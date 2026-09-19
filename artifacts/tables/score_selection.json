@@ -1,0 +1,2828 @@
+{
+  "candidates": [
+    "mean_margin",
+    "neg_mean_entropy",
+    "neg_tc_entropy"
+  ],
+  "selected": "neg_tc_entropy",
+  "unanimous_across_outer_targets": false,
+  "inner_mean_aurc": {
+    "mean_margin": 0.33878789430546524,
+    "neg_mean_entropy": 0.3234304573010555,
+    "neg_tc_entropy": 0.3191261836727317,
+    "mean_norm_margin": 0.34107094500927376,
+    "q25_norm_margin": 0.3344337709277674,
+    "min_norm_margin": 0.33051714359998147,
+    "max_prob": 0.39145000732409096
+  },
+  "per_outer_target": {
+    "PTBXL": {
+      "winner": "neg_tc_entropy",
+      "aurc": {
+        "mean_margin": 0.2512819281998462,
+        "neg_mean_entropy": 0.2296168733284293,
+        "neg_tc_entropy": 0.21327003613836681
+      }
+    },
+    "Georgia": {
+      "winner": "neg_tc_entropy",
+      "aurc": {
+        "mean_margin": 0.22394987392097848,
+        "neg_mean_entropy": 0.21379892965721917,
+        "neg_tc_entropy": 0.21062683569744067
+      }
+    },
+    "Chapman": {
+      "winner": "neg_mean_entropy",
+      "aurc": {
+        "mean_margin": 0.43809887551879023,
+        "neg_mean_entropy": 0.4249833942797627,
+        "neg_tc_entropy": 0.4281098071285873
+      }
+    },
+    "Ningbo": {
+      "winner": "neg_tc_entropy",
+      "aurc": {
+        "mean_margin": 0.441820899582246,
+        "neg_mean_entropy": 0.4253226319388108,
+        "neg_tc_entropy": 0.42449805572653193
+      }
+    }
+  },
+  "n_folds": 36,
+  "folds": [
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.3817382657355157
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.3206558226425093
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.29357060104347976
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.378824396322269
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.32699937031215565
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.307171887581704
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.34836180047521825
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.3684010854799144
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.32772956617479126
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.31152347779664746
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.3682875690938938
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.3368109665124309
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.31249364889823145
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.35197586948840964
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.5206066315782863
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.49781287032381305
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.4885738047198947
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.5174661123299459
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.5056800383657263
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.49722851436457366
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.4837120741784745
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.21239012662492535
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.19475706710130758
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.17827124116985565
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.21077121154558712
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.20746656645993605
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.18038681832503883
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.22975088051585033
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.4970462911662478
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.4790366304004628
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.4621487889832641
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.4995842988222716
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.47856279928198264
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.4797757080967164
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.5101123830306731
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.1328596683064036
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.09152846365027777
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.07301813515012849
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.13185433236663582
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.09764084281687888
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.0860201690559694
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.1872119362634672
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.3308104339943108
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.32955755927639185
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.3458467785983547
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.3350598808254159
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.3416145426343082
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.40576871706549533
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.5212640493241453
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.1727355827614017
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.1467174848481771
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.13298678453113957
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.17523596878188993
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.1702529386925725
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.132643187753594
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.17141274416392485
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.3256362440202151
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.3541393477177271
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.3864519122632043
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.33097156193981675
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.3606905404322492
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.4233736331160091
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.554136004222252
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.12991640277009583
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.08329211489509593
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.0744052815976124
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.13888298329662954
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.10971808112657445
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.07898135261881317
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.17250212729055373
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.2904538785702156
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.31630929325790225
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.339008469065734
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.2957359657272119
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.3349232326294038
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.3254295886200678
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.5054796540375829
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.4544240302944009
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.426292787349461
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.3963521691201198
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.45655017317218144
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.4118958153831175
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.4161293706148931
+    },
+    {
+      "representation": "raw",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.47160949762949467
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.3702172363327076
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.3352801766215856
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.29409306102986893
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.36687943912372234
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.34410831037519735
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.30120492640152113
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.3628391080717923
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.3777530434166437
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.3529554310265847
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.3285801270207496
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.37658995238393966
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.37052047538899135
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.3253520851042529
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.3695360360332095
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.5091937275002194
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.49956981392995053
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.48587754311913656
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.5056958430638404
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.49300230424431457
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.5073807225017625
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.4990181687944215
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.2112755729126595
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.19540201111499192
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.176081876863399
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.21024811274709052
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.2016460311926126
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.1780362453803068
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.22678966548051688
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.48431423468935225
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.4492843560047164
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.43311539187877596
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.49198633649012297
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.4588846865362618
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.4472234171552243
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.4801662462566646
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.12544833012361048
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.09749712551745413
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.07592810025088244
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.133508420960146
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.10044440295359089
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.08612136380300031
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.18377055152737024
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.3473834659428161
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.347830436665174
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.38759258438965677
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.34867653645013874
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.3627650994292816
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.46861587456187603
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.5426105656371175
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.1753016851876123
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.15892333557351943
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.13798673120280688
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.17489781334268448
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.1693645396255534
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.1347543627320551
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.18770829631919828
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.3785665351474627
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.38225628286831714
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.4253755697228362
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.3818754599458796
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.4081053397174862
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.46642475661954325
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.5912945236079915
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.13021462526454228
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.09530340236642165
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.07560633778652585
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.13029547697598007
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.11226929192646554
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.08361547464438362
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.1588274445590668
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.2998825217216264
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.32658312461932665
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.34725925020777676
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.30358887791142836
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.3535122839102851
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.3360791046932747
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.5417172541599148
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.4465751369572672
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.41905663960452555
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.3947807457199578
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.4487615140995732
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.41100494938779913
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.4108320397741877
+    },
+    {
+      "representation": "vcg",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.46496721402846625
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.5798239421640385
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.579305391644946
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.5924915696954601
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.5959972261656142
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.5986160462422647
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.60048201362206
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.5660866951101993
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.6056380871352018
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.5982968369454712
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.6114361764206685
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.6208592355044121
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.6164814993185393
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.6143493107991141
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.5648438191621021
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.5401495876682776
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.5192563803263915
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.526295083300386
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.5384517683173263
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.5382440110838079
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.5432871064200635
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.5339791762662102
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.24728652193174444
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.22583330478941882
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.2294577813417236
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.24779526688617695
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.2520044198257774
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.24135494081040887
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "PTBXL"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.2612598658002802
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.5045485302359186
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.484368325689884
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.4868060452143308
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.5021303559479607
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.4960257315068765
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.5017573085646108
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.5134646287502366
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.15502923351972464
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.14456378056592123
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.1306374407837225
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.15364438000687747
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.14501883552806866
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.143742087591485
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Ningbo",
+        "PTBXL"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.22349084279045142
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "mean_margin",
+      "aurc": 0.3964648053240421
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "neg_mean_entropy",
+      "aurc": 0.3986352360185353
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "neg_tc_entropy",
+      "aurc": 0.4061414756425499
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "mean_norm_margin",
+      "aurc": 0.40696051786965726
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "q25_norm_margin",
+      "aurc": 0.40885961602472826
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "min_norm_margin",
+      "aurc": 0.397855152976822
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Ningbo",
+      "score": "max_prob",
+      "aurc": 0.5214622579426155
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.19579059052416975
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.1866460825117565
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.17811864838490654
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.19428003406954505
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.1939507187361815
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.19185544515191913
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Georgia"
+      ],
+      "inner_target": "Ningbo",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.2416085359671745
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "mean_margin",
+      "aurc": 0.40098582837815566
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "neg_mean_entropy",
+      "aurc": 0.3967837716899105
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "neg_tc_entropy",
+      "aurc": 0.40755077485680913
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "mean_norm_margin",
+      "aurc": 0.40785809202859963
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "q25_norm_margin",
+      "aurc": 0.4191157827469089
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "min_norm_margin",
+      "aurc": 0.38396563003104695
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Chapman",
+      "score": "max_prob",
+      "aurc": 0.4902425986826696
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.12027920370305988
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.11717694761207821
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.10785813966679476
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.11796731349534523
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.12093836802663716
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.11526312842914223
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Georgia",
+        "Ningbo"
+      ],
+      "inner_target": "Chapman",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.16259695544391548
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "mean_margin",
+      "aurc": 0.34092301157789623
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "neg_mean_entropy",
+      "aurc": 0.3317161962983722
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "neg_tc_entropy",
+      "aurc": 0.34597922644374385
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "mean_norm_margin",
+      "aurc": 0.34666713656553944
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "q25_norm_margin",
+      "aurc": 0.3469532744902302
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "min_norm_margin",
+      "aurc": 0.32795526955903886
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "PTBXL",
+      "outer_target": "Georgia",
+      "score": "max_prob",
+      "aurc": 0.4154878779070145
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "mean_margin",
+      "aurc": 0.4363000963360661
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "neg_mean_entropy",
+      "aurc": 0.43314306519482854
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "neg_tc_entropy",
+      "aurc": 0.42133548723543784
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "mean_norm_margin",
+      "aurc": 0.4337144557585059
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "q25_norm_margin",
+      "aurc": 0.4355240005344286
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "min_norm_margin",
+      "aurc": 0.4457068061611282
+    },
+    {
+      "representation": "fft",
+      "train_pair": [
+        "Chapman",
+        "Ningbo"
+      ],
+      "inner_target": "Georgia",
+      "outer_target": "PTBXL",
+      "score": "max_prob",
+      "aurc": 0.4809029147486261
+    }
+  ],
+  "note": "Selected on training-source folds only; outer targets unused."
+}
