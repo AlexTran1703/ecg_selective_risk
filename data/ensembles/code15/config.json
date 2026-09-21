@@ -1,0 +1,31 @@
+{
+  "dataset": "code15",
+  "members": 5,
+  "epochs": 15,
+  "batch_size": 256,
+  "lr": 0.001,
+  "split": "patient-level, frozen before preprocessing",
+  "split_seed": 0,
+  "normalisation": {
+    "mean": -0.06644100695848465,
+    "std": 1.4591648578643799,
+    "source": "train partition only"
+  },
+  "thresholds": {
+    "1dAVb": 0.915,
+    "RBBB": 0.895,
+    "LBBB": 0.9550000000000001,
+    "SB": 0.905,
+    "AF": 0.9500000000000001,
+    "ST": 0.925
+  },
+  "threshold_rule": "max F1 on the CODE-15% validation partition, frozen before the test set is read",
+  "labels": [
+    "1dAVb",
+    "RBBB",
+    "LBBB",
+    "SB",
+    "AF",
+    "ST"
+  ]
+}
