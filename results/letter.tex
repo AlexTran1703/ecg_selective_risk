@@ -66,19 +66,21 @@ Vietnam National University, Ho Chi Minh City, Vietnam
 \linenumbers
 
 % ============================ RESEARCH LETTER ============================
-Reader disagreement during Electrocardiography (ECG) interpretation may signal 
-cases near diagnostic boundaries, yet conventional evaluation typically reduces the adjudication
-process to a single final reference label, discarding information about how
-readily consensus was reached. Automated ECG interpretation has shown strong
-performance in rhythm and conduction diagnosis, particularly for arrhythmias,
-and has increasingly been extended to derive clinically relevant information
-beyond categorical classification.\cite{ribeiro2020,wei2022} Prior work has
-demonstrated limited expert agreement in difficult AI--reader discordant ECGs,
-while uncertainty estimation can support referral of lower-confidence automated
-interpretations for expert review.\cite{vranken2021,mayourian2025} We therefore
-examined whether uncertainty-based referral reduces the burden of automated
-diagnostic error and whether reader disagreement identifies ECGs with
-persistently elevated patient-level error risk across retained coverage.
+Reader disagreement during electrocardiographic (ECG) interpretation may signal
+cases near diagnostic boundaries, yet conventional evaluation typically reduces
+the adjudication process to a single final reference label, discarding
+information about how readily consensus was reached. Automated ECG
+interpretation has shown strong performance in rhythm and conduction diagnosis,
+particularly for arrhythmias, and has increasingly been extended to derive
+clinically relevant information beyond categorical classification.
+\cite{ribeiro2020,wei2022} Prior work has demonstrated limited expert agreement
+in difficult AI--reader discordant ECGs, while uncertainty estimation can
+support referral of lower-confidence automated interpretations for expert
+review.\cite{vranken2021,mayourian2025} We therefore first evaluated whether
+uncertainty-based referral reduced the overall burden of automated diagnostic
+error and then examined whether the excess patient-level error risk associated
+with reader disagreement declined in parallel or persisted across retained
+coverage.
 
 This retrospective secondary analysis used the Clinical Outcomes in Digital
 Electrocardiology (CODE) datasets from the Telehealth Network of Minas Gerais,
@@ -203,18 +205,13 @@ dataset of 12-lead ECGs. Zenodo. Published June 9, 2021.
 \noindent\makebox[\textwidth][c]{%
   \includegraphics[width=7.4in]{figures/figure1.pdf}}
 \noindent\textbf{Figure 1. Uncertainty-Based Referral and Reader Disagreement in Automated ECG Diagnosis.}
-\textbf{(A)} Uncertainty-based referral evaluates whether lower-confidence
-whole ECGs concentrate automated diagnostic error, using the least confident
-diagnosis to determine ECG-level confidence. Shading represents 95\% ECG-level
-bootstrap confidence intervals.
-\textbf{(B)} Reader-agreement stratification evaluates whether reader
-disagreement identifies residual diagnostic risk across retained coverage after
-the same confidence-based referral procedure. The corresponding risk ratio
-(RR) compares patient-level diagnostic error between ECGs with reader
-disagreement and reader consensus; the dashed line denotes RR = 1.
-Circles mark the annotated coverage levels and shaded regions represent
-95\% ECG-level bootstrap confidence intervals.
-ECG = electrocardiogram; RR = risk ratio.
+\textbf{(A)} Error burden across uncertainty-based whole-ECG referral using the
+least confident diagnosis to define ECG-level confidence.
+\textbf{(B)} Patient-level diagnostic error across retained coverage, stratified
+by reader disagreement versus consensus. The corresponding risk ratio (RR)
+compares both groups; the dashed line denotes RR = 1. Circles mark annotated
+coverage levels; shading represents 95\% ECG-level bootstrap confidence
+intervals.
 \vfill
 
 

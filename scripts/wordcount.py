@@ -45,3 +45,11 @@ if k:
     p.write_text(s, encoding="utf-8")
 else:
     print("  (no word-count field on the title page; nothing written)")
+
+# The cover letter has no stated limit, but it is the other thing being
+# submitted and its length is worth knowing before it goes.
+cov = p.with_name("cover_letter.tex")
+if cov.exists():
+    t = cov.read_text(encoding="utf-8")
+    t = t[t.index(r"\begin{document}"):t.index(r"\end{document}")]
+    print(f"\n  {'cover letter':<14}{wc(t):>5}  (no stated limit)")
