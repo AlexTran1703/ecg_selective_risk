@@ -47,6 +47,7 @@ from ecguq.data import LABELS                                     # noqa: E402
 from ecguq.metrics import macro_auprc, macro_auroc                # noqa: E402
 from ecguq.selective import (retained_mask, disagreement_enrichment,             # noqa: E402
                              patient_errors_at, patient_risk_at,
+                             patient_group_size, patient_risk_in_group,
                              disputed_error_share, disputed_prevalence,
                              macro_aurc, macro_risk_at,
                              retained_disputed_prevalence)
@@ -58,6 +59,7 @@ from ecguq.uncertainty import (ensemble_mean, model_uncertainty,  # noqa: E402
 # surface): identity is also carried by position and direct labels, never by
 # colour alone.
 C_AGREE, C_DISPUTE = "#2a78d6", "#eb6834"
+C_RR = "#1baf7a"        # validated slot 3, for the ratio strip
 INK, INK2, GRID = "#0b0b0b", "#52514e", "#d8d7d2"
 SURFACE = "#fcfcfb"
 
@@ -65,8 +67,14 @@ SURFACE = "#fcfcfb"
 # q = 0 retains nothing and is undefined, so evaluation starts at 0.01
 # while the axis still spans the full [0, 1].
 COVERAGES = np.round(np.arange(0.01, 1.0001, 0.01), 2)
-XVIEW = (0.50, 1.00)          # displayed span of the risk-coverage panel
-XTICKS = (0.50, 0.60, 0.70, 0.80, 0.90, 1.00)
+XVIEW = (0.80, 1.00)          # displayed span of both panels
+XTICKS = (0.80, 0.85, 0.90, 0.95, 1.00)
+MARKS = (1.00, 0.95, 0.90, 0.80)   # annotated operating points
+# RR(c) spans the same window as the risk curves. Below 0.90 coverage
+# fewer than ~15 disagreement ECGs remain and the lower confidence
+# bound reaches zero, so the band is drawn across the whole range
+# rather than the point estimate alone -- the widening is the warning.
+RRVIEW = XVIEW
 # Analysis runs the full grid; the figure shows the clinically
 # informative high-coverage region. 1 - q is the referral fraction, so
 # this window spans 50% referred (left) to none referred (right).
@@ -258,55 +266,60 @@ def main() -> None:
     # selective risk and a residual error count.
     marks = [(q, patient_risk_at(loss, conf, q),
               patient_errors_at(loss, conf, q))
-             for q in (1.00, 0.95, 0.90)]
+             for q in MARKS]
 
-    # Panel B is patient-level: the clinically interpretable unit. Each
-    # CODE-test ECG is a distinct patient, and an ECG counts as disputed if
-    # the readers disagreed on any of its six diagnoses, as erroneous if the
-    # model was wrong on any.
+    # Panel B: the same referral policy as A, split by whether the two
+    # cardiologists disagreed anywhere on the ECG.
     #
-    # The label-level version of the same comparison gives a much larger
-    # ratio (25x), but part of that is arithmetic: six label opportunities
-    # per ECG against a consensus baseline of 1.08%. Patient level is the
-    # more conservative framing and is what the figure shows; the
-    # diagnosis-level result stays in the text.
-    pe = err_any = (loss.astype(bool)).sum(axis=1) > 0
-    pd_ = dis_any = D.astype(bool).sum(axis=1) > 0
+    # Ranking is global. Each ECG keeps the confidence it had in A, the
+    # top q fraction is retained, and only then are retained ECGs split
+    # into strata. Ranking within strata would make coverage mean a
+    # different thing in each curve.
+    dis_ecg = D.astype(bool).any(axis=1)
+    err_ecg = loss.astype(bool).any(axis=1)
 
-    def _safe(v):
-        return float(v) if np.isfinite(v) else float('nan')
-
-    def _rate_p(i, disputed):
-        s = pd_[i] if disputed else ~pd_[i]
-        return _safe(pe[i][s].mean()) if s.any() else float('nan')
-
-    def _rr_p(i):
-        a, b = _rate_p(i, True), _rate_p(i, False)
+    def _rr(i):
+        a = patient_risk_in_group(loss[i], conf[i], dis_ecg[i], 1.0, True)
+        b = patient_risk_in_group(loss[i], conf[i], dis_ecg[i], 1.0, False)
         return a / b if np.isfinite(a) and np.isfinite(b) and b > 0 \
             else float('nan')
 
-    def _prev_err(i):
-        return _safe(pd_[i][pe[i]].mean()) if pe[i].any() else float('nan')
+    reps_band = max(200, args.replicates // 4)
+    panelc = {}
+    for nm, ing, sd in (("dis", True, 20), ("con", False, 21)):
+        panelc[nm] = np.array([
+            patient_risk_in_group(loss, conf, dis_ecg, q, ing)
+            for q in COVERAGES])
+        panelc[nm + "_band"] = np.array([clustered_ci(
+            lambda i, q=q, g=ing: patient_risk_in_group(
+                loss[i], conf[i], dis_ecg[i], q, g),
+            n, reps_band, seed=sd)[1:] for q in COVERAGES])
+        panelc[nm + "_n"] = np.array([
+            patient_group_size(conf, dis_ecg, q, ing) for q in COVERAGES])
+    panelc["rr"] = clustered_ci(_rr, n, args.replicates, seed=12)
 
-    def _enrich_p(i):
-        a, b = _prev_err(i), _safe(pd_[i].mean())
-        return a / b if np.isfinite(a) and b > 0 else float('nan')
+    # RR at every coverage. The ratio is formed inside each replicate;
+    # dividing the two risk curves' confidence limits would be wrong.
+    def _rr_at(q):
+        def f(i):
+            a = patient_risk_in_group(loss[i], conf[i], dis_ecg[i],
+                                      q, True)
+            b = patient_risk_in_group(loss[i], conf[i], dis_ecg[i],
+                                      q, False)
+            return (a / b if np.isfinite(a) and np.isfinite(b) and b > 0
+                    else float('nan'))
+        return clustered_ci(f, n, reps_band, seed=30)
 
-    panelc = {
-        "prev_all": clustered_ci(lambda i: _safe(pd_[i].mean()), n,
-                                 args.replicates, seed=8),
-        "prev_err": clustered_ci(_prev_err, n, args.replicates, seed=9),
-        "enrichment": clustered_ci(_enrich_p, n, args.replicates, seed=13),
-        "rate_con": clustered_ci(lambda i: _rate_p(i, False), n,
-                                 args.replicates, seed=10),
-        "rate_dis": clustered_ci(lambda i: _rate_p(i, True), n,
-                                 args.replicates, seed=11),
-        "ratio": clustered_ci(_rr_p, n, args.replicates, seed=12),
-        "n_dis": int(pd_.sum()), "n_pairs": n,
-        "n_err": int(pe.sum()),
-        "n_errD": int((pe & pd_).sum()),
-        "n_errC": int((pe & ~pd_).sum()), "n_C": int((~pd_).sum()),
-    }
+    rr_c = np.array([_rr_at(q) if RRVIEW[0] - 1e-9 <= q <= RRVIEW[1]
+                     else (np.nan, np.nan, np.nan) for q in COVERAGES])
+    panelc["rr_curve"] = rr_c[:, 0]
+    panelc["rr_band"] = rr_c[:, 1:]
+    panelc["n_all"] = n
+    panelc["n_dis"] = int(dis_ecg.sum())
+    panelc["n_con"] = int((~dis_ecg).sum())
+    panelc["n_err"] = int(err_ecg.sum())
+    panelc["n_errD"] = int((err_ecg & dis_ecg).sum())
+    panelc["n_errC"] = int((err_ecg & ~dis_ecg).sum())
     figure(COVERAGES, risk_c, band_r, marks, panelc,
            args.out / "figures")
 
@@ -325,11 +338,14 @@ def main() -> None:
         "score_sensitivity": sens,
         # Patient-level quantities behind Figure 1B, so every number in the
         # figure and in the Results paragraph has a recorded source.
-        "patient_level": {k: (list(v) if isinstance(v, tuple) else v)
-                          for k, v in panelc.items()},
+        # The stratified curves as well as the scalars, so every point in
+        # panel B is recoverable without rerunning the figure.
+        "coverage_grid": COVERAGES,
+        "patient_level": panelc,
         "disputed_prevalence_full": disputed_prevalence(D),
         "replicates": args.replicates,
-    }, indent=2), encoding="utf-8")
+    }, indent=2, default=lambda o: (o.tolist() if hasattr(o, "tolist")
+                                    else list(o))), encoding="utf-8")
     print(text)
 
     # ---- the four sentences ----------------------------------------------
@@ -392,20 +408,29 @@ def main() -> None:
         f"q = {XVIEW[0]:.2f} corresponds to "
         f"{(1 - XVIEW[0]) * 100:.0f}% referred. Risk-coverage curves were "
         f"computed over the full range q in (0, 1]. "
-        f"(B) Patient-level analysis of the {panelc['n_pairs']:,} "
-        f"CODE-test ECGs, each from a distinct patient; an ECG is "
-        f"classified as disputed if the two cardiologists disagreed on any "
-        f"of its {len(L)} diagnoses and as erroneous if the model was "
-        f"incorrect on any. Left, reader disagreement among all ECGs "
-        f"({panelc['n_dis']:,} of {panelc['n_pairs']:,}) and among ECGs "
-        f"containing any model error ({panelc['n_errD']:,} of "
-        f"{panelc['n_err']:,}), a {panelc['enrichment'][0]:.1f}-fold "
-        f"enrichment. Right, model error among ECGs with complete reader "
-        f"consensus ({panelc['n_errC']:,} of {panelc['n_C']:,}) and with "
-        f"any disagreement ({panelc['n_errD']:,} of {panelc['n_dis']:,}), "
-        f"risk ratio {panelc['ratio'][0]:.1f}. Points are percentages and "
-        f"error bars are 95% ECG-level bootstrap intervals. The "
-        f"diagnosis-level analysis is reported in the text.")
+        f"(B) The same referral policy, with retained ECGs split by "
+        f"whether the 2 cardiologists disagreed on any of the "
+        f"{len(L)} diagnoses. Both curves use the single global "
+        f"confidence ranking of (A); strata are formed only after "
+        f"retention, so coverage means the same thing in both panels. "
+        f"At full coverage, any model error occurred in "
+        f"{panelc['n_errD']} of {panelc['n_dis']} ECGs with any "
+        f"disagreement ({panelc['dis'][-1]:.1%}) versus "
+        f"{panelc['n_errC']} of {panelc['n_con']} with complete "
+        f"consensus ({panelc['con'][-1]:.1%}), a risk ratio of "
+        f"{panelc['rr'][0]:.2f} (95% CI, {panelc['rr'][1]:.2f} to "
+        f"{panelc['rr'][2]:.2f}). Shading in both panels represents 95% "
+        f"ECG-level bootstrap intervals. The lower strip of (B) shows the "
+        f"risk ratio between the 2 strata at each coverage, with each "
+        f"ratio formed within the bootstrap replicate rather than from "
+        f"the limits of the 2 risk curves, and a reference line at 1. It "
+        f"Below 90% coverage fewer than 15 disagreement ECGs remain "
+        f"and the lower confidence bound reaches zero, so the ratio "
+        f"there should be read as unstable rather than rising. "
+        f"Disagreement ECGs retained fall from {panelc['n_dis']} at full "
+        f"coverage to "
+        f"{int(panelc['dis_n'][int(round(XVIEW[0] * 100)) - 1])} at "
+        f"{XVIEW[0]:.0%} coverage. RR = risk ratio.")
     (args.out / "tables" / "caption.txt").write_text(
         caption + chr(10), encoding="utf-8")
     print("\n" + "-" * 74 + "\nRESULTS PARAGRAPH\n" + "-" * 74)
@@ -422,142 +447,149 @@ def _ytop(vals, pad=1.08):
     return float(v.max() * pad) if v.size and v.max() > 0 else 1.0
 
 
+def _annotate_marks(ax, cov, curve, qs, col, above=True, fs=8.5):
+    """Mark the reported operating points and print their values."""
+    for q in qs:
+        i = int(np.argmin(np.abs(cov - q)))
+        v = curve[i]
+        if not np.isfinite(v):
+            continue
+        ax.plot(cov[i], v * 100, "o", color=col, ms=5.5, mec=SURFACE,
+                mew=1.2, zorder=4)
+        edge = "left" if q <= XVIEW[0] + 1e-9 else (
+            "right" if q >= XVIEW[1] - 1e-9 else "center")
+        dx = {"left": 5, "right": -5, "center": 0}[edge]
+        ax.annotate(f"{v * 100:.1f}", xy=(cov[i], v * 100),
+                    xytext=(dx, 7 if above else -7),
+                    textcoords="offset points", ha=edge,
+                    va="bottom" if above else "top", fontsize=fs,
+                    color=col, zorder=5,
+                    bbox=dict(facecolor=SURFACE, edgecolor="none",
+                              alpha=0.8, boxstyle="round,pad=0.12"))
+
+
 def figure(cov, risk, band_r, marks, panelc, out_dir: Path) -> None:
-    """Two panels, in the order the argument runs.
-
-    A  confidence identifies the error-prone tail
-    B  those errors land disproportionately on disputed labels
-
-    The uncertainty-by-agreement comparison that used to open the figure
-    replicates a known effect and reads perfectly well as one sentence; it
-    stays in results.txt section A and in the results paragraph rather
-    than spending a panel. Per-diagnosis disagreement counts likewise
-    survive in the descriptive table.
-    """
-    # A carries a curve whose shape is the message and needs horizontal
-    # room; B is a two-point comparison. Equal widths would spend the same
-    # space on both.
-    # Equal widths: B holds four points in two pairs plus three lines of
-    # annotation under each, so it needs as much room as the curve.
-    fig, axes = plt.subplots(1, 2, figsize=(7.9, 4.6), facecolor=SURFACE)
-    for ax in axes:
+    """Two panels on one coverage axis: overall referral, then stratified."""
+    nl = chr(10)
+    fig = plt.figure(figsize=(7.9, 4.6), facecolor=SURFACE)
+    # Panel B is two stacked axes sharing one coverage axis: the risk
+    # curves, and a shallow RR strip. Formally still one part.
+    gs = fig.add_gridspec(2, 2, height_ratios=[2.5, 1.0],
+                          hspace=0.12, wspace=0.28,
+                          left=0.085, right=0.985, top=0.86,
+                          bottom=0.115)
+    axA = fig.add_subplot(gs[:, 0])
+    axB = fig.add_subplot(gs[0, 1])
+    axR = fig.add_subplot(gs[1, 1], sharex=axB)
+    axes = [axA, axB]
+    for ax in (axA, axB, axR):
         ax.set_facecolor(SURFACE)
         ax.grid(color=GRID, lw=0.6, alpha=0.9)
         ax.set_axisbelow(True)
-        for s in ("top", "right"):
-            ax.spines[s].set_visible(False)
-        for s in ("left", "bottom"):
-            ax.spines[s].set_color(GRID)
-        ax.tick_params(colors=INK2, labelsize=10, length=3)
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+        for sp in ("left", "bottom"):
+            ax.spines[sp].set_color(GRID)
+        ax.tick_params(colors=INK2, labelsize=9.5, length=3)
+        ax.set_xlim(*XVIEW)
+        ax.set_xticks(XTICKS)
+    for ax in axes:
+        ax.set_ylabel(r"ECGs with $\geq$1 error (%)", fontsize=10.5,
+                      color=INK)
+    axA.set_xlabel("ECG coverage", fontsize=10.5, color=INK)
+    axR.set_xlabel("ECG coverage", fontsize=10.5, color=INK)
+    plt.setp(axB.get_xticklabels(), visible=False)
 
-    # A -- one series, so no legend box; the title names it.
+    # ---- A: overall ------------------------------------------------
     ax = axes[0]
     ax.fill_between(cov, band_r[:, 0] * 100, band_r[:, 1] * 100,
                     color=C_AGREE, alpha=0.18, lw=0)
     ax.plot(cov, risk * 100, color=C_AGREE, lw=2.0,
-            solid_capstyle="round")
-    ax.set_xlabel("ECG coverage", fontsize=11.0, color=INK)
-    ax.set_ylabel(r"ECGs with $\geq$1 error (%)", fontsize=11.0, color=INK)
-    ax.set_title("A   Uncertainty-based referral" + chr(10) +
-                 "of whole ECGs",
-                 fontsize=10.5, color=INK, loc="left", pad=14)
-    ax.set_xlim(*XVIEW)
-    ax.set_xticks(XTICKS)
-    # Scale y to the visible window only: the full grid runs to q = 0.01,
-    # and autoscaling over off-screen points would flatten the display.
+            solid_capstyle="round", zorder=3)
     ax.set_ylim(0, _ytop(band_r[:, 1][_inview(cov)] * 100))
-    # A few operating points, so the curve reads as a decision rather
-    # than a shape: how many errors survive at 0%, 5% and 10% referral.
     for q, r, ne in marks:
-        ax.plot(q, r * 100, "o", color=C_AGREE, ms=6.5, mec=SURFACE,
-                mew=1.5, zorder=4)
-        right = q >= 0.95
-        ax.annotate(f"{r * 100:.1f}%" + chr(10) + f"{ne} ECGs",
+        ax.plot(q, r * 100, "o", color=C_AGREE, ms=6, mec=SURFACE, mew=1.3,
+                zorder=4)
+        edge = "left" if q <= XVIEW[0] + 1e-9 else (
+            "right" if q >= XVIEW[1] - 1e-9 else "center")
+        dx = {"left": 5, "right": -5, "center": 0}[edge]
+        ax.annotate(f"{r * 100:.1f}%" + nl + f"{ne} ECGs",
                     xy=(q, r * 100),
-                    xytext=(-9, 5) if right else (9, -4),
-                    textcoords="offset points",
-                    ha="right" if right else "left",
-                    va="bottom" if right else "top",
-                    fontsize=9.0, color=INK2, linespacing=1.3)
-    sec = ax.secondary_xaxis("top", functions=(
-        lambda x: (1.0 - x) * 100.0, lambda x: 1.0 - x / 100.0))
-    sec.set_xlabel("ECGs referred (%)", fontsize=10.0, color=INK2,
-                   labelpad=3)
-    sec.tick_params(colors=INK2, labelsize=10, length=3)
-    sec.spines["top"].set_color(GRID)
+                    xytext=(dx, 9), textcoords="offset points",
+                    ha=edge, va="bottom", fontsize=8.5, color=INK2,
+                    linespacing=1.3, zorder=5,
+                    bbox=dict(facecolor=SURFACE, edgecolor="none",
+                              alpha=0.8, boxstyle="round,pad=0.12"))
+    ax.set_title("A   Uncertainty-based referral" + nl + "of whole ECGs",
+                 fontsize=10.5, color=INK, loc="left", pad=12)
 
-    # B -- two paired comparisons, separated by a gap.
-    #
-    # Left pair answers 'how much of X was disputed', right pair answers
-    # 'how often was the model wrong in group X'. Running all four points
-    # as one sequence would invite the reader to compare across the two,
-    # which is meaningless; the gap and the sub-headings keep them apart.
+    # ---- B: stratified ----------------------------------------------
     ax = axes[1]
-    nl = chr(10)
-    XL, XR = (0.6, 2.3), (4.1, 5.8)
-    groups = (
-        (XL, "Disagreement" + nl + "prevalence",
-         ((panelc["prev_all"], C_AGREE, "All" + nl + "ECGs",
-           f"{panelc['n_dis']:,} of {panelc['n_pairs']:,}"),
-          (panelc["prev_err"], C_DISPUTE, "With" + nl + "any error",
-           f"{panelc['n_errD']:,} of {panelc['n_err']:,}")),
-         (f"PR = {panelc['enrichment'][0]:.1f}",
-          f"({panelc['enrichment'][1]:.1f}-{panelc['enrichment'][2]:.1f})")),
-        (XR, "Patient-level" + nl + "model error",
-         ((panelc["rate_con"], C_AGREE, "Complete" + nl + "consensus",
-           f"{panelc['n_errC']:,} of {panelc['n_C']:,}"),
-          (panelc["rate_dis"], C_DISPUTE, "Any" + nl + "disagreement",
-           f"{panelc['n_errD']:,} of {panelc['n_dis']:,}")),
-         (f"RR = {panelc['ratio'][0]:.1f}",
-          f"({panelc['ratio'][1]:.1f}-{panelc['ratio'][2]:.1f})")),
-    )
-    top = max(g[2][k][0][2] for g in groups for k in (0, 1)) * 100 * 1.34
-    ticks, labels = [], []
-    for (xs, heading, pts, ratio) in groups:
-        for x, ((pt, lo, hi), col, name, cnt) in zip(xs, pts):
-            ax.plot([x, x], [lo * 100, hi * 100], color=col, lw=2.2,
-                    solid_capstyle="round", zorder=2)
-            ax.plot(x, pt * 100, "o", color=col, ms=8.5, mec=SURFACE,
-                    mew=1.6, zorder=3)
-            ax.annotate(f"{pt * 100:.2f}%" if pt < 0.02
-                        else f"{pt * 100:.1f}%",
-                        xy=(x, pt * 100), xytext=(9, 0),
-                        textcoords="offset points", va="center",
-                        fontsize=10.0, color=col, fontweight="bold")
-            ax.annotate(cnt, xy=(x, -0.175), xycoords=("data",
-                        "axes fraction"), ha="center", va="top",
-                        fontsize=8.0, color=INK2)
-            ticks.append(x)
-            labels.append(name)
-        mid = sum(xs) / 2
-        ax.annotate(heading, xy=(mid, 0.965), xycoords=("data",
-                    "axes fraction"), ha="center", va="top",
-                    fontsize=10.0, color=INK)
-        y_mid = (pts[0][0][0] + pts[1][0][0]) / 2 * 100
-        box = dict(facecolor=SURFACE, edgecolor="none",
-                   boxstyle="round,pad=0.18")
-        ax.annotate(ratio[0], xy=(mid, y_mid), xytext=(0, 1),
-                    textcoords="offset points", ha="center", va="bottom",
-                    fontsize=11.0, color=INK, fontweight="bold", zorder=6,
-                    bbox=box)
-        ax.annotate(ratio[1], xy=(mid, y_mid), xytext=(0, -2),
-                    textcoords="offset points", ha="center", va="top",
-                    fontsize=8.0, color=INK2, zorder=6, bbox=box)
-        ax.annotate("", xy=(xs[1], pts[1][0][0] * 100),
-                    xytext=(xs[0], pts[0][0][0] * 100),
-                    arrowprops=dict(arrowstyle="-", color=GRID, lw=1.1,
-                                    linestyle=(0, (3, 3))))
-    ax.axvline(3.2, color=GRID, lw=1.0, zorder=1)
-    ax.set_xticks(ticks)
-    ax.set_xticklabels(labels, fontsize=8.5, color=INK2)
-    ax.set_xlim(-0.25, 6.65)
-    ax.set_ylim(0, top)
-    ax.set_ylabel("percentage (%)", fontsize=11.0, color=INK)
-    ax.set_title("B   Reader disagreement and" + nl +
-                 "patient-level model error",
-                 fontsize=10.5, color=INK, loc="left", pad=40)
+    vis = _inview(cov)
+    top = 0.0
+    for nm, col, lab, up in (
+            ("dis", C_DISPUTE, "reader disagreement", True),
+            ("con", C_AGREE, "reader consensus", True)):
+        r, band = panelc[nm], panelc[nm + "_band"]
+        ok = np.isfinite(r) & vis
+        fb = np.isfinite(band[:, 1]) & ok
+        ax.fill_between(cov[fb], band[fb, 0] * 100, band[fb, 1] * 100,
+                        color=col, alpha=0.16, lw=0)
+        ax.plot(cov[ok], r[ok] * 100, color=col, lw=2.0, label=lab,
+                solid_capstyle="round", zorder=3)
+        _annotate_marks(ax, cov, r, MARKS, col, above=up)
+        top = max(top, float(np.nanmax(band[fb, 1])) * 100 if fb.any() else 0)
+    ax.set_ylim(0, top * 1.16)
+    # RR rides in the legend title: anywhere inside the axes it would
+    # land on a curve or inside the disagreement band.
+    ax.legend(loc="upper left", frameon=True, facecolor=SURFACE,
+              edgecolor=GRID, framealpha=0.92, fontsize=8.5,
+              labelcolor=INK2, handlelength=1.6, borderpad=0.5)
+    ax.set_title("B   Error by reader agreement" + nl + "across referral",
+                 fontsize=10.5, color=INK, loc="left", pad=12)
 
-    fig.tight_layout()
+    # ---- B, lower strip: RR across coverage -------------------------
+    rrc, rrb = panelc["rr_curve"], panelc["rr_band"]
+    ok = np.isfinite(rrc) & _inview(cov)
+    axR.axhline(1.0, color=INK2, lw=1.0, ls=(0, (3, 3)), zorder=2)
+    fb = ok & np.isfinite(rrb[:, 1])
+    axR.fill_between(cov[fb], rrb[fb, 0], rrb[fb, 1], color=C_RR,
+                     alpha=0.16, lw=0)
+    axR.plot(cov[ok], rrc[ok], color=C_RR, lw=1.8,
+             solid_capstyle="round", zorder=3)
+    axR.set_ylabel("RR", fontsize=10.5, color=INK)
+    # Scale to the point estimates: the interval at low coverage runs to
+    # about 75 and would flatten the region that carries the result.
+    ytop = float(np.nanmax(rrc[ok])) * 1.55 if ok.any() else 30.0
+    axR.set_ylim(0, ytop)
+    for q in MARKS:
+        i = int(np.argmin(np.abs(cov - q)))
+        if not np.isfinite(rrc[i]):
+            continue
+        axR.plot(cov[i], rrc[i], "o", color=C_RR, ms=5, mec=SURFACE,
+                 mew=1.1, zorder=4)
+        edge = "left" if q <= XVIEW[0] + 1e-9 else (
+            "right" if q >= XVIEW[1] - 1e-9 else "center")
+        dx = {"left": 4, "right": -4, "center": 0}[edge]
+        # Value on its own line with the interval beneath it, so a
+        # reader tracking the curve reads the estimate first. All
+        # labels sit above the curve -- below the last one would run
+        # into the axis -- and the 0.95 label is lifted clear of the
+        # 1.00 label, which is close by on a flat stretch.
+        dy = 20 if q >= XVIEW[1] - 1e-9 else 7
+        axR.annotate(f"{rrc[i]:.1f}" + nl +
+                     f"({rrb[i, 0]:.1f}-{rrb[i, 1]:.1f})",
+                     xy=(cov[i], rrc[i]), xytext=(dx, dy),
+                     textcoords="offset points", ha=edge,
+                     va="bottom",
+                     fontsize=7.2, color=C_RR, zorder=5,
+                     linespacing=1.25,
+                     bbox=dict(facecolor=SURFACE, edgecolor="none",
+                               alpha=0.85, boxstyle="round,pad=0.12"))
+    axR.annotate("RR = 1", xy=(XVIEW[0] + 0.004, 1.0), ha="left",
+                 va="bottom", fontsize=7.5, color=INK2)
+
+
     for ext in ("pdf", "png"):
         fig.savefig(out_dir / f"figure1.{ext}", dpi=300,
                     bbox_inches="tight", facecolor=SURFACE)

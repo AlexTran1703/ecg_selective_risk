@@ -38,6 +38,10 @@ print(f"  {'-' * 19}")
 print(f"  {'TOTAL':<14}{total:>5}  / {LIMIT}"
       f"   ({LIMIT - total:+d} headroom)")
 
+# The title page may or may not declare a word count; update it if present
+# rather than failing, so this stays a read-only check when it is not.
 s, k = re.subn(r"(\\textbf\{Word count:\} )\d+", r"\g<1>%d" % total, s)
-assert k == 1, "word-count field not found on the title page"
-p.write_text(s, encoding="utf-8")
+if k:
+    p.write_text(s, encoding="utf-8")
+else:
+    print("  (no word-count field on the title page; nothing written)")

@@ -212,3 +212,34 @@ def patient_errors_at(loss: np.ndarray, conf: np.ndarray, q: float) -> int:
     """Count of retained ECGs carrying at least one error."""
     err = np.asarray(loss).astype(bool).any(axis=1)
     return int(err[_retained_ecgs(conf, q)].sum())
+
+
+def _as_ecg_flag(group: np.ndarray) -> np.ndarray:
+    g = np.asarray(group).astype(bool)
+    return g.any(axis=1) if g.ndim > 1 else g
+
+
+def patient_risk_in_group(loss: np.ndarray, conf: np.ndarray,
+                          group: np.ndarray, q: float,
+                          in_group: bool = True) -> float:
+    """Error prevalence among retained ECGs of one stratum.
+
+    Ranking is global -- the same whole-ECG confidence order that produces
+    overall selective risk -- and the split into strata happens only *after*
+    retention. Ranking within each stratum separately would silently make
+    coverage mean a different thing in each curve, so the two lines would no
+    longer be comparable at a given x.
+    """
+    err = np.asarray(loss).astype(bool).any(axis=1)
+    g = _as_ecg_flag(group)
+    keep = _retained_ecgs(conf, q)
+    sel = keep[g[keep]] if in_group else keep[~g[keep]]
+    return float(err[sel].mean()) if sel.size else float("nan")
+
+
+def patient_group_size(conf: np.ndarray, group: np.ndarray, q: float,
+                       in_group: bool = True) -> int:
+    """Number of retained ECGs in one stratum, the support behind the curve."""
+    g = _as_ecg_flag(group)
+    keep = _retained_ecgs(conf, q)
+    return int(g[keep].sum() if in_group else (~g[keep]).sum())

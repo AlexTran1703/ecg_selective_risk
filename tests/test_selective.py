@@ -297,3 +297,35 @@ def test_patient_risk_is_at_least_the_label_error_share():
     loss = (rng.random((200, 6)) < 0.02).astype(float)
     conf = rng.random((200, 6))
     assert patient_risk_at(loss, conf, 1.0) >= loss.mean()
+
+
+def test_stratified_risk_uses_one_global_ranking():
+    """The design constraint of the stratified panel.
+
+    Coverage must refer to the model's own referral order over all ECGs. If
+    each stratum were ranked separately, an ECG could be retained in its own
+    stratum while being outside the global retained set, and the two curves
+    would answer different questions at the same x.
+    """
+    from ecguq.selective import patient_group_size, patient_risk_in_group
+    # Group B holds the two least confident ECGs, so at 50% coverage neither
+    # survives the global ranking and its risk is undefined, not 0.
+    conf = np.array([[9.0], [8.0], [1.0], [0.5]])
+    loss = np.array([[0.0], [0.0], [1.0], [1.0]])
+    grp = np.array([[0], [0], [1], [1]], dtype=int)
+    assert patient_group_size(conf, grp, 0.5, in_group=True) == 0
+    assert np.isnan(patient_risk_in_group(loss, conf, grp, 0.5, True))
+    assert patient_risk_in_group(loss, conf, grp, 0.5, False) == 0.0
+
+
+def test_stratified_risk_at_full_coverage_matches_plain_prevalence():
+    rng = np.random.default_rng(40)
+    loss = (rng.random((300, 6)) < 0.03).astype(float)
+    conf = rng.random((300, 6))
+    grp = (rng.random(300) < 0.2)
+    from ecguq.selective import patient_risk_in_group
+    err = loss.astype(bool).any(axis=1)
+    assert patient_risk_in_group(loss, conf, grp, 1.0, True) == pytest.approx(
+        err[grp].mean())
+    assert patient_risk_in_group(loss, conf, grp, 1.0, False) == pytest.approx(
+        err[~grp].mean())
