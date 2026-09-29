@@ -1,219 +1,239 @@
-% Research Letter -- JACC: Clinical Electrophysiology
-% Current live limits (Aug 26, 2026): <=1,000 words including text,
-% references, and figure legend; <=5 references; <=10 authors;
-% 1 simple figure in no more than 2 parts OR 1 simple table;
-% no abstract; no supplemental material.
+% Journal of Electrocardiology -- Short Communication
+% Updated from the JACC: Clinical Electrophysiology Research Letter draft.
 %
-% NOTE: JACC requests Times New Roman 12 pt for submission. This LaTeX draft
-% uses a Times-compatible font. Use Times New Roman 12 pt in the final DOCX.
+% Current Short Communication limits reported in the Journal of Electrocardiology
+% Guide for Authors: 3--5 pages total (including text, references, figure legends,
+% tables and figures), no more than 8 references, and an abstract <=100 words.
+% The journal submission checklist also asks for keywords and a designated
+% corresponding author with e-mail and full postal address.
+%
+% This file uses Elsevier's elsarticle class for a submission-style draft.
+% Do not try to imitate the final published two-column layout at initial submission.
 
-\documentclass[12pt]{article}
+\documentclass[5p,times,twocolumn]{elsarticle}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{newtxtext,newtxmath}
-\usepackage[margin=1in]{geometry}
-\usepackage{setspace}
 \usepackage{graphicx}
-\usepackage[super,sort&compress]{natbib}
-\usepackage[hidelinks]{hyperref}
-\usepackage{caption}
-\usepackage{lineno}
+\usepackage{hyperref}
 
-\pagestyle{plain}
-\setlength{\parindent}{0.5in}
-\setlength{\parskip}{0pt}
-\renewcommand{\refname}{\normalsize References}
-\captionsetup{labelformat=empty,singlelinecheck=false,justification=raggedright,
-              font=normalsize}
+\hypersetup{hidelinks}
+\journal{Journal of Electrocardiology}
+\biboptions{sort&compress}
 
 \begin{document}
 
-% ============================ TITLE PAGE ============================
-% Single-spaced, 12 pt, left aligned, one field per line -- JACC asks for
-% a single-spaced title page with the rest of the text double-spaced.
-\begin{singlespace}
-\noindent{\bfseries\large Reader Disagreement Identifies Residual Diagnostic Risk in Automated Arrhythmia ECG Interpretation}
+\begin{frontmatter}
 
-\vspace{2em}
+\title{Reader Disagreement Identifies Residual Diagnostic Risk in Automated ECG Interpretation}
 
-\noindent Khanh Duy Tran$^{a}$
+\author[iu]{Khanh Duy Tran\corref{cor1}}
 
-\vspace{1em}
+\address[iu]{School of Electrical Engineering, International University -- Vietnam National University, Ho Chi Minh City, Vietnam}
 
-\noindent $^{a}$School of Electrical Engineering, International University --
-Vietnam National University, Ho Chi Minh City, Vietnam
+\cortext[cor1]{Corresponding author.}
 
+\ead{khanh1234tg@gmail.com}
+% REQUIRED BEFORE SUBMISSION:
+% \ead{your.email@institution.edu}
+% Add the complete postal address for the corresponding author if the affiliation
+% above is not sufficiently specific for the submission system.
+% Optional: add ORCID in the submission system or here if desired.
+\begin{abstract}
+Reader disagreement may preserve diagnostic difficulty lost after adjudication
+to a single reference label. We evaluated uncertainty-based referral and reader
+disagreement in CODE-test (827 12-lead ECGs). Overall diagnostic error decreased
+from 7.4\% at full coverage to 3.9\% at 90\% coverage, but
+disagreement-associated excess error persisted. At full coverage, error occurred
+in 33.3\% of disagreement ECGs versus 6.3\% with consensus (RR, 5.29; 95\% CI,
+2.70--8.85). From 90\% to 100\% coverage, RR and PR remained above 1 with 95\%
+CIs excluding 1, indicating residual diagnostic difficulty despite
+confidence-based referral.
+\end{abstract}
 
-\vspace{2em}
+\begin{keyword}
+electrocardiography \sep automated diagnosis \sep reader disagreement \sep uncertainty estimation \sep arrhythmia
+\end{keyword}
 
-% \noindent\textbf{Running title:} Reader Disagreement and Automated ECG Error
+\end{frontmatter}
 
-\vspace{0.8em}
+% Line numbers are useful for peer review and can be removed if the submission
+% system generates them automatically.
 
-% \noindent\textbf{Address for correspondence:} \\
-% Name, Degree \\
-% Department, Institution \\
-% Street, City, Postcode, Country \\
-% E-mail: name@institution.edu
+\section{Introduction}
 
-\vspace{0.8em}
-\end{singlespace}
-
-\newpage
-\doublespacing
-% Line numbers start with the body; the title page fields are not numbered.
-\linenumbers
-
-% ============================ RESEARCH LETTER ============================
 Reader disagreement during electrocardiographic (ECG) interpretation may signal
 cases near diagnostic boundaries, yet conventional evaluation typically reduces
 the adjudication process to a single final reference label, discarding
 information about how readily consensus was reached. Automated ECG
 interpretation has shown strong performance in rhythm and conduction diagnosis,
 particularly for arrhythmias, and has increasingly been extended to derive
-clinically relevant information beyond categorical classification.\cite{ribeiro2020,wei2022} 
-Prior work has demonstrated limited expert agreement
-in difficult AI--reader discordant ECGs, while uncertainty estimation can
-support referral of lower-confidence automated interpretations for expert
-review.\cite{vranken2021,mayourian2025} We therefore first evaluated whether
-uncertainty-based referral reduced the overall burden of automated diagnostic
-error and then examined whether the excess patient-level error risk associated
+clinically relevant information beyond categorical classification \cite{ribeiro2020,wei2022}.
+Prior work has demonstrated limited expert agreement in difficult AI--reader
+discordant ECGs, while uncertainty estimation can support referral of
+lower-confidence automated interpretations for expert review \cite{vranken2021,mayourian2025}.
+We therefore evaluated whether uncertainty-based referral reduced overall
+automated diagnostic error and whether excess patient-level error risk associated
 with reader disagreement declined in parallel or persisted across retained
 coverage.
+
+\section{Materials and methods}
 
 This retrospective secondary analysis used the Clinical Outcomes in Digital
 Electrocardiology (CODE) datasets from the Telehealth Network of Minas Gerais,
 Brazil, comprising standard 12-lead ECGs acquired predominantly with TEB ECGPC
-or ErgoPC 13 devices.\cite{ribeiro2020} CODE-15\%, including 345,779 ECGs from
-233,770 patients recorded between 2010 and 2016, served as the model-development
-cohort.\cite{code15} Independent evaluation used CODE-test, an
-arrhythmia- and conduction-focused set of 827 ECGs from 827 patients collected
-in 2018. Each ECG was independently interpreted by 2 cardiologists for 6
-prespecified rhythm and conduction diagnoses, with disagreements adjudicated by
-a third senior specialist.\cite{ribeiro2020} The analysis used only publicly
-available, de-identified data; the source CODE study was approved by the
-Research Ethics Committee of the Universidade Federal de Minas Gerais
-(protocol 49368496317.7.0000.5149).\cite{ribeiro2020}
+or ErgoPC 13 devices \cite{ribeiro2020}. CODE-15\%, containing 345,779 ECGs
+from 233,770 patients recorded between 2010 and 2016, served as the
+model-development cohort \cite{code15}. Independent evaluation used CODE-test,
+an arrhythmia- and conduction-focused set of 827 ECGs from 827 patients
+collected in 2018. Each ECG was independently interpreted by 2 cardiologists
+for 6 prespecified rhythm and conduction diagnoses, with disagreements
+adjudicated by a third senior specialist \cite{ribeiro2020}.
 
 An ensemble of 5 lightweight 1-dimensional convolutional neural networks with
-the same architecture was trained using different random seeds, and their
-predicted probabilities were averaged. Following prior work, model confidence
-was defined from the diagnosis-specific decision threshold, and whole ECGs were
-referred according to their least confident diagnosis.\cite{vranken2021}
+the same architecture was trained using different random seeds, and predicted
+probabilities were averaged. Following prior work, diagnosis-specific confidence
+was defined relative to the decision threshold, and each ECG was assigned the
+confidence of its least confident diagnosis \cite{vranken2021}. Progressively
+lower-confidence ECGs were referred from automated interpretation.
 
-For each ECG, confidence was defined by its least confident diagnosis, and
-progressively lower-confidence ECGs were referred according to the previously
-described uncertainty framework.\cite{vranken2021} Error burden was defined as
-the proportion of retained ECGs containing at least 1 incorrect diagnosis among
-the 6 labels. Reader disagreement was then examined in relation to this error
-burden. The primary comparison used a risk ratio (RR) to compare the occurrence
-of any model error between ECGs with reader disagreement and those with reader
-consensus, while a prevalence ratio (PR) descriptively quantified enrichment of
-reader disagreement among ECGs containing any model error relative to the
-overall cohort. Confidence intervals were estimated by bootstrap resampling of
-whole ECGs, preserving all 6 labels within each ECG.
+Error burden was the proportion of retained ECGs with at least 1 incorrect
+diagnosis among the 6 labels. At each coverage level, RR compared error risk
+between ECGs with reader disagreement and consensus, while PR quantified the
+enrichment of reader disagreement among error-containing ECGs relative to all
+retained ECGs. Confidence intervals were obtained from 1000 whole-ECG bootstrap
+resamples using the percentile method, with ratios recalculated within each
+replicate.
+
+\section{Results}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.88\columnwidth]{figures/figure1.pdf}
+    \caption{\textbf{Uncertainty-based referral of whole ECGs.}
+    Error burden across uncertainty-based whole-ECG referral, using the least
+    confident diagnosis to define ECG-level confidence. Annotated points
+    indicate selected coverage levels and shading represents 95\% ECG-level
+    bootstrap confidence intervals.}
+    \label{fig:referral}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.96\columnwidth]{figures/figure2.pdf}
+    \caption{\textbf{Reader disagreement and residual diagnostic risk across uncertainty-based referral.}
+    \textbf{(A)} Patient-level diagnostic error across retained ECG coverage,
+    stratified by reader disagreement versus consensus.
+    \textbf{(B)} Risk ratio (RR) for any diagnostic error and prevalence ratio
+    (PR) for enrichment of reader disagreement among error-containing ECGs,
+    evaluated across retained coverage. Shading represents 95\% bootstrap
+    confidence intervals; the dashed line in panel B denotes the null value of 1.}
+    \label{fig:disagreement}
+\end{figure}
 
 Diagnostic errors were concentrated in the lowest-confidence ECGs. At full
 coverage, 61 of 827 ECGs (7.4\%) contained at least 1 diagnostic error,
-decreasing to 40 ECGs (5.1\%) at 95\% coverage and 29 ECGs (3.9\%) at
-90\% coverage (Figure 1A). This progressive reduction in error burden as
-lower-confidence ECGs were referred indicates that confidence distinguished
-more from less reliable automated ECG interpretations.
+decreasing to 40 ECGs (5.1\%) at 95\% coverage and 29 ECGs (3.9\%) at 90\%
+coverage (Fig.~\ref{fig:referral}). Thus, referral of lower-confidence
+ECGs progressively reduced
+the retained error burden.
 
 Across 80\% to 100\% coverage, ECGs with reader disagreement maintained a
 consistently higher patient-level diagnostic error rate than those with reader
-consensus (Figure 1B), rather than the excess risk emerging only as
-lower-confidence ECGs were added.  The mean error-risk difference across this range was
-26.4 percentage points (95\% CI: 6.4--49.7).
+consensus (Fig.~\ref{fig:disagreement}A), rather than the excess risk
+emerging only as lower-confidence ECGs were added. 
+
+Given that only 33 ECGs had reader disagreement, ratio estimates became
+increasingly imprecise at lower retained coverage, as reflected by the widening
+confidence intervals. From 90\% through 100\% coverage, however, both the RR
+and PR remained above the null value of 1, with their 95\% confidence intervals
+also excluding 1 (Fig.~\ref{fig:disagreement}B). Thus, reader disagreement
+remained associated with greater diagnostic error risk and was consistently
+enriched among error-containing ECGs even after lower-confidence ECGs were
+referred.
 
 At full coverage, any diagnostic error occurred in 11 of 33 ECGs with reader
 disagreement (33.3\%) compared with 50 of 794 ECGs with reader consensus
-(6.3\%; RR: 5.29; 95\% CI: 2.70--8.85). This full-coverage association was
-significant by two-sided Fisher exact test ($P<0.001$). Reader disagreement
-was uncommon overall, occurring in 33 of 827 ECGs (4.0\%), but was present in
-11 of 61 ECGs containing any diagnostic error (18.0\%; PR: 4.5; 95\% CI:
-2.6--6.8). Thus, reader disagreement was enriched among error-containing ECGs
-and marked a subgroup with persistently greater diagnostic error risk across
-the examined referral range.
+(6.3\%; RR, 5.29; 95\% CI, 2.70--8.85; two-sided Fisher exact $P<0.001$).
+Reader disagreement occurred in 33 of 827 ECGs (4.0\%) overall but in 11 of 61
+ECGs containing any diagnostic error (18.0\%; PR, 4.5; 95\% CI, 2.6--6.8).
+In 9 of the 11 ECGs with both reader disagreement and diagnostic error, the error
+involved the disputed diagnosis; in the remaining 2, it involved a different
+diagnosis.
 
-In 9 of the 11 ECGs with both reader disagreement and diagnostic error, the
-error involved the disputed diagnosis; in the remaining 2, it involved a
-different diagnosis. Thus, disagreement most often marked difficulty in the
-same diagnostic decision, while occasionally reflecting broader interpretive
-difficulty. Disagreement should not be interpreted as evidence that the
-adjudicated reference was incorrect, but rather as a marker of an interpretive
-boundary where independent cardiologists did not initially converge, consistent
-with prior expert readjudication of difficult AI--reader discordant
-ECGs.\cite{mayourian2025}
+\section{Discussion}
 
-Uncertainty-based referral reduced overall error burden but did not eliminate
-the excess risk associated with reader disagreement. Automated diagnostic
-uncertainty supports referral, whereas reader disagreement marks residual
-diagnostic difficulty that persists after lower-confidence ECGs are excluded.
-In arrhythmia assessment, these findings suggest that a single inconclusive
-tracing may prompt repeat or longitudinal evaluation. More broadly, collapsing
-expert annotations into one adjudicated label discards information about label
-reliability; preserving individual reader labels and adjudication history may
-therefore improve evaluation of automated ECG systems. This retrospective analysis 
-was based on a modest number of disagreement ECGs;
-therefore, the findings warrant confirmation in larger cohorts.
-% ============================ REFERENCES ============================
-% Order here sets the numbering: entries must be in order of first
-% citation. Double-spaced and on its own page, per the journal.
-\clearpage
-\begin{thebibliography}{5}
+Uncertainty-based referral reduced overall error burden but did not eliminate the
+excess risk associated with reader disagreement. Disagreement therefore marked a
+subgroup with residual diagnostic difficulty even after lower-confidence ECGs
+were excluded. It should not be interpreted as evidence that the adjudicated
+reference was incorrect, but rather as a marker of an interpretive boundary where
+independent cardiologists did not initially converge, consistent with prior expert
+readjudication of difficult AI--reader discordant ECGs \cite{mayourian2025}.
+
+These findings distinguish two complementary signals in automated ECG evaluation:
+model confidence can identify interpretations suitable for referral, whereas
+reader disagreement preserves information about reference-label reliability that
+is lost when adjudication is collapsed to a single final label. Preserving
+individual reader labels and adjudication history may therefore improve evaluation
+of automated ECG systems. This retrospective analysis included a modest number of
+disagreement ECGs, and the findings warrant confirmation in larger cohorts.
+
+\section*{Funding}
+
+This research did not receive any specific grant from funding agencies in the
+public, commercial, or not-for-profit sectors.
+
+\section*{CRediT authorship contribution statement}
+
+Khanh Duy Tran: Conceptualization, Methodology, Software, Formal analysis,
+Visualization, Writing -- original draft, Writing -- review \& editing.
+
+\section*{Declaration of competing interest}
+
+The author declares no competing interests.
+
+\section*{Data availability}
+
+CODE-15\% and CODE-test are publicly available from Zenodo
+(doi:10.5281/zenodo.4916206 and doi:10.5281/zenodo.3765780, respectively).
+
+\section*{Declaration of generative AI use}
+
+During the preparation of this work, the author used ChatGPT (OpenAI) 
+solely to check grammar and polish wording. The author reviewed and 
+edited all resulting text and takes full responsibility for the content of the published article.
+
+\begin{thebibliography}{8}
 
 \bibitem{ribeiro2020}
-Ribeiro AH, Ribeiro MH, Paixão GMM, et al. Automatic diagnosis of the 12-lead
-ECG using a deep neural network. \textit{Nat Commun}. 2020;11:1760.
+Ribeiro AH, Ribeiro MH, Paix\~ao GMM, et al. Automatic diagnosis of the 12-lead
+ECG using a deep neural network. Nat Commun 2020;11:1760.
+\url{https://doi.org/10.1038/s41467-020-15432-4}.
 
 \bibitem{wei2022}
 Wei G, Di X, Zhang W, et al. Estimating critical values from electrocardiogram
-using a deep ordinal convolutional neural network.
-\textit{BMC Med Inform Decis Mak}. 2022;22:295.
+using a deep ordinal convolutional neural network. BMC Med Inform Decis Mak
+2022;22:295. \url{https://doi.org/10.1186/s12911-022-02035-w}.
 
 \bibitem{vranken2021}
 Vranken JF, van de Leur RR, Gupta DK, et al. Uncertainty estimation for deep
-learning-based automated analysis of 12-lead electrocardiograms.
-\textit{Eur Heart J Digit Health}. 2021;2:401--415.
+learning-based automated analysis of 12-lead electrocardiograms. Eur Heart J
+Digit Health 2021;2:401--415. \url{https://doi.org/10.1093/ehjdh/ztab045}.
 
 \bibitem{mayourian2025}
 Mayourian J, La Cava WG, de Ferranti SD, et al. Expert-level automated diagnosis
-of the pediatric ECG using a deep neural network.
-\textit{J Am Coll Cardiol EP}. 2025;11:1308--1320.
+of the pediatric ECG using a deep neural network. JACC Clin Electrophysiol
+2025;11:1308--1320. \url{https://doi.org/10.1016/j.jacep.2025.02.003}.
 
 \bibitem{code15}
-Ribeiro AH, Paixão GMM, Lima EM, et al. CODE-15\%: a large scale annotated
-dataset of 12-lead ECGs. Zenodo. Published June 9, 2021.
-\url{https://doi.org/10.5281/zenodo.4916206}.
+Ribeiro AH, Paix\~ao GMM, Lima EM, et al. CODE-15\%: a large scale annotated
+dataset of 12-lead ECGs. Zenodo; 2021. \url{https://doi.org/10.5281/zenodo.4916206}.
+
 \end{thebibliography}
 
-% ============================ FIGURE LEGEND ============================
-\clearpage
-
-
-% The journal requires the figure as a separate upload. The image below is
-% included only to make this drafting PDF self-contained for review.
-% Not a float: placed at the top of its own page rather than drifting to the
-% vertical centre. Drawn at 7.4 in and centred across the margins, because
-% \textwidth here is 6.5 in and scaling to that would put the lettering back
-% below the journal's 10 pt floor.
-\clearpage
-\nolinenumbers        % a stray line number was printing beside the figure
-\thispagestyle{plain}
-\noindent\makebox[\textwidth][c]{%
-  \includegraphics[width=7.4in]{figures/figure1.pdf}}
-\noindent\textbf{Figure 1. Uncertainty-Based Referral and Reader Disagreement in Automated ECG Diagnosis.}
-\textbf{(A)} Error burden across uncertainty-based whole-ECG referral using the
-least confident diagnosis to define ECG-level confidence.
-\textbf{(B)} Patient-level diagnostic error across retained coverage, stratified
-by reader disagreement versus consensus. The corresponding risk ratio (RR)
-compares both groups; the dashed line denotes RR = 1. Circles mark annotated
-coverage levels; shading represents 95\% ECG-level bootstrap confidence
-intervals.
-\vfill
-
-
+% Single-column floats. Widths match the authored canvases (77 mm and
+% 84 mm) so \includegraphics neither enlarges nor shrinks the lettering.
 
 \end{document}

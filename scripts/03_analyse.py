@@ -46,6 +46,7 @@ from ecguq.bootstrap import clustered_ci, fmt                     # noqa: E402
 from ecguq.data import LABELS                                     # noqa: E402
 from ecguq.metrics import macro_auprc, macro_auroc                # noqa: E402
 from ecguq.selective import (retained_mask, disagreement_enrichment,             # noqa: E402
+                             _retained_ecgs,
                              patient_errors_at, patient_risk_at,
                              patient_group_size, patient_risk_in_group,
                              disputed_error_share, disputed_prevalence,
@@ -284,7 +285,11 @@ def main() -> None:
         return a / b if np.isfinite(a) and np.isfinite(b) and b > 0 \
             else float('nan')
 
-    reps_band = max(200, args.replicates // 4)
+    # One replicate count for everything. The curves used to run at a
+    # quarter of this to save time, which left the same estimand with
+    # two different intervals -- the scalar in the text and the curve
+    # endpoint in the figure disagreed at full coverage.
+    reps_band = args.replicates
     panelc = {}
     for nm, ing, sd in (("dis", True, 20), ("con", False, 21)):
         panelc[nm] = np.array([
@@ -296,7 +301,18 @@ def main() -> None:
             n, reps_band, seed=sd)[1:] for q in COVERAGES])
         panelc[nm + "_n"] = np.array([
             patient_group_size(conf, dis_ecg, q, ing) for q in COVERAGES])
-    panelc["rr"] = clustered_ci(_rr, n, args.replicates, seed=12)
+
+
+    # Prevalence ratio: disagreement among error-containing ECGs
+    # against disagreement in the whole cohort. The other direction
+    # of the same association, and the bridge back to figure 1.
+    def _pr(i):
+        a = (float(dis_ecg[i][err_ecg[i]].mean())
+             if err_ecg[i].any() else float('nan'))
+        b = float(dis_ecg[i].mean())
+        return a / b if np.isfinite(a) and b > 0 else float('nan')
+
+
 
     # RR at every coverage. The ratio is formed inside each replicate;
     # dividing the two risk curves' confidence limits would be wrong.
@@ -314,14 +330,42 @@ def main() -> None:
                      else (np.nan, np.nan, np.nan) for q in COVERAGES])
     panelc["rr_curve"] = rr_c[:, 0]
     panelc["rr_band"] = rr_c[:, 1:]
+
+    # PR(c): disagreement among the errors that survive referral,
+    # against disagreement among everything retained *at that same
+    # coverage*. Using the fixed full-cohort prevalence as denominator
+    # would compare a shrinking numerator set against a set that never
+    # shrinks, and the ratio would drift for that reason alone.
+    def _pr_at(q):
+        def f(i):
+            keep = _retained_ecgs(conf[i], q)
+            d, e = dis_ecg[i][keep], err_ecg[i][keep]
+            if not e.any() or not d.any():
+                return float('nan')
+            base = float(d.mean())
+            return float(d[e].mean()) / base if base > 0 \
+                else float('nan')
+        return clustered_ci(f, n, reps_band, seed=31)
+
+    pr_c = np.array([_pr_at(q) if RRVIEW[0] - 1e-9 <= q <= RRVIEW[1]
+                     else (np.nan, np.nan, np.nan) for q in COVERAGES])
+    panelc["pr_curve"] = pr_c[:, 0]
+    panelc["pr_band"] = pr_c[:, 1:]
+
+    # The full-coverage values quoted in the text are the endpoints of
+    # these same curves, not a separate bootstrap with its own seed.
+    panelc["rr"] = (rr_c[-1, 0], rr_c[-1, 1], rr_c[-1, 2])
+    panelc["pr"] = (pr_c[-1, 0], pr_c[-1, 1], pr_c[-1, 2])
     panelc["n_all"] = n
     panelc["n_dis"] = int(dis_ecg.sum())
     panelc["n_con"] = int((~dis_ecg).sum())
     panelc["n_err"] = int(err_ecg.sum())
     panelc["n_errD"] = int((err_ecg & dis_ecg).sum())
     panelc["n_errC"] = int((err_ecg & ~dis_ecg).sum())
-    figure(COVERAGES, risk_c, band_r, marks, panelc,
-           args.out / "figures")
+    figure_referral(COVERAGES, risk_c, band_r, marks,
+                    args.out / "figures")
+    figure_disagreement(COVERAGES, panelc,
+                        args.out / "figures")
 
     text = "\n".join(lines)
     (args.out / "tables" / "results.txt").write_text(text + "\n",
@@ -447,151 +491,133 @@ def _ytop(vals, pad=1.08):
     return float(v.max() * pad) if v.size and v.max() > 0 else 1.0
 
 
-def _annotate_marks(ax, cov, curve, qs, col, above=True, fs=8.5):
-    """Mark the reported operating points and print their values."""
-    for q in qs:
-        i = int(np.argmin(np.abs(cov - q)))
-        v = curve[i]
-        if not np.isfinite(v):
-            continue
-        ax.plot(cov[i], v * 100, "o", color=col, ms=5.5, mec=SURFACE,
-                mew=1.2, zorder=4)
-        edge = "left" if q <= XVIEW[0] + 1e-9 else (
-            "right" if q >= XVIEW[1] - 1e-9 else "center")
-        dx = {"left": 5, "right": -5, "center": 0}[edge]
-        ax.annotate(f"{v * 100:.1f}", xy=(cov[i], v * 100),
-                    xytext=(dx, 7 if above else -7),
-                    textcoords="offset points", ha=edge,
-                    va="bottom" if above else "top", fontsize=fs,
-                    color=col, zorder=5,
-                    bbox=dict(facecolor=SURFACE, edgecolor="none",
-                              alpha=0.8, boxstyle="round,pad=0.12"))
+# Single-column figures for J Electrocardiol: drawn at final size so the
+# lettering is what it looks like here, rather than a wide canvas squashed
+# down by \includegraphics until the labels are unreadable.
+FS_TICK, FS_LAB, FS_ANN, FS_TITLE = 7.0, 7.5, 6.6, 8.0
 
 
-def figure(cov, risk, band_r, marks, panelc, out_dir: Path) -> None:
-    """Two panels on one coverage axis: overall referral, then stratified."""
-    nl = chr(10)
-    fig = plt.figure(figsize=(7.9, 4.6), facecolor=SURFACE)
-    # Panel B is two stacked axes sharing one coverage axis: the risk
-    # curves, and a shallow RR strip. Formally still one part.
-    gs = fig.add_gridspec(2, 2, height_ratios=[2.5, 1.0],
-                          hspace=0.12, wspace=0.28,
-                          left=0.085, right=0.985, top=0.86,
-                          bottom=0.115)
-    axA = fig.add_subplot(gs[:, 0])
-    axB = fig.add_subplot(gs[0, 1])
-    axR = fig.add_subplot(gs[1, 1], sharex=axB)
-    axes = [axA, axB]
-    for ax in (axA, axB, axR):
-        ax.set_facecolor(SURFACE)
-        ax.grid(color=GRID, lw=0.6, alpha=0.9)
-        ax.set_axisbelow(True)
-        for sp in ("top", "right"):
-            ax.spines[sp].set_visible(False)
-        for sp in ("left", "bottom"):
-            ax.spines[sp].set_color(GRID)
-        ax.tick_params(colors=INK2, labelsize=9.5, length=3)
-        ax.set_xlim(*XVIEW)
-        ax.set_xticks(XTICKS)
-    for ax in axes:
-        ax.set_ylabel(r"ECGs with $\geq$1 error (%)", fontsize=10.5,
-                      color=INK)
-    axA.set_xlabel("ECG coverage", fontsize=10.5, color=INK)
-    axR.set_xlabel("ECG coverage", fontsize=10.5, color=INK)
-    plt.setp(axB.get_xticklabels(), visible=False)
+def _frame(ax):
+    ax.set_facecolor(SURFACE)
+    ax.grid(color=GRID, lw=0.5, alpha=0.9)
+    ax.set_axisbelow(True)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    for sp in ("left", "bottom"):
+        ax.spines[sp].set_color(GRID)
+    ax.tick_params(colors=INK2, labelsize=FS_TICK, length=2.5, pad=2)
 
-    # ---- A: overall ------------------------------------------------
-    ax = axes[0]
+
+def _edge(q):
+    if q <= XVIEW[0] + 1e-9:
+        return "left", 4
+    if q >= XVIEW[1] - 1e-9:
+        return "right", -4
+    return "center", 0
+
+
+def figure_referral(cov, risk, band_r, marks, out_dir: Path) -> None:
+    """Figure 1: whole-ECG referral. One curve, so no panel letters."""
+    fig, ax = plt.subplots(figsize=(2.95, 2.15), facecolor=SURFACE)
+    _frame(ax)
     ax.fill_between(cov, band_r[:, 0] * 100, band_r[:, 1] * 100,
                     color=C_AGREE, alpha=0.18, lw=0)
-    ax.plot(cov, risk * 100, color=C_AGREE, lw=2.0,
-            solid_capstyle="round", zorder=3)
-    ax.set_ylim(0, _ytop(band_r[:, 1][_inview(cov)] * 100))
+    ax.plot(cov, risk * 100, color=C_AGREE, lw=1.6, solid_capstyle="round",
+            zorder=3)
     for q, r, ne in marks:
-        ax.plot(q, r * 100, "o", color=C_AGREE, ms=6, mec=SURFACE, mew=1.3,
+        ha, dx = _edge(q)
+        ax.plot(q, r * 100, "o", color=C_AGREE, ms=4, mec=SURFACE, mew=1,
                 zorder=4)
-        edge = "left" if q <= XVIEW[0] + 1e-9 else (
-            "right" if q >= XVIEW[1] - 1e-9 else "center")
-        dx = {"left": 5, "right": -5, "center": 0}[edge]
-        ax.annotate(f"{r * 100:.1f}%" + nl + f"{ne} ECGs",
-                    xy=(q, r * 100),
-                    xytext=(dx, 9), textcoords="offset points",
-                    ha=edge, va="bottom", fontsize=8.5, color=INK2,
-                    linespacing=1.3, zorder=5,
+        ax.annotate(f"{r * 100:.1f}%", xy=(q, r * 100), xytext=(dx, 5),
+                    textcoords="offset points", ha=ha, va="bottom",
+                    fontsize=FS_ANN, color=INK2, zorder=5,
                     bbox=dict(facecolor=SURFACE, edgecolor="none",
-                              alpha=0.8, boxstyle="round,pad=0.12"))
-    ax.set_title("A   Uncertainty-based referral" + nl + "of whole ECGs",
-                 fontsize=10.5, color=INK, loc="left", pad=12)
+                              alpha=0.8, boxstyle="round,pad=0.1"))
+    ax.set_xlim(*XVIEW)
+    ax.set_xticks(XTICKS)
+    ax.set_ylim(0, _ytop(band_r[:, 1][_inview(cov)] * 100))
+    ax.set_xlabel("ECG coverage", fontsize=FS_LAB, color=INK)
+    ax.set_ylabel(r"ECGs with $\geq$1 error (%)", fontsize=FS_LAB, color=INK)
+    fig.tight_layout(pad=0.4)
+    for ext in ("pdf", "png"):
+        fig.savefig(out_dir / f"figure1.{ext}", dpi=600,
+                    bbox_inches="tight", facecolor=SURFACE)
+    plt.close(fig)
 
-    # ---- B: stratified ----------------------------------------------
-    ax = axes[1]
+
+def figure_disagreement(cov, panelc, out_dir: Path) -> None:
+    """Figure 2: stratified error across coverage (A) and the ratios (B)."""
+    nl = chr(10)
+    fig = plt.figure(figsize=(3.35, 3.85), facecolor=SURFACE)
+    gs = fig.add_gridspec(2, 1, height_ratios=[1.6, 1.0], hspace=0.46,
+                          left=0.18, right=0.965, top=0.94, bottom=0.10)
+    axA, axB = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
+
+    # ---- A: error by reader agreement across retained coverage -------
+    _frame(axA)
     vis = _inview(cov)
     top = 0.0
-    for nm, col, lab, up in (
-            ("dis", C_DISPUTE, "reader disagreement", True),
-            ("con", C_AGREE, "reader consensus", True)):
+    for nm, col, lab in (("dis", C_DISPUTE, "reader disagreement"),
+                         ("con", C_AGREE, "reader consensus")):
         r, band = panelc[nm], panelc[nm + "_band"]
         ok = np.isfinite(r) & vis
-        fb = np.isfinite(band[:, 1]) & ok
-        ax.fill_between(cov[fb], band[fb, 0] * 100, band[fb, 1] * 100,
-                        color=col, alpha=0.16, lw=0)
-        ax.plot(cov[ok], r[ok] * 100, color=col, lw=2.0, label=lab,
-                solid_capstyle="round", zorder=3)
-        _annotate_marks(ax, cov, r, MARKS, col, above=up)
+        fb = ok & np.isfinite(band[:, 1])
+        axA.fill_between(cov[fb], band[fb, 0] * 100, band[fb, 1] * 100,
+                         color=col, alpha=0.16, lw=0)
+        axA.plot(cov[ok], r[ok] * 100, color=col, lw=1.6, label=lab,
+                 solid_capstyle="round", zorder=3)
         top = max(top, float(np.nanmax(band[fb, 1])) * 100 if fb.any() else 0)
-    ax.set_ylim(0, top * 1.16)
-    # RR rides in the legend title: anywhere inside the axes it would
-    # land on a curve or inside the disagreement band.
-    ax.legend(loc="upper left", frameon=True, facecolor=SURFACE,
-              edgecolor=GRID, framealpha=0.92, fontsize=8.5,
-              labelcolor=INK2, handlelength=1.6, borderpad=0.5)
-    ax.set_title("B   Error by reader agreement" + nl + "across referral",
-                 fontsize=10.5, color=INK, loc="left", pad=12)
+    axA.set_xlim(*XVIEW)
+    axA.set_xticks(XTICKS)
+    axA.set_ylim(0, top * 1.22)
+    axA.set_xlabel("ECG coverage", fontsize=FS_LAB, color=INK)
+    axA.set_ylabel(r"ECGs with $\geq$1 error (%)", fontsize=FS_LAB, color=INK)
+    axA.legend(loc="upper left", frameon=True, facecolor=SURFACE,
+               edgecolor=GRID, framealpha=0.92, fontsize=FS_ANN,
+               labelcolor=INK2, handlelength=1.3, borderpad=0.4,
+               handletextpad=0.5)
+    axA.set_title("A", fontsize=FS_TITLE, color=INK, loc="left", pad=4,
+                  fontweight="bold")
 
-    # ---- B, lower strip: RR across coverage -------------------------
-    rrc, rrb = panelc["rr_curve"], panelc["rr_band"]
-    ok = np.isfinite(rrc) & _inview(cov)
-    axR.axhline(1.0, color=INK2, lw=1.0, ls=(0, (3, 3)), zorder=2)
-    fb = ok & np.isfinite(rrb[:, 1])
-    axR.fill_between(cov[fb], rrb[fb, 0], rrb[fb, 1], color=C_RR,
-                     alpha=0.16, lw=0)
-    axR.plot(cov[ok], rrc[ok], color=C_RR, lw=1.8,
-             solid_capstyle="round", zorder=3)
-    axR.set_ylabel("RR", fontsize=10.5, color=INK)
-    # Scale to the point estimates: the interval at low coverage runs to
-    # about 75 and would flatten the region that carries the result.
-    ytop = float(np.nanmax(rrc[ok])) * 1.55 if ok.any() else 30.0
-    axR.set_ylim(0, ytop)
-    for q in MARKS:
-        i = int(np.argmin(np.abs(cov - q)))
-        if not np.isfinite(rrc[i]):
-            continue
-        axR.plot(cov[i], rrc[i], "o", color=C_RR, ms=5, mec=SURFACE,
-                 mew=1.1, zorder=4)
-        edge = "left" if q <= XVIEW[0] + 1e-9 else (
-            "right" if q >= XVIEW[1] - 1e-9 else "center")
-        dx = {"left": 4, "right": -4, "center": 0}[edge]
-        # Value on its own line with the interval beneath it, so a
-        # reader tracking the curve reads the estimate first. All
-        # labels sit above the curve -- below the last one would run
-        # into the axis -- and the 0.95 label is lifted clear of the
-        # 1.00 label, which is close by on a flat stretch.
-        dy = 20 if q >= XVIEW[1] - 1e-9 else 7
-        axR.annotate(f"{rrc[i]:.1f}" + nl +
-                     f"({rrb[i, 0]:.1f}-{rrb[i, 1]:.1f})",
-                     xy=(cov[i], rrc[i]), xytext=(dx, dy),
-                     textcoords="offset points", ha=edge,
-                     va="bottom",
-                     fontsize=7.2, color=C_RR, zorder=5,
-                     linespacing=1.25,
-                     bbox=dict(facecolor=SURFACE, edgecolor="none",
-                               alpha=0.85, boxstyle="round,pad=0.12"))
-    axR.annotate("RR = 1", xy=(XVIEW[0] + 0.004, 1.0), ha="left",
-                 va="bottom", fontsize=7.5, color=INK2)
-
+    # ---- B: both ratios across the same coverage axis ---------------
+    _frame(axB)
+    axB.axhline(1.0, color=INK2, lw=0.9, ls=(0, (3, 3)), zorder=2)
+    top_r = 0.0
+    for key, col, lab in (("rr", C_DISPUTE, "RR"), ("pr", C_AGREE, "PR")):
+        c_, b_ = panelc[key + "_curve"], panelc[key + "_band"]
+        ok = np.isfinite(c_) & vis
+        fb = ok & np.isfinite(b_[:, 1])
+        axB.fill_between(cov[fb], b_[fb, 0], b_[fb, 1], color=col,
+                         alpha=0.12, lw=0)
+        axB.plot(cov[ok], c_[ok], color=col, lw=1.6, label=lab,
+                 solid_capstyle="round", zorder=3)
+        if ok.any():
+            top_r = max(top_r, float(np.nanmax(c_[ok])))
+    axB.set_xlim(*XVIEW)
+    axB.set_xticks(XTICKS)
+    axB.set_ylim(0, top_r * 1.28)
+    axB.set_xlabel("ECG coverage", fontsize=FS_LAB, color=INK)
+    axB.set_ylabel("ratio", fontsize=FS_LAB, color=INK)
+    axB.legend(loc="upper right", frameon=True, facecolor=SURFACE,
+               edgecolor=GRID, framealpha=0.92, fontsize=FS_ANN,
+               labelcolor=INK2, handlelength=1.3, borderpad=0.35,
+               handletextpad=0.5, ncol=2, columnspacing=1.0)
+    axB.annotate("no association", xy=(XVIEW[1] - 0.004, 1.0),
+                 xytext=(0, 2), textcoords="offset points", ha="right",
+                 va="bottom", fontsize=FS_ANN - 0.6, color=INK2)
+    # The interval runs past the top below 0.90; say so rather than
+    # letting a clipped band read as a narrow one.
+    hi_all = np.nanmax([panelc["rr_band"][:, 1][vis],
+                        panelc["pr_band"][:, 1][vis]])
+    if hi_all > top_r * 1.28:
+        axB.annotate("CI extends beyond axis", xy=(0.5, 0.965),
+                     xycoords="axes fraction", ha="center", va="top",
+                     fontsize=FS_ANN - 0.8, color=INK2, style="italic")
+    axB.set_title("B", fontsize=FS_TITLE, color=INK, loc="left", pad=4,
+                  fontweight="bold")
 
     for ext in ("pdf", "png"):
-        fig.savefig(out_dir / f"figure1.{ext}", dpi=300,
+        fig.savefig(out_dir / f"figure2.{ext}", dpi=600,
                     bbox_inches="tight", facecolor=SURFACE)
     plt.close(fig)
 
