@@ -1,0 +1,10 @@
+Supplementary Table S6. Macro AUROC by held-out source. AUPRC in Table III is the primary endpoint; AUROC is reported because it is the more familiar number, not because it is the more informative one under this class imbalance.
+------------------------------------------------------------------------------
+               PTB-XL  Georgia  Chapman  Ningbo   mean
+model                                                 
+TinyCNN         0.861    0.839    0.897   0.917  0.879
+DS-CNN          0.862    0.844    0.905   0.924  0.883
+MobileNet1D     0.849    0.839    0.910   0.925  0.881
+MBConv1D        0.876    0.855    0.916   0.934  0.895
+TCN-Lite        0.867    0.846    0.913   0.930  0.889
+ResNet1D-Lite   0.871    0.853    0.927   0.940  0.898

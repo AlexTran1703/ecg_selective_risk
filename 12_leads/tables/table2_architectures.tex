@@ -1,0 +1,16 @@
+\begin{table}
+\caption{Table II. The six encoder families at their reference width. All share the same input (10 s, 12 leads, 100 Hz), the same global-average-pooled linear head and the same training recipe, so differences are attributable to the body. MACs are measured by ST Edge AI on the quantised graph, and count multiply-accumulate operations per inference. Width-scaled variants are supplementary.}
+\begin{tabular}{llrrllr}
+\toprule
+ & width & parameters & learnable conv layers & blocks & core operation & MACs (M) \\
+model &  &  &  &  &  &  \\
+\midrule
+TinyCNN & 1.0 & 38349 & 4 & 4 conv & plain Conv1D, stride 2 & 4.280000 \\
+DS-CNN & 1.0 & 19277 & 7 & stem + 3 separable & depthwise + pointwise & 3.330000 \\
+MobileNet1D & 1.0 & 19709 & 11 & stem + 5 separable & depthwise + pointwise & 2.670000 \\
+MBConv1D & 1.0 & 89453 & 19 & stem + 6 inverted bottleneck & inverted bottleneck, expand 4 & 9.990000 \\
+TCN-Lite & 1.0 & 40829 & 4 & 4 dilated & dilated Conv1D, d = 1/2/4/8 & 10.250000 \\
+ResNet1D-Lite & 1.0 & 485069 & 12 & 4 residual & residual Conv1D & 54.470000 \\
+\bottomrule
+\end{tabular}
+\end{table}

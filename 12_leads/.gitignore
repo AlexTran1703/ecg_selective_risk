@@ -1,0 +1,47 @@
+# 12_leads: only code, figures and tables are versioned.
+#
+# Everything else here is either enormous or regenerable from the scripts
+# that are versioned. The rule of thumb: if a script can rebuild it, git
+# should not carry it.
+
+# ---------------------------------------------------------------------------
+# Decimated signal caches - 5.2 GB, rebuilt by ecgmcu.data.prepare()
+# ---------------------------------------------------------------------------
+data/
+
+# ---------------------------------------------------------------------------
+# Per-study output: prediction caches (.npz), checkpoints (.pt), the
+# quality parquet, generated ONNX and the ST Edge AI workspaces. 311 MB,
+# and all of it falls out of scripts/s1 through scripts/s9.
+# ---------------------------------------------------------------------------
+results/
+
+# ---------------------------------------------------------------------------
+# The superseded 250 Hz study, kept on disk for provenance but not in
+# history. Its scripts live in archive_250hz/scripts/ if ever needed.
+# ---------------------------------------------------------------------------
+archive_250hz/
+
+# ---------------------------------------------------------------------------
+# Firmware build products. firmware/*.c, *.ld are source and are kept.
+# ---------------------------------------------------------------------------
+firmware/build/
+*.elf
+*.bin
+*.hex
+*.map
+*.o
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+
+# ---------------------------------------------------------------------------
+# Scratch. One-shot patch scripts were named _*.py while this study was
+# being built; none should survive into a commit.
+# ---------------------------------------------------------------------------
+scripts/_*.py
+*.tmp
+*.log

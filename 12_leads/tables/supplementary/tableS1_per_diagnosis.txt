@@ -1,0 +1,10 @@
+Supplementary Table S1. AUPRC for each harmonised diagnosis, averaged over the four held-out sources. A macro average can hide a collapsed rare class; this is where to check.
+------------------------------------------------------------------------------
+                 NSR     SB    TAb  STach    LAD   TInv  CRBBB   IAVB    PAC    QAb  NSIVCB  LQRSV  CLBBB
+model                                                                                                    
+TinyCNN        0.814  0.800  0.522  0.870  0.580  0.262  0.874  0.439  0.064  0.142   0.095  0.300  0.769
+DS-CNN         0.861  0.814  0.536  0.898  0.557  0.267  0.878  0.566  0.064  0.142   0.088  0.303  0.781
+MobileNet1D    0.894  0.771  0.530  0.916  0.540  0.241  0.864  0.462  0.073  0.135   0.101  0.328  0.761
+MBConv1D       0.900  0.788  0.519  0.955  0.548  0.251  0.876  0.623  0.205  0.155   0.117  0.318  0.765
+TCN-Lite       0.896  0.789  0.532  0.944  0.578  0.259  0.897  0.471  0.071  0.167   0.109  0.339  0.786
+ResNet1D-Lite  0.902  0.797  0.544  0.955  0.614  0.264  0.870  0.646  0.132  0.180   0.120  0.331  0.782

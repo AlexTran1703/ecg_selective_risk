@@ -1,0 +1,7 @@
+model,width,parameters,learnable conv layers,blocks,core operation,MACs (M)
+TinyCNN,1.0,38349,4,4 conv,"plain Conv1D, stride 2",4.28
+DS-CNN,1.0,19277,7,stem + 3 separable,depthwise + pointwise,3.33
+MobileNet1D,1.0,19709,11,stem + 5 separable,depthwise + pointwise,2.67
+MBConv1D,1.0,89453,19,stem + 6 inverted bottleneck,"inverted bottleneck, expand 4",9.99
+TCN-Lite,1.0,40829,4,4 dilated,"dilated Conv1D, d = 1/2/4/8",10.25
+ResNet1D-Lite,1.0,485069,12,4 residual,residual Conv1D,54.47
