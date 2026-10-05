@@ -82,10 +82,16 @@ def table2(dep):
 
 
 def table3(runs):
-    """Discrimination only. Selective reliability now has its own figure."""
+    """Bootstrap the cross-source mean for figure 2.
+
+    This used to be Table III. Figure 2 now carries both halves of it --
+    the per-source values in the heatmap, the mean and interval in the dot
+    plot -- so printing the same 24 numbers underneath would be a second
+    container for evidence the reader just saw.
+    """
     rng = np.random.default_rng(0)
     reps = 300
-    rows = {}
+    rows, boot = {}, {}
     for m in ORDER:
         srcs = [s for s in SOURCES if (m, s) in runs]
         if not srcs:
@@ -110,17 +116,11 @@ def table3(runs):
         lo, hi = np.percentile(draws, [2.5, 97.5])
         cells["mean (95% CI)"] = f"{np.mean(per_src):.3f} ({lo:.3f}-{hi:.3f})"
         rows[NICE[m]] = cells
+        boot[m] = (float(np.mean(per_src)), float(lo), float(hi))
         print(f"    bootstrapped {m}", flush=True)
     t = pd.DataFrame(rows).T
     t.index.name = "model"
-    A.emit(t, "table3_discrimination",
-           "Table III. Leave-one-source-out diagnostic discrimination of "
-           "the float32 host models. Values are macro AUPRC; higher is "
-           "better. Each column is evaluation on a clinical source "
-           "excluded entirely from training, and the interval is a "
-           "record-level bootstrap on the four-source mean. Selective "
-           "reliability is reported in Figure 3, int8 deployment effects "
-           "in Table V, and macro AUROC in Supplementary Table S6.", TAB)
+    return boot
 
 
 def table4(qr):
@@ -142,7 +142,6 @@ def table4(qr):
     for m in [x for x in ORDER if x in d.index]:
         cells = {c: f"{d.loc[m, c]:+.3f} ({lo.loc[m, c]:+.3f}, "
                     f"{hi.loc[m, c]:+.3f})" for c in cols}
-        cells["worst"] = d.loc[m, cols].idxmin()
         rows[NICE[m]] = cells
     # Pooled row and the support each column actually had.
     if not qp.empty:
@@ -150,14 +149,13 @@ def table4(qr):
         rows["pooled"] = {
             **{c: f"{pv.loc[c, 'delta']:+.3f} ({pv.loc[c, 'lo']:+.3f}, "
                   f"{pv.loc[c, 'hi']:+.3f})" for c in cols},
-            "worst": ""}
+        }
         rows["held-out sources"] = {
-            **{c: str(int(pv.loc[c, "sources_used"])) for c in cols},
-            "worst": ""}
-    t = pd.DataFrame(rows).T[cols + ["worst"]]
+            c: str(int(pv.loc[c, "sources_used"])) for c in cols}
+    t = pd.DataFrame(rows).T[cols]
     t.index.name = "model"
-    A.emit(t, "table4_quality_association",
-           "Table IV. Prevalence-matched association between signal-quality "
+    A.emit(t, "table3_quality_association",
+           "Table III. Prevalence-matched association between signal-quality "
            "strata and diagnostic discrimination. Values are dAUPRC = "
            "higher-impairment minus lower-impairment stratum, with "
            "record-level bootstrap 95% intervals in parentheses (B = 1000, "
@@ -221,8 +219,11 @@ def table5(dep, acc):
             "dAUPRC": round(a.delta.mean(), 4)
             if a is not None and len(a) else np.nan,
             "practical fit": v})
-    A.emit(pd.DataFrame(rows).set_index("model"), "table5_stm32f411",
-           f"Table V. STM32F411 deployment at {FS_OUT} Hz in int8 "
+    A.emit(pd.DataFrame(rows).set_index("model"),
+           "tableS7_stm32f411_deployment",
+           f"Supplementary Table S7. STM32F411 deployment at {FS_OUT} Hz "
+           f"in int8. Figure 5 carries the scientific result; this is "
+           f"the numerical detail behind it. "
            f"({SRAM_KB} KB SRAM, {FLASH_KB} KB Flash). Flash and RAM are "
            f"totals including the generated ST Edge AI runtime, not "
            f"weights alone. Latency is measured on the part: each model "
@@ -236,7 +237,8 @@ def table5(dep, acc):
            f"{SRAM_KB - RESERVE_SRAM} KB SRAM, leaving {RESERVE_FLASH} KB "
            f"and {RESERVE_SRAM} KB for application firmware, drivers, "
            f"acquisition buffers and a bootloader. All six models are "
-           f"physically smaller than the part and all six ran on it.", TAB)
+           f"physically smaller than the part and all six ran on it.",
+           STAB)
 
 
 def supplementary(runs, qr):
@@ -365,26 +367,30 @@ def main():
         qr = pd.DataFrame(json.loads(
             (A.S2D / "quality_robustness.json").read_text()))
 
-    print(f"figures ({FS_OUT} Hz):")
-    A.figure1()                 # Fig 1  study design and RQ map
-    A.figure2(q)                # Fig 2  signal quality, RQ1
-    A.figure3_reliability()     # Fig 3  selective reliability, RQ2b
-    A.figure4(dep, acc, f32)    # Fig 4  deployment, RQ4
-    if runs:
-        A.figure5(runs, dep)    # Fig 5  accuracy-resource, RQ5
-    # RQ3 is answered by Table IV alone: a heatmap of the same six
-    # by six numbers would be the table again, in paint.
-    A.figureS2_risk_coverage()  # supplementary detail behind Fig 3
+    # Tables first: the bootstrap table III computes is also what
+    # figure 2 plots, so computing it once stops the two disagreeing.
     print("tables:")
     table1()
     table2(dep)
-    if runs:
-        table3(runs)
+    boot = table3(runs) if runs else {}
     table4(qr)
     supplementary_rq3(qr)
-    table5(dep, acc)
+    table5(dep, acc)   # -> supplementary S7
+
+    print("main figures:")
+    A.figure1()                      # design, three RQ blocks
+    A.figure2_generalisation(boot)   # RQ1  external generalisation
+    A.figure2(q)                     # RQ2a -> figure3_signal_quality
+    A.figure4_reliability(qr)        # RQ2c  risk-coverage + E-AURC
     if runs:
-        print("supplementary:")
+        A.figure5(runs, dep)         # RQ3  -> figure5_operating_points
+
+    print("supplementary:")
+    A.figure3_reliability()          # E-AURC by held-out source
+    A.figure4(dep, acc, f32)         # float32 vs int8 memory detail
+    A.figureS2_risk_coverage()
+    A.figureS5_quality_reliability()
+    if runs:
         supplementary(runs, qr)
     print(f"\nmain: {A.FIG} | {TAB}\nsupp: {A.SFIG} | {STAB}")
 

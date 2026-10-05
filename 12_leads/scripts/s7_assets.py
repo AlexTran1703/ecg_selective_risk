@@ -172,41 +172,36 @@ def quality():
 
 # ------------------------------------------------------------- figure 1
 def figure1():
-    """Study design as a map of the five research questions.
+    """Study design as one chain of three research questions.
 
-    Each box carries a small icon of what it does, a bold title and two
-    lines of detail, with the RQ number on a tab sitting across the top
-    edge. Three functional colours: amber for signal quality, blue for
-    data and modelling, green for hardware, and neutral grey for the
-    synthesis, which belongs to both worlds.
+    External generalisation is the spine. The quality work explains
+    failures in it, selective prediction asks whether those failures can
+    be recognised, and deployment asks whether the externally validated
+    behaviour survives implementation -- so the three blocks are stacked,
+    not arranged side by side as independent studies.
 
-    The arrow into RQ5 comes from RQ2 and RQ4, not from RQ3: the
-    accuracy-resource trade-off combines discrimination with deployment
-    cost, while the quality association answers its own question and feeds
-    nothing downstream.
+    The quality branch leaves the native 500 Hz signal and rejoins at RQ2,
+    because those indicators are measured before decimation while the
+    classifiers see the 100 Hz input.
     """
-    FIG_H, YLO, YHI = 5.2, 13.0, 101.0
+    FIG_H, YLO, YHI = 6.0, 1.0, 101.0
     YSPAN = YHI - YLO
-    fig, ax = plt.subplots(figsize=(7.6, FIG_H), facecolor=SURFACE)
+    fig, ax = plt.subplots(figsize=(7.4, FIG_H), facecolor=SURFACE)
     ax.set_xlim(0, 100)
     ax.set_ylim(YLO, YHI)
     ax.axis("off")
     NL = chr(10)
 
-    FILL = {"data": "#e8f1fb", "qual": "#fdefe2", "hw": "#e7f6ef",
-            "syn": "#f2f2f0"}
-    EDGE = {"data": "#4a86c8", "qual": "#e07f33", "hw": "#36a173",
-            "syn": "#8a8a88"}
+    FILL = {"data": "#e8f1fb", "qual": "#fdefe2", "hw": "#e7f6ef"}
+    EDGE = {"data": "#4a86c8", "qual": "#e07f33", "hw": "#36a173"}
+    ARR = "#54544f"
 
-    def box(x, y, w, h, kind, title, detail, fs_t=8.0, fs_d=6.8,
-            tx=None):
+    def box(x, y, w, h, kind, title, detail, fs_t=8.0, fs_d=6.8, tx=None,
+            lw=1.3):
         ax.add_patch(FancyBboxPatch(
-            (x, y), w, h, boxstyle="round,pad=0.9", linewidth=1.3,
+            (x, y), w, h, boxstyle="round,pad=0.9", linewidth=lw,
             facecolor=FILL[kind], edgecolor=EDGE[kind], zorder=2))
         cx = tx if tx is not None else x + w / 2
-        # Points to data units: the axis spans YSPAN units over
-        # FIG_H inches, and there are 72 points to the inch. Guessing this
-        # factor is how the title ends up sitting on the detail.
         pt2y = YSPAN / (FIG_H * 72.0)
         nt = title.count(NL) + 1
         nd = detail.count(NL) + 1 if detail else 0
@@ -223,199 +218,112 @@ def figure1():
                     linespacing=1.55)
 
     def tab(x, y, label, kind):
-        """RQ number on a tab straddling the top edge of its box."""
         ax.add_patch(FancyBboxPatch(
-            (x, y - 1.8), 8.6, 3.6, boxstyle="round,pad=0.5",
-            linewidth=0, facecolor=EDGE[kind], zorder=5))
-        ax.text(x + 4.3, y, label, ha="center", va="center",
-                fontsize=6.6, color="white", fontweight="bold", zorder=6)
+            (x, y - 1.8), 8.6, 3.6, boxstyle="round,pad=0.5", linewidth=0,
+            facecolor=EDGE[kind], zorder=5))
+        ax.text(x + 4.3, y, label, ha="center", va="center", fontsize=6.6,
+                color="white", fontweight="bold", zorder=6)
 
-    ARR = "#54544f"
-
-    def arrow(x1, y1, x2, y2, cs=None):
+    def arrow(x1, y1, x2, y2):
         ax.add_patch(FancyArrowPatch(
             (x1, y1), (x2, y2), arrowstyle="-|>", mutation_scale=10,
-            color="#54544f", lw=1.1, zorder=1, shrinkA=1, shrinkB=1,
-            connectionstyle=cs or "arc3,rad=0"))
+            color=ARR, lw=1.1, zorder=1, shrinkA=1, shrinkB=1))
 
     def note(x, y, t, ha="center"):
         ax.text(x, y, t, fontsize=6.3, color=INK2, ha=ha, va="center",
-                style="italic", zorder=4, linespacing=1.3)
+                style="italic", zorder=4)
 
-    # ------------------------------------------------------------ icons
     def ecg_icon(cx, cy, w, h, c):
-        """One PQRST complex, drawn rather than approximated by a zigzag."""
-        t = np.linspace(0, 1, 260)
-        y = (0.10 * np.exp(-((t - 0.17) / 0.035) ** 2)          # P
-             - 0.13 * np.exp(-((t - 0.40) / 0.012) ** 2)        # Q
-             + 1.00 * np.exp(-((t - 0.45) / 0.011) ** 2)        # R
-             - 0.30 * np.exp(-((t - 0.51) / 0.014) ** 2)        # S
-             + 0.22 * np.exp(-((t - 0.72) / 0.045) ** 2))       # T
-        ax.plot(cx + (t - 0.5) * w, cy + y * h * 0.42, lw=1.3, color=c,
+        t = np.linspace(0, 1, 240)
+        y = (0.10 * np.exp(-((t - 0.17) / 0.035) ** 2)
+             - 0.13 * np.exp(-((t - 0.40) / 0.012) ** 2)
+             + 1.00 * np.exp(-((t - 0.45) / 0.011) ** 2)
+             - 0.30 * np.exp(-((t - 0.51) / 0.014) ** 2)
+             + 0.22 * np.exp(-((t - 0.72) / 0.045) ** 2))
+        ax.plot(cx + (t - 0.5) * w, cy + y * h * 0.42, lw=1.2, color=c,
                 zorder=4, solid_capstyle="round")
 
-    def resample_icon(cx, cy, w, h, c):
-        t = np.linspace(0, 1, 200)
-        wave = np.sin(2 * np.pi * 3 * t) * np.exp(-1.1 * t)
-        ax.plot(cx - w * 0.33 + (t - 0.5) * w * 0.34,
-                cy + wave * h * 0.26, lw=1.1, color=c, zorder=4)
-        k = np.linspace(0, 1, 13)
-        ax.plot(cx + w * 0.30 + (k - 0.5) * w * 0.34,
-                cy + (np.sin(2 * np.pi * 3 * k) * np.exp(-1.1 * k))
-                * h * 0.26, lw=1.1, color=c, zorder=4, marker="o", ms=1.9)
-        ax.annotate("", xy=(cx + w * 0.10, cy), xytext=(cx - w * 0.10, cy),
-                    arrowprops=dict(arrowstyle="-|>", color=c, lw=1.1),
-                    zorder=4)
-
-    def bars_icon(cx, cy, w, h, c):
-        hs = [0.42, 0.78, 0.55, 1.0, 0.33]
-        bw = w / 7.5
-        for k, v in enumerate(hs):
-            ax.add_patch(plt.Rectangle(
-                (cx - w * 0.36 + k * bw * 1.4, cy - h * 0.30),
-                bw, v * h * 0.60, facecolor=c, edgecolor="none", zorder=4))
-
-    def nn_icon(cx, cy, w, h, c):
-        layers = [(-0.30, 2), (0.0, 3), (0.30, 2)]
-        pos = []
-        for dx, n in layers:
-            ys = np.linspace(-0.26, 0.26, n)
-            pos.append([(cx + dx * w, cy + y * h) for y in ys])
-        for a, b in zip(pos[:-1], pos[1:]):
-            for p1 in a:
-                for p2 in b:
-                    ax.plot([p1[0], p2[0]], [p1[1], p2[1]], lw=0.5,
-                            color=c, alpha=0.55, zorder=3)
-        for layer in pos:
-            for (px, py) in layer:
-                ax.add_patch(plt.Circle((px, py), w * 0.052,
-                                        facecolor="white", edgecolor=c,
-                                        lw=1.0, zorder=4))
-
-    def scatter_icon(cx, cy, w, h, c):
-        ax.plot([cx - w * 0.34, cx - w * 0.34, cx + w * 0.36],
-                [cy + h * 0.30, cy - h * 0.28, cy - h * 0.28],
-                lw=0.9, color=c, zorder=4)
-        rng = np.random.default_rng(3)
-        xs = np.linspace(-0.24, 0.28, 9)
-        ys = xs * 0.9 + rng.normal(0, 0.055, xs.size)
-        ax.scatter(cx + xs * w, cy + ys * h * 0.8, s=5.5, color=c,
-                   zorder=5)
-        ax.plot(cx + xs * w, cy + xs * 0.9 * h * 0.8, lw=0.9, ls="--",
-                color=c, alpha=0.75, zorder=4)
-
-    def chip_icon(cx, cy, w, h, c):
-        s = w * 0.30
-        ax.add_patch(FancyBboxPatch(
-            (cx - s, cy - s), 2 * s, 2 * s, boxstyle="round,pad=0.25",
-            facecolor="white", edgecolor=c, lw=1.2, zorder=4))
-        ax.add_patch(plt.Rectangle((cx - s * 0.42, cy - s * 0.42),
-                                   s * 0.84, s * 0.84, facecolor=c,
-                                   edgecolor="none", zorder=5))
-        for k in (-0.5, 0.0, 0.5):
-            ax.plot([cx + k * 2 * s * 0.6] * 2,
-                    [cy + s, cy + s * 1.45], lw=1.0, color=c, zorder=4)
-            ax.plot([cx + k * 2 * s * 0.6] * 2,
-                    [cy - s, cy - s * 1.45], lw=1.0, color=c, zorder=4)
-            ax.plot([cx - s, cx - s * 1.45],
-                    [cy + k * 2 * s * 0.6] * 2, lw=1.0, color=c, zorder=4)
-            ax.plot([cx + s, cx + s * 1.45],
-                    [cy + k * 2 * s * 0.6] * 2, lw=1.0, color=c, zorder=4)
-
-    def pareto_icon(cx, cy, w, h, c):
-        ax.plot([cx - w * 0.34, cx - w * 0.34, cx + w * 0.36],
-                [cy + h * 0.32, cy - h * 0.30, cy - h * 0.30],
-                lw=0.9, color=c, zorder=4)
-        xs = np.linspace(-0.26, 0.30, 8)
-        ys = 0.30 * np.exp(-6.0 * (xs + 0.26)) - 0.12
-        ax.scatter(cx + xs * w, cy + ys * h * 1.5, s=6.0, color=c,
-                   zorder=5)
-        ax.text(cx - w * 0.40, cy + h * 0.34, "AUPRC", fontsize=5.0,
-                color=INK2, ha="center", va="bottom", rotation=90)
-        ax.text(cx + w * 0.02, cy - h * 0.40, "resource cost",
-                fontsize=5.0, color=INK2, ha="center", va="top")
-
-    # ------------------------------------------------- level 1: the data
-    # Columns 3-46 and 54-97 leave an 8-unit centre gap, which is what the
-    # arrows need in order to run orthogonally instead of diagonally.
-    box(3, 90, 94, 9, "data",
-        "Four clinical ECG sources",
+    # ---------------------------------------------------------- the data
+    box(5, 90, 90, 9, "data", "Four clinical ECG sources",
         "PTB-XL | Georgia | Chapman | Ningbo" + NL +
         "77,333 records  ->  66,379 retained, 13 harmonised labels",
-        fs_t=8.4, fs_d=6.8, tx=56)
-    ecg_icon(16, 94.5, 10, 5, EDGE["data"])
+        fs_t=8.6, fs_d=7.0, tx=56)
+    ecg_icon(17, 94.5, 11, 5.5, EDGE["data"])
 
-    ax.plot([50, 50], [90, 87.5], lw=1.0, color=ARR, zorder=1)
-    ax.plot([24, 76], [87.5, 87.5], lw=1.0, color=ARR, zorder=1)
-    note(51.5, 88.6, "10 s ECG extraction", ha="left")
-    arrow(24, 87.5, 24, 84.5)
-    arrow(76, 87.5, 76, 84.5)
+    ax.plot([50, 50], [90, 87], lw=1.1, color=ARR, zorder=1)
+    ax.plot([22, 72], [87, 87], lw=1.1, color=ARR, zorder=1)
+    note(51.5, 88.2, "10 s extraction", ha="left")
+    arrow(22, 87, 22, 84)
+    arrow(72, 87, 72, 84)
 
-    box(3, 76, 43, 8, "qual", "Native 500 Hz ECG",
-        "signal-quality characterisation", fs_t=7.4, fs_d=6.4, tx=30)
-    ecg_icon(10, 80, 8, 4.5, EDGE["qual"])
-    box(54, 76, 43, 8, "data", "Anti-aliased resampling to 100 Hz",
-        "FIR zero phase | input 12 x 1000", fs_t=7.4, fs_d=6.4, tx=81)
-    resample_icon(61, 80, 9, 4.5, EDGE["data"])
+    box(5, 76, 34, 8, "qual", "Native 500 Hz signal",
+        "quality indicators measured" + NL + "before decimation",
+        fs_t=7.4, fs_d=6.4)
+    box(50, 76, 45, 8, "data", "Anti-aliased resampling to 100 Hz",
+        "model input: 12 x 1000", fs_t=7.4, fs_d=6.4)
 
-    arrow(24, 76, 24, 72.5)
-    arrow(76, 76, 76, 72.5)
+    # --------------------------------------------------- RQ1, the spine
+    arrow(72, 76, 72, 71)
+    box(40, 58, 55, 13, "data", "External generalisation",
+        "leave-one-source-out, six compact encoders" + NL +
+        "macro AUPRC across unseen clinical sources", fs_t=8.2)
+    tab(43, 71, "RQ1", "data")
 
-    # ------------------------------------------- level 2: RQ1 to RQ4
-    box(3, 60, 43, 12, "qual", "Source signal characteristics",
-        "HF | baseline | mains" + NL + "flat/clipped | QRS | RR",
-        fs_t=7.4, fs_d=6.4, tx=31)
-    tab(6, 72, "RQ1", "qual")
-    bars_icon(10, 65, 6.5, 5.5, EDGE["qual"])
+    arrow(67, 58, 67, 53)
+    note(68.5, 55.5, "held-out predictions", ha="left")
 
-    box(54, 60, 43, 12, "data",
-        "External-source discrimination" + NL + "and selective reliability",
-        "leave-one-source-out | 6 encoders x 4 folds" + NL +
-        "AUPRC higher | E-AURC lower", fs_t=7.4, fs_d=6.4, tx=83)
-    tab(57, 72, "RQ2", "data")
-    nn_icon(61, 65, 7, 5.5, EDGE["data"])
+    # ------------------------------------ RQ2, three steps in one block
+    # Drawn as a plain panel: box() centres its title, which here would
+    # land on step (b) rather than heading the block.
+    ax.add_patch(FancyBboxPatch(
+        (14, 27), 81, 25, boxstyle="round,pad=0.9", linewidth=1.3,
+        facecolor=FILL["qual"], edgecolor=EDGE["qual"], zorder=2))
+    ax.text(55, 49.3, "Reliability under source and quality shift",
+            ha="center", va="center", fontsize=8.2, color=INK,
+            fontweight="bold", zorder=4)
+    tab(17, 52, "RQ2", "qual")
+    steps = [
+        (43.5, "a", "what shifts between the sources",
+         "six indicators, four sources"),
+        (36.0, "b", "do those shifts matter diagnostically?",
+         "within-source strata, prevalence-matched dAUPRC"),
+        (28.5, "c", "can the model tell when it is unreliable?",
+         "E-AURC, and whether it degrades with the signal"),
+    ]
+    for y, letter, head, sub in steps:
+        ax.text(23, y, letter, fontsize=7.0, color=EDGE["qual"],
+                fontweight="bold", ha="center", va="center", zorder=4)
+        ax.text(27, y + 1.1, head, fontsize=7.2, color=INK, ha="left",
+                va="center", zorder=4)
+        ax.text(27, y - 1.6, sub, fontsize=6.3, color="#55554f", ha="left",
+                va="center", zorder=4)
+    for y in (39.8, 32.3):
+        ax.add_patch(FancyArrowPatch(
+            (23, y + 1.2), (23, y - 1.2), arrowstyle="-|>",
+            mutation_scale=7, color=EDGE["qual"], lw=0.9, zorder=4))
 
-    box(3, 38, 43, 12, "qual",
-        "Quality-performance" + NL + "association",
-        "within-source strata | prevalence matching" + NL +
-        "dAUPRC with 95% CI", fs_t=7.4, fs_d=6.4, tx=31)
-    tab(6, 50, "RQ3", "qual")
-    scatter_icon(10, 43, 7, 5.5, EDGE["qual"])
-
-    box(54, 38, 43, 12, "hw",
-        "Embedded feasibility of the" + NL + "externally evaluated models",
-        "STM32F411 100 MHz | int8 PTQ" + NL +
-        "Flash | SRAM | latency | dAUPRC",
-        fs_t=7.4, fs_d=6.4, tx=83)
-    tab(57, 50, "RQ4", "hw")
-    chip_icon(61, 43, 7, 5.5, EDGE["hw"])
-
-    arrow(24, 60, 24, 50.5)
-    note(25.5, 55.5, "quality indicators", ha="left")
-    arrow(76, 60, 76, 50.5)
-    note(77.5, 55, "trained encoders", ha="left")
-
-    # One trunk out of RQ2, branching: left into RQ3, onward into RQ5.
-    # Drawn as a T rather than two lines that cross each other.
-    ax.plot([58, 50, 50], [60, 56, 28], lw=1.0, color=ARR, zorder=1,
+    # The quality branch rejoins here, not at RQ1.
+    ax.plot([10, 10, 13], [76, 43.5, 43.5], lw=1.1, color=ARR, zorder=1,
             solid_joinstyle="round")
-    arrow(50, 44, 46.6, 44)
-    note(51.3, 56, "LOSO predictions", ha="left")
+    ax.add_patch(FancyArrowPatch(
+        (12, 43.5), (14.6, 43.5), arrowstyle="-|>", mutation_scale=10,
+        color=ARR, lw=1.1, zorder=1))
+    note(10.6, 60, "quality" + NL + "indicators", ha="left")
 
-    # ------------------------------------------- level 3: RQ5 synthesis
-    box(3, 15, 94, 12, "syn", "Accuracy-resource operating points",
-        "diagnostic value  <->  deployment cost" + NL +
-        "macro AUPRC | Flash / SRAM / measured latency" + NL +
-        "which encoders are worth running on the part",
-        fs_t=8.4, fs_d=6.8, tx=57)
-    tab(6, 27, "RQ5", "syn")
-    pareto_icon(26, 20, 9, 5.5, "#6f6f6d")
+    arrow(67, 27, 67, 22)
+    note(68.5, 24.5, "externally evaluated encoders", ha="left")
 
-    arrow(50, 28, 50, 27)
-    note(51.5, 31, "discrimination", ha="left")
-    arrow(76, 38, 76, 27)
-    note(77.5, 32, "hardware metrics", ha="left")
+    # ------------------------------------------------- RQ3, deployment
+    box(14, 8, 81, 13, "hw", "Deployment-preserved performance",
+        "int8 post-training quantisation | STM32F411 at 100 MHz" + NL +
+        "Flash | SRAM | measured latency | accuracy-resource trade-off",
+        fs_t=8.2)
+    tab(17, 21, "RQ3", "hw")
 
+    ax.text(50, 3.4,
+            "Generalises?   ->   Can we trust it?   ->   Can we deploy it?",
+            ha="center", va="center", fontsize=7.4, color=INK2,
+            style="italic")
     fig.tight_layout(pad=0.2)
     save(fig, "figure1_design", FIG)
 
@@ -478,90 +386,10 @@ def figure2(q):
     axes[0][0].legend(fontsize=6.2, frameon=False, labelcolor=INK2,
                       loc="lower right")
     fig.tight_layout(pad=0.5, w_pad=1.2, h_pad=1.4)
-    save(fig, "figure2_signal_quality", FIG)
+    save(fig, "figure3_signal_quality", FIG)
 
 
 # ------------------------------------------------------------- figure 3
-def figure3(qr):
-    if qr is None or qr.empty:
-        print("  (no quality-robustness results)")
-        return
-    qm = qr[qr.model != "__pooled__"]
-    qp = qr[qr.model == "__pooled__"]
-    piv = qm.pivot(index="model", columns="label", values="delta")
-    piv = piv.reindex(index=[m for m in ORDER if m in piv.index],
-                      columns=[c for c in FACTOR_ORDER if c in piv.columns])
-    fig, axes = plt.subplots(
-        1, 2, figsize=(7.4, 3.0), facecolor=SURFACE,
-        gridspec_kw={"width_ratios": [1.45, 1.0]})
-
-    # (a) heatmap
-    ax = axes[0]
-    lim = float(np.nanmax(np.abs(piv.to_numpy())))
-    im = ax.imshow(piv.to_numpy(), cmap="RdBu", vmin=-lim, vmax=lim,
-                   aspect="auto")
-    ax.set_xticks(range(piv.shape[1]))
-    ax.set_xticklabels(piv.columns, fontsize=6.4, rotation=28, ha="right")
-    ax.set_yticks(range(piv.shape[0]))
-    ax.set_yticklabels([NICE[m] for m in piv.index], fontsize=6.8)
-    for i in range(piv.shape[0]):
-        for j in range(piv.shape[1]):
-            v = piv.iloc[i, j]
-            if np.isfinite(v):
-                ax.text(j, i, f"{v:+.3f}", ha="center", va="center",
-                        fontsize=5.9,
-                        color="#ffffff" if abs(v) > 0.6 * lim else INK)
-    ax.set_title("(a) prevalence-matched dAUPRC: higher minus lower\nimpairment stratum", fontsize=7.2, color=INK, pad=4)
-    # Two families of indicator, measured on different signals: the
-    # first three come from the native 500 Hz recording and describe
-    # acquisition conditions, the last three are structural and survive
-    # decimation. A divider stops the heatmap reading as six
-    # perturbations applied to the 100 Hz model input.
-    n_spec = sum(1 for c in piv.columns
-                 if c in ("HF noise", "baseline wander", "mains"))
-    if 0 < n_spec < piv.shape[1]:
-        ax.axvline(n_spec - 0.5, color=INK, lw=1.8)
-        ax.text((n_spec - 1) / 2.0, -0.92, "native spectral (500 Hz)",
-                ha="center", va="bottom", fontsize=6.0, color=INK2,
-                style="italic")
-        ax.text((n_spec + piv.shape[1] - 1) / 2.0, -0.92,
-                "structural / rhythm", ha="center", va="bottom",
-                fontsize=6.0, color=INK2, style="italic")
-    ax.tick_params(length=0, colors=INK2)
-    cb = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
-    cb.ax.tick_params(labelsize=6, colors=INK2, length=2)
-
-    # (b) pooled effect, model-averaged, with CI
-    ax = axes[1]
-    # Pooled effect and interval are produced inside the record-level
-    # bootstrap, where every architecture sees the same resampled
-    # records. Averaging six separately drawn intervals would treat
-    # the encoders as independent observations, which they are not.
-    pooled = (qp.set_index("label")[["delta", "lo", "hi"]]
-              .rename(columns={"delta": "d"})
-              .reindex([c for c in FACTOR_ORDER if c in set(qp.label)]))
-    yy = np.arange(len(pooled))[::-1]
-    ax.errorbar(pooled["d"], yy,
-                xerr=[pooled["d"] - pooled["lo"], pooled["hi"] - pooled["d"]],
-                fmt="o", ms=4.6, lw=1.2, capsize=2.4,
-                color=INK, ecolor=INK2, zorder=3)
-    for y_, v in zip(yy, pooled["d"]):
-        ax.scatter(v, y_, s=34, zorder=4,
-                   color=BADC if v < 0 else OKC, edgecolor=SURFACE, lw=0.9)
-    ax.axvline(0, color=INK, lw=0.9, ls="--")
-    ax.set_yticks(yy)
-    ax.set_yticklabels(pooled.index, fontsize=6.8)
-    ax.set_xlabel("dAUPRC, model-averaged", fontsize=7.4, color=INK)
-    ax.set_title("(b) pooled effect, record-level bootstrap 95% CI",
-                 fontsize=7.2, color=INK, pad=4)
-    _frame(ax)
-    ax.grid(axis="x", color=GRID, lw=0.5)
-    fig.tight_layout(pad=0.5, w_pad=1.6)
-    save(fig, "figure4_quality_association", FIG)
-    return pooled
-
-
-# ------------------------------------------------------------- figure 4
 def figure4(dep, acc, f32):
     if not dep:
         print("  (no int8 deployment)")
@@ -637,17 +465,33 @@ def figure4(dep, acc, f32):
     _frame(ax)
     ax.grid(axis="y", color=GRID, lw=0.5)
     fig.tight_layout(pad=0.5, w_pad=1.6, h_pad=1.6)
-    save(fig, "figure4_deployment", FIG)
+    save(fig, "figureS3_deployment_detail", SFIG)
 
 
 # ------------------------------------------------------------- figure 5
 def figure5(runs, dep):
+    """RQ3: what diagnostic performance each resource budget buys.
+
+    Plotted on int8 accuracy, not float32: these are deployment operating
+    points, so the y-axis has to describe the model that actually runs on
+    the part. The frontier is left for the reader to read off the scatter
+    rather than ringed: with six points per panel the markers were doing
+    the work already, and the rings only added ink.
+    """
     acc = {}
-    for m in ORDER:
-        v = [macro_ap(runs[(m, s)]["y"], runs[(m, s)]["p"])
-             for s in SOURCES if (m, s) in runs]
-        if v:
-            acc[m] = float(np.mean(v))
+    f8 = S3B / "int8.json"
+    if f8.exists():
+        a8 = pd.DataFrame(json.loads(f8.read_text()))
+        for m in ORDER:
+            sub = a8[a8.model == m]
+            if len(sub):
+                acc[m] = float(sub.auprc_int8.mean())
+    if not acc:                      # fall back to float32 if int8 absent
+        for m in ORDER:
+            v = [macro_ap(runs[(m, s)]["y"], runs[(m, s)]["p"])
+                 for s in SOURCES if (m, s) in runs]
+            if v:
+                acc[m] = float(np.mean(v))
     if not acc:
         return
     lat = load_latency()
@@ -678,22 +522,23 @@ def figure5(runs, dep):
                  ha="right")
     axes[0].set_xlabel("measured total Flash (KB)", fontsize=7.4,
                        color=INK)
-    axes[0].set_ylabel("cross-source macro AUPRC", fontsize=7.4, color=INK)
-    axes[0].set_title("(a) accuracy vs Flash", fontsize=7.2,
+    axes[0].set_ylabel("int8 cross-source macro AUPRC", fontsize=7.4,
+                       color=INK)
+    axes[0].set_title("(a) int8 AUPRC vs Flash", fontsize=7.2,
                       color=INK)
 
     axes[1].axvline(SRAM_KB, color=INK, lw=1.0, ls="--")
     axes[1].text(SRAM_KB, axes[1].get_ylim()[0], "F411 128 KB  ",
                  fontsize=6.0, color=INK, rotation=90, va="bottom")
     axes[1].set_xlabel("measured total RAM (KB)", fontsize=7.4, color=INK)
-    axes[1].set_title("(b) accuracy vs peak SRAM", fontsize=7.2,
+    axes[1].set_title("(b) int8 AUPRC vs peak SRAM", fontsize=7.2,
                       color=INK)
 
     axes[2].set_xscale("log")
     axes[2].xaxis.set_minor_formatter(NullFormatter())
     axes[2].set_xlabel("measured latency on F411 (ms)", fontsize=7.4,
                        color=INK)
-    axes[2].set_title("(c) accuracy vs inference latency", fontsize=7.2,
+    axes[2].set_title("(c) int8 AUPRC vs measured latency", fontsize=7.2,
                       color=INK)
     for ax in axes:
         _frame(ax)
@@ -702,7 +547,7 @@ def figure5(runs, dep):
                    labelcolor=INK2, loc="upper center",
                    bbox_to_anchor=(1.75, -0.22))
     fig.tight_layout(pad=0.5, w_pad=1.4)
-    save(fig, "figure5_accuracy_resource", FIG)
+    save(fig, "figure5_operating_points", FIG)
 
 
 def figure3_reliability():
@@ -780,7 +625,7 @@ def figure3_reliability():
     _frame(ax)
     ax.grid(axis="x", color=GRID, lw=0.5)
     fig.tight_layout(pad=0.5, w_pad=1.8)
-    save(fig, "figure3_selective_reliability", FIG)
+    save(fig, "figureS4_eaurc_by_source", SFIG)
 
 
 def figureS2_risk_coverage():
@@ -824,5 +669,198 @@ def figureS2_risk_coverage():
              ha="center", fontsize=6.0, color=INK2, style="italic")
     fig.tight_layout(pad=0.4, w_pad=1.0)
     save(fig, "figureS2_risk_coverage", SFIG)
+
+
+def figure2_generalisation(boot):
+    """RQ1: how well the encoders transfer to an unseen clinical source.
+
+    The primary diagnostic result had been living in a table while the
+    secondary analyses got the figures, which made the supporting work
+    look like the main event. Same visual language as the reliability
+    panels so the two read as one study.
+    """
+    runs = load_runs()
+    if not runs or not boot:
+        print("  (no runs for figure 2)")
+        return
+    models = [m for m in ORDER if any(k[0] == m for k in runs)]
+    srcs = [s for s in SOURCES if (models[0], s) in runs]
+    mat = np.array([[macro_ap(runs[(m, s)]["y"], runs[(m, s)]["p"])
+                     for s in srcs] for m in models])
+
+    fig, axes = plt.subplots(
+        1, 2, figsize=(7.4, 3.0), facecolor=SURFACE,
+        gridspec_kw={"width_ratios": [1.0, 0.95]})
+    ax = axes[0]
+    im = ax.imshow(mat, cmap="YlGnBu", aspect="auto")
+    ax.set_xticks(range(len(srcs)))
+    ax.set_xticklabels([sname(s) for s in srcs], fontsize=6.8, rotation=20,
+                       ha="right")
+    ax.set_yticks(range(len(models)))
+    ax.set_yticklabels([NICE[m] for m in models], fontsize=7.0)
+    lim = mat.max()
+    for i in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
+            ax.text(j, i, f"{mat[i, j]:.3f}", ha="center", va="center",
+                    fontsize=6.4,
+                    color="#ffffff" if mat[i, j] > 0.80 * lim else INK)
+    ax.set_title("(a) macro AUPRC by held-out source", fontsize=7.4,
+                 color=INK, pad=4)
+    ax.tick_params(length=0, colors=INK2)
+    cb = fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
+    cb.ax.tick_params(labelsize=6, colors=INK2, length=2)
+    cb.set_label("higher AUPRC = better discrimination", fontsize=6.0,
+                 color=INK2)
+
+    ax = axes[1]
+    order = sorted(models, key=lambda m: -boot[m][0])
+    yy = np.arange(len(order))[::-1]
+    pt = [boot[m][0] for m in order]
+    lo = [boot[m][0] - boot[m][1] for m in order]
+    hi = [boot[m][2] - boot[m][0] for m in order]
+    ax.errorbar(pt, yy, xerr=[lo, hi], fmt="none", ecolor=INK2,
+                elinewidth=1.1, capsize=2.6, zorder=2)
+    cmap = plt.get_cmap("tab10")
+    for y_, m in zip(yy, order):
+        ax.scatter(boot[m][0], y_, s=42, color=cmap(ORDER.index(m)),
+                   edgecolor=SURFACE, lw=0.9, zorder=3)
+    ax.set_yticks(yy)
+    ax.set_yticklabels([NICE[m] for m in order], fontsize=7.0)
+    ax.set_xlabel("mean macro AUPRC over four held-out sources",
+                  fontsize=7.4, color=INK)
+    ax.set_title("(b) mean AUPRC, record-level bootstrap 95% CI",
+                 fontsize=7.2, color=INK, pad=4)
+    ax.annotate("higher = better", xy=(0.5, -0.30),
+                xycoords="axes fraction", ha="center", fontsize=6.2,
+                color=INK2)
+    _frame(ax)
+    ax.grid(axis="x", color=GRID, lw=0.5)
+    fig.tight_layout(pad=0.5, w_pad=1.8)
+    save(fig, "figure2_generalisation", FIG)
+
+
+def figure4_reliability(qr):
+    """RQ2c: can confidence identify unreliable external predictions?
+
+    Panels (a-d) are the risk-coverage curves themselves, one per held-out
+    source, so the reader sees the selective behaviour rather than only
+    its integrated scalar. Panel (e) is the integral, E-AURC, with
+    record-level bootstrap intervals.
+
+    The risk axis is exactly the quantity E-AURC integrates: records are
+    ranked by confidence, retained from most to least confident, and
+    selective risk is the mean loss over the retained fraction. Using a
+    different selective metric here because it plots more prettily would
+    make the figure and the summary describe different things.
+    """
+    f = S2D / "reliability_curves.json"
+    if not f.exists():
+        print("  (no reliability curves)")
+        return
+    d = json.loads(f.read_text())
+    grid = np.array(d["grid"])
+    models = [m for m in ORDER if m in d["models"]]
+    srcs = [s for s in SOURCES
+            if s in d["models"][models[0]].get("risk_coverage", {})]
+    if not srcs:
+        print("  (no per-source curves)")
+        return
+
+    cmap = plt.get_cmap("tab10")
+    fig = plt.figure(figsize=(7.6, 4.3), facecolor=SURFACE)
+    # The legend sits in the gap between the rows, so the gap has to be
+    # big enough for it and no bigger.
+    gs = fig.add_gridspec(2, len(srcs), height_ratios=[1.0, 0.80],
+                          hspace=0.62, wspace=0.18,
+                          top=0.93, bottom=0.10, left=0.09, right=0.98)
+
+    ax0 = None
+    for k, s in enumerate(srcs):
+        ax = fig.add_subplot(gs[0, k], sharey=ax0) if ax0 else \
+            fig.add_subplot(gs[0, k])
+        ax0 = ax0 or ax
+        for m in models:
+            rc = d["models"][m]["risk_coverage"][s]
+            ax.plot(grid, rc["risk"], lw=1.3, color=cmap(ORDER.index(m)),
+                    label=NICE[m] if k == 0 else None)
+        ax.set_title(f"({chr(97 + k)}) {sname(s)}", fontsize=7.4,
+                     color=INK, pad=3)
+        ax.set_xlabel("coverage", fontsize=7.0, color=INK)
+        if k == 0:
+            ax.set_ylabel("selective risk", fontsize=7.0, color=INK)
+        else:
+            ax.tick_params(labelleft=False)
+        _frame(ax)
+        ax.grid(color=GRID, lw=0.5)
+
+    ax = fig.add_subplot(gs[1, :])
+    order = sorted(models, key=lambda m: d["models"][m]["eaurc"])
+    yy = np.arange(len(order))[::-1]
+    pt = [d["models"][m]["eaurc"] for m in order]
+    lo = [d["models"][m]["eaurc"] - d["models"][m]["eaurc_lo"]
+          for m in order]
+    hi = [d["models"][m]["eaurc_hi"] - d["models"][m]["eaurc"]
+          for m in order]
+    ax.errorbar(pt, yy, xerr=[lo, hi], fmt="none", ecolor=INK2,
+                elinewidth=1.1, capsize=2.6, zorder=2)
+    for y_, m in zip(yy, order):
+        ax.scatter(d["models"][m]["eaurc"], y_, s=42,
+                   color=cmap(ORDER.index(m)), edgecolor=SURFACE, lw=0.9,
+                   zorder=3)
+    ax.set_yticks(yy)
+    ax.set_yticklabels([NICE[m] for m in order], fontsize=7.0)
+    ax.set_xlabel("mean E-AURC over four held-out sources, "
+                  "lower = better error ranking", fontsize=7.2, color=INK)
+    ax.set_title(f"({chr(97 + len(srcs))}) selective reliability, "
+                 f"record-level bootstrap 95% CI", fontsize=7.4,
+                 color=INK, pad=3)
+    _frame(ax)
+    ax.grid(axis="x", color=GRID, lw=0.5)
+
+    handles, labels = ax0.get_legend_handles_labels()
+    fig.legend(handles, labels, fontsize=6.4, frameon=False,
+               labelcolor=INK2, ncol=6, loc="upper center",
+               bbox_to_anchor=(0.5, 0.515))
+    save(fig, "figure4_reliability", FIG)
+
+
+def figureS5_quality_reliability():
+    """Supplementary: does confidence degrade along with the signal?
+
+    A second-order interaction -- quality against confidence, given that
+    quality already costs discrimination. Kept because the answer is the
+    unwelcome one and it bears on how a deployment should gate, but out of
+    the main sequence, where it would pull RQ2c back towards being a
+    signal-quality study rather than a reliability one.
+    """
+    f = S2D / "quality_reliability.json"
+    if not f.exists():
+        return
+    q2 = pd.DataFrame(json.loads(f.read_text()))
+    pq = q2[q2.model == "__pooled__"].set_index("label")
+    labs = [c for c in FACTOR_ORDER if c in pq.index]
+    if not labs:
+        return
+    fig, ax = plt.subplots(figsize=(4.4, 2.3), facecolor=SURFACE)
+    yy = np.arange(len(labs))[::-1]
+    pt = [pq.loc[c, "delta_eaurc"] for c in labs]
+    lo = [pq.loc[c, "delta_eaurc"] - pq.loc[c, "lo"] for c in labs]
+    hi = [pq.loc[c, "hi"] - pq.loc[c, "delta_eaurc"] for c in labs]
+    ax.errorbar(pt, yy, xerr=[lo, hi], fmt="none", ecolor=INK2,
+                elinewidth=1.1, capsize=2.4, zorder=2)
+    for y_, v in zip(yy, pt):
+        ax.scatter(v, y_, s=38, color=BADC if v > 0 else OKC,
+                   edgecolor=SURFACE, lw=0.9, zorder=3)
+    ax.axvline(0, color=INK, lw=0.9, ls="--")
+    ax.set_yticks(yy)
+    ax.set_yticklabels(labs, fontsize=7.0)
+    ax.set_xlabel("dE-AURC, impaired minus clean", fontsize=7.2, color=INK)
+    ax.annotate("positive = errors the model is also worse at ranking",
+                xy=(0.5, -0.34), xycoords="axes fraction", ha="center",
+                fontsize=6.2, color=INK2)
+    _frame(ax)
+    ax.grid(axis="x", color=GRID, lw=0.5)
+    fig.tight_layout(pad=0.4)
+    save(fig, "figureS5_quality_reliability", SFIG)
 
 
