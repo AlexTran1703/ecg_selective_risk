@@ -344,6 +344,18 @@ Flash and RAM are totals including the generated ST Edge AI runtime
 
 ## Main figures
 
+**Figure 1 caption.** Overview of the study design and research questions.
+Four harmonised clinical ECG sources were used. Signal-quality indicators
+were measured on the native 500 Hz recordings before decimation, while all
+models operated on anti-aliased 100 Hz inputs. RQ1 evaluates cross-source
+diagnostic generalisation using leave-one-source-out testing of six compact
+encoders. RQ2 uses those held-out predictions together with the source-specific
+quality indicators to study reliability under source and signal-quality shift,
+through descriptive characterisation, prevalence-matched quality-performance
+association, and selective reliability. RQ3 evaluates whether the externally
+assessed models retain useful diagnostic performance after int8 deployment on
+the STM32F411. In short: generalises? can we trust it? can we deploy it?
+
 | | file | answers |
 |---|---|---|
 | 1 | `figures/figure1_design` | the experimental logic, three RQs |

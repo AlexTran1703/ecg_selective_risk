@@ -172,158 +172,109 @@ def quality():
 
 # ------------------------------------------------------------- figure 1
 def figure1():
-    """Study design as one chain of three research questions.
+    """Study overview: a central spine with one side branch.
 
-    External generalisation is the spine. The quality work explains
-    failures in it, selective prediction asks whether those failures can
-    be recognised, and deployment asks whether the externally validated
-    behaviour survives implementation -- so the three blocks are stacked,
-    not arranged side by side as independent studies.
+    An overview figure should show where the data go, what each question
+    consumes, and what flows into the next stage. It should not try to be
+    the methods section, so every box carries a title and a single line,
+    the three RQ blocks are the dominant objects, and the detail that used
+    to sit inside them lives in the caption instead.
 
-    The quality branch leaves the native 500 Hz signal and rejoins at RQ2,
-    because those indicators are measured before decimation while the
-    classifiers see the 100 Hz input.
+    RQ1, RQ2 and RQ3 are the same width and centred, so the eye reads one
+    vertical story. The quality branch leaves the native 500 Hz signal and
+    enters RQ2 horizontally -- a real input, not an annotation floating in
+    the margin.
     """
-    FIG_H, YLO, YHI = 6.0, 1.0, 101.0
+    FIG_H, YLO, YHI = 5.0, 12.0, 99.0
     YSPAN = YHI - YLO
-    fig, ax = plt.subplots(figsize=(7.4, FIG_H), facecolor=SURFACE)
+    fig, ax = plt.subplots(figsize=(7.0, FIG_H), facecolor=SURFACE)
     ax.set_xlim(0, 100)
     ax.set_ylim(YLO, YHI)
     ax.axis("off")
     NL = chr(10)
 
-    FILL = {"data": "#e8f1fb", "qual": "#fdefe2", "hw": "#e7f6ef"}
-    EDGE = {"data": "#4a86c8", "qual": "#e07f33", "hw": "#36a173"}
-    ARR = "#54544f"
+    FILL = {"data": "#eaf2fc", "qual": "#fdf0e6", "hw": "#e9f7f1"}
+    EDGE = {"data": "#3f7cbf", "qual": "#d9792b", "hw": "#2f9a6d"}
+    ARR, TXT = "#5a5a55", "#2d2d2b"
+    SPINE_L, SPINE_R = 20, 80          # the RQ column
+    MID = (SPINE_L + SPINE_R) / 2
 
-    def box(x, y, w, h, kind, title, detail, fs_t=8.0, fs_d=6.8, tx=None,
-            lw=1.3):
+    def box(x, y, w, h, kind, title, line, fs_t=8.4, fs_d=7.2):
         ax.add_patch(FancyBboxPatch(
-            (x, y), w, h, boxstyle="round,pad=0.9", linewidth=lw,
+            (x, y), w, h, boxstyle="round,pad=0.9", linewidth=1.4,
             facecolor=FILL[kind], edgecolor=EDGE[kind], zorder=2))
-        cx = tx if tx is not None else x + w / 2
         pt2y = YSPAN / (FIG_H * 72.0)
-        nt = title.count(NL) + 1
-        nd = detail.count(NL) + 1 if detail else 0
-        th = nt * fs_t * 1.30 * pt2y
-        dh = nd * fs_d * 1.55 * pt2y
-        gap = 0.9 if nd else 0.0
-        top = y + h / 2 + (th + gap + dh) / 2
-        ax.text(cx, top - th / 2, title, ha="center", va="center",
-                fontsize=fs_t, color=INK, fontweight="bold", zorder=4,
-                linespacing=1.30)
-        if detail:
-            ax.text(cx, top - th - gap - dh / 2, detail, ha="center",
-                    va="center", fontsize=fs_d, color="#3c3c3a", zorder=4,
-                    linespacing=1.55)
+        nl = line.count(NL) + 1
+        th = fs_t * 1.3 * pt2y
+        dh = nl * fs_d * 1.5 * pt2y
+        top = y + h / 2 + (th + 0.8 + dh) / 2
+        ax.text(x + w / 2, top - th / 2, title, ha="center", va="center",
+                fontsize=fs_t, color=INK, fontweight="bold", zorder=4)
+        ax.text(x + w / 2, top - th - 0.8 - dh / 2, line, ha="center",
+                va="center", fontsize=fs_d, color=TXT, zorder=4,
+                linespacing=1.5)
 
-    def tab(x, y, label, kind):
-        ax.add_patch(FancyBboxPatch(
-            (x, y - 1.8), 8.6, 3.6, boxstyle="round,pad=0.5", linewidth=0,
-            facecolor=EDGE[kind], zorder=5))
-        ax.text(x + 4.3, y, label, ha="center", va="center", fontsize=6.6,
-                color="white", fontweight="bold", zorder=6)
-
-    def arrow(x1, y1, x2, y2):
+    def down(x, y1, y2):
         ax.add_patch(FancyArrowPatch(
-            (x1, y1), (x2, y2), arrowstyle="-|>", mutation_scale=10,
-            color=ARR, lw=1.1, zorder=1, shrinkA=1, shrinkB=1))
+            (x, y1), (x, y2), arrowstyle="-|>", mutation_scale=11,
+            color=ARR, lw=1.2, zorder=1, shrinkA=0, shrinkB=0))
 
-    def note(x, y, t, ha="center"):
-        ax.text(x, y, t, fontsize=6.3, color=INK2, ha=ha, va="center",
+    def elbow(pts, head):
+        xs, ys = zip(*pts)
+        ax.plot(xs, ys, lw=1.2, color=ARR, zorder=1,
+                solid_joinstyle="round")
+        ax.add_patch(FancyArrowPatch(
+            pts[-1], head, arrowstyle="-|>", mutation_scale=11,
+            color=ARR, lw=1.2, zorder=1, shrinkA=0, shrinkB=0))
+
+    def label(x, y, t, ha="left"):
+        ax.text(x, y, t, fontsize=6.6, color=INK2, ha=ha, va="center",
                 style="italic", zorder=4)
 
-    def ecg_icon(cx, cy, w, h, c):
-        t = np.linspace(0, 1, 240)
-        y = (0.10 * np.exp(-((t - 0.17) / 0.035) ** 2)
-             - 0.13 * np.exp(-((t - 0.40) / 0.012) ** 2)
-             + 1.00 * np.exp(-((t - 0.45) / 0.011) ** 2)
-             - 0.30 * np.exp(-((t - 0.51) / 0.014) ** 2)
-             + 0.22 * np.exp(-((t - 0.72) / 0.045) ** 2))
-        ax.plot(cx + (t - 0.5) * w, cy + y * h * 0.42, lw=1.2, color=c,
-                zorder=4, solid_capstyle="round")
-
-    # ---------------------------------------------------------- the data
-    box(5, 90, 90, 9, "data", "Four clinical ECG sources",
+    # ---- the data -----------------------------------------------------
+    box(6, 86, 88, 11, "data", "Four clinical ECG sources",
         "PTB-XL | Georgia | Chapman | Ningbo" + NL +
         "77,333 records  ->  66,379 retained, 13 harmonised labels",
-        fs_t=8.6, fs_d=7.0, tx=56)
-    ecg_icon(17, 94.5, 11, 5.5, EDGE["data"])
+        fs_t=9.0, fs_d=7.4)
 
-    ax.plot([50, 50], [90, 87], lw=1.1, color=ARR, zorder=1)
-    ax.plot([22, 72], [87, 87], lw=1.1, color=ARR, zorder=1)
-    note(51.5, 88.2, "10 s extraction", ha="left")
-    arrow(22, 87, 22, 84)
-    arrow(72, 87, 72, 84)
+    # Split into the two preparation paths.
+    ax.plot([50, 50], [86, 83], lw=1.2, color=ARR, zorder=1)
+    ax.plot([26, 74], [83, 83], lw=1.2, color=ARR, zorder=1)
+    down(26, 83, 79.4)
+    down(74, 83, 79.4)
 
-    box(5, 76, 34, 8, "qual", "Native 500 Hz signal",
-        "quality indicators measured" + NL + "before decimation",
-        fs_t=7.4, fs_d=6.4)
-    box(50, 76, 45, 8, "data", "Anti-aliased resampling to 100 Hz",
-        "model input: 12 x 1000", fs_t=7.4, fs_d=6.4)
+    box(6, 69, 40, 10, "qual", "Native 500 Hz ECG",
+        "quality indicators measured" + NL + "before decimation")
+    box(54, 69, 40, 10, "data", "Anti-aliased resampling to 100 Hz",
+        "model input: 12 x 1000")
 
-    # --------------------------------------------------- RQ1, the spine
-    arrow(72, 76, 72, 71)
-    box(40, 58, 55, 13, "data", "External generalisation",
-        "leave-one-source-out, six compact encoders" + NL +
-        "macro AUPRC across unseen clinical sources", fs_t=8.2)
-    tab(43, 71, "RQ1", "data")
+    # ---- the spine ----------------------------------------------------
+    elbow([(74, 69), (74, 65.5), (MID, 65.5)], (MID, 62.4))
 
-    arrow(67, 58, 67, 53)
-    note(68.5, 55.5, "held-out predictions", ha="left")
+    box(SPINE_L, 52, SPINE_R - SPINE_L, 10, "data",
+        "RQ1.  External generalisation",
+        "leave-one-source-out evaluation of six compact encoders")
 
-    # ------------------------------------ RQ2, three steps in one block
-    # Drawn as a plain panel: box() centres its title, which here would
-    # land on step (b) rather than heading the block.
-    ax.add_patch(FancyBboxPatch(
-        (14, 27), 81, 25, boxstyle="round,pad=0.9", linewidth=1.3,
-        facecolor=FILL["qual"], edgecolor=EDGE["qual"], zorder=2))
-    ax.text(55, 49.3, "Reliability under source and quality shift",
-            ha="center", va="center", fontsize=8.2, color=INK,
-            fontweight="bold", zorder=4)
-    tab(17, 52, "RQ2", "qual")
-    steps = [
-        (43.5, "a", "what shifts between the sources",
-         "six indicators, four sources"),
-        (36.0, "b", "do those shifts matter diagnostically?",
-         "within-source strata, prevalence-matched dAUPRC"),
-        (28.5, "c", "can the model tell when it is unreliable?",
-         "E-AURC, and whether it degrades with the signal"),
-    ]
-    for y, letter, head, sub in steps:
-        ax.text(23, y, letter, fontsize=7.0, color=EDGE["qual"],
-                fontweight="bold", ha="center", va="center", zorder=4)
-        ax.text(27, y + 1.1, head, fontsize=7.2, color=INK, ha="left",
-                va="center", zorder=4)
-        ax.text(27, y - 1.6, sub, fontsize=6.3, color="#55554f", ha="left",
-                va="center", zorder=4)
-    for y in (39.8, 32.3):
-        ax.add_patch(FancyArrowPatch(
-            (23, y + 1.2), (23, y - 1.2), arrowstyle="-|>",
-            mutation_scale=7, color=EDGE["qual"], lw=0.9, zorder=4))
+    down(MID, 52, 44.4)
+    label(MID + 2, 48, "held-out predictions")
 
-    # The quality branch rejoins here, not at RQ1.
-    ax.plot([10, 10, 13], [76, 43.5, 43.5], lw=1.1, color=ARR, zorder=1,
-            solid_joinstyle="round")
-    ax.add_patch(FancyArrowPatch(
-        (12, 43.5), (14.6, 43.5), arrowstyle="-|>", mutation_scale=10,
-        color=ARR, lw=1.1, zorder=1))
-    note(10.6, 60, "quality" + NL + "indicators", ha="left")
+    box(SPINE_L, 32, SPINE_R - SPINE_L, 12, "qual",
+        "RQ2.  Reliability under source and quality shift",
+        "quality characterisation, prevalence-matched dAUPRC," + NL +
+        "and selective reliability")
 
-    arrow(67, 27, 67, 22)
-    note(68.5, 24.5, "externally evaluated encoders", ha="left")
+    # The quality branch rejoins here, around the outside of the spine.
+    elbow([(26, 69), (26, 66.5), (13, 66.5), (13, 38)], (19.4, 38))
+    label(15.2, 41.0, "quality" + NL + "indicators")
 
-    # ------------------------------------------------- RQ3, deployment
-    box(14, 8, 81, 13, "hw", "Deployment-preserved performance",
-        "int8 post-training quantisation | STM32F411 at 100 MHz" + NL +
-        "Flash | SRAM | measured latency | accuracy-resource trade-off",
-        fs_t=8.2)
-    tab(17, 21, "RQ3", "hw")
+    down(MID, 32, 24.4)
+    label(MID + 2, 28, "externally evaluated models")
 
-    ax.text(50, 3.4,
-            "Generalises?   ->   Can we trust it?   ->   Can we deploy it?",
-            ha="center", va="center", fontsize=7.4, color=INK2,
-            style="italic")
+    box(SPINE_L, 14, SPINE_R - SPINE_L, 10, "hw",
+        "RQ3.  Deployment-preserved performance",
+        "int8 on STM32F411: Flash, SRAM, latency," + NL +
+        "accuracy-resource trade-off")
+
     fig.tight_layout(pad=0.2)
     save(fig, "figure1_design", FIG)
 
