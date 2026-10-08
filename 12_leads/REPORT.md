@@ -17,9 +17,9 @@ source-out predictions.
 
 | | question | evidence |
 |---|---|---|
-| **RQ1** | How well do compact ECG encoders generalise to previously unseen clinical sources? | Figure 2, Table III |
+| **RQ1** | How well do compact ECG encoders generalise to each of the four evaluated clinical sources when it is held out entirely? | Figure 2, Table III |
 | **RQ2** | How are source-specific signal characteristics and record-level impairments associated with external performance, and can selective prediction identify unreliable cases? | Figure 3, Table III, Figure 4 |
-| **RQ3** | Which externally evaluated models retain performance after int8 deployment, and what accuracy-resource operating points do they offer? | Figure 5 |
+| **RQ3** | Do the externally evaluated models retain **both** discrimination and selective reliability after int8 deployment, and what accuracy-resource operating points do they offer? | Figure 5 |
 
 ```
 Generalises?  ->  Can we trust it?  ->  Can we deploy it?
@@ -205,7 +205,7 @@ Pooled across the six encoders with 95% record-level bootstrap intervals, 200 re
 
 ### RQ2c - does confidence degrade with the signal?
 
-RQ2b shows impaired records are harder. Figure 4(b) shows confidence
+RQ2b shows impaired records are harder. Figure 4(e) shows confidence
 ranks errors to some degree. Neither says whether the two interact, and
 the interaction is what a referral deployment depends on:
 
@@ -214,7 +214,7 @@ the interaction is what a referral deployment depends on:
 Positive means degradation produces errors the model is *also* worse at
 recognising. Restricted to the three structural indicators, since those
 are the ones RQ2b found consistently associated with lower
-discrimination. **Figure 4(c)**, 1000 replicates, seed 0:
+discrimination. **Figure S5**, 1000 replicates, seed 0:
 
 | indicator | dE-AURC (95% CI) | sources |
 |---|---|---|
@@ -233,7 +233,7 @@ discrimination. **Figure 4(c)**, 1000 replicates, seed 0:
 > indicator directly, not on model confidence.
 
 ---
-## RQ3 - deployment-preserved performance
+## RQ3 - reliability-preserving embedded deployment
 
 Target confirmed over SWD: **STM32F411xC/E, Cortex-M4, 128 KB SRAM,
 512 KB Flash**, ST-Link V2. Toolchain: ST Edge AI Core v2.2.0, GNU Arm
@@ -276,6 +276,16 @@ Flash and RAM are totals including the generated ST Edge AI runtime
 > encoders is -0.0032, one to two orders of magnitude below the gaps
 > between architectures. Quantisation is not a trade-off here; it is a
 > precondition that costs nothing.
+>
+> The selective half holds too. dE-AURC spans **-0.0157 to -0.0058**,
+> so the confidence ordering survives quantisation along with the
+> discrimination -- which is what RQ2c needs in order to mean anything
+> on the device that actually runs. The sign is negative throughout,
+> but that is read here as *quantisation-induced change in E-AURC was
+> small*, not as int8 improving reliability: the shifts are an order of
+> magnitude below the spread between architectures (0.130 to 0.161),
+> and the E-AURC bootstrap is mildly biased in this setting
+> (Limitations).
 
 > **Finding 8. MACC mis-ranks latency, and by a factor of two.**
 > MobileNet1D has **36% fewer MACC than TinyCNN and identical latency**
@@ -300,6 +310,26 @@ Flash and RAM are totals including the generated ST Edge AI runtime
 ---
 
 ## Limitations
+
+0. **The percentile bootstrap is mildly biased for E-AURC.** Resampling records
+   with replacement introduces duplicates, which changes the tie structure that
+   a confidence ranking depends on, and E-AURC is a non-linear functional of
+   that ranking. The consequence is visible in Figure 5(b): for TCN-Lite the
+   full-data estimate (-0.0108) lies just outside its own 1000-replicate
+   interval (-0.0132, -0.0111). It did not close when replicates were raised
+   from 20 to 1000, so it is bias rather than noise. Intervals on E-AURC and
+   on dE-AURC should therefore be read as indicating width, not as exact
+   coverage; the point estimates are unaffected. Intervals are drawn as 
+   absolute endpoints so that a point outside its interval is shown rather
+   than hidden.
+
+0. **Four source domains, not a sample of them.** The intervals throughout
+   are record-level bootstraps: they quantify sampling variation of records
+   *within* these four sources. They say nothing about variation across the
+   population of clinical sources, because four domains cannot estimate that.
+   Read every result as generalisation to *these four* held-out sources, and
+   treat the spread across the columns of Figure 2 -- not the interval on the
+   mean -- as the honest measure of source dependence.
 
 1. **"Source" is not a single variable.** Holding out a dataset varies
    acquisition hardware, population and labelling protocol at once.
@@ -361,8 +391,8 @@ the STM32F411. In short: generalises? can we trust it? can we deploy it?
 | 1 | `figures/figure1_design` | the experimental logic, three RQs |
 | 2 | `figures/figure2_generalisation` | **RQ1** do the encoders generalise? AUPRC by held-out source, and the mean with bootstrap CI |
 | 3 | `figures/figure3_signal_quality` | **RQ2a** how do the sources differ? six indicators, native 500 Hz |
-| 4 | `figures/figure4_reliability` | **RQ2c** can confidence identify unreliable predictions? risk-coverage per source, and E-AURC |
-| 5 | `figures/figure5_operating_points` | **RQ3** which reliable models are practical on-device? int8 AUPRC against Flash, SRAM and measured latency |
+| 4 | `figures/figure4_reliability` | **RQ2c** can confidence identify unreliable predictions? risk-coverage per held-out source (a-d), and mean E-AURC with bootstrap CI (e) |
+| 5 | `figures/figure5_operating_points` | **RQ3** top row, what int8 changed: macro AUPRC (a) and E-AURC (b). Bottom row, what the preserved operating points cost: Flash (c), SRAM (d) and measured latency (e). RTF spans 0.022-0.425, so every encoder finishes inside the 10 s window |
 
 ## Main tables
 
@@ -399,4 +429,6 @@ magnitude below the gaps between architectures.
 | S4 | `figures/supplementary/figureS4_eaurc_by_source` and `tables/supplementary/tableS4_quality_robustness_full` | E-AURC by held-out source; full quality-association output |
 | S5 | `figures/supplementary/figureS5_quality_reliability` | **RQ2c extension** whether confidence degrades along with the signal |
 | S6 | `tables/supplementary/tableS6_auroc` | macro AUROC by held-out source |
-| S7 | `tables/supplementary/tableS7_stm32f411_deployment` | the numerical deployment detail behind Figure 5 |
+| S7 | `tables/supplementary/tableS7_deployment_measurements` | every deployment number behind Figure 5: Flash, SRAM, MACC, measured latency, RTF, both precisions of AUPRC and E-AURC, and practical fit |
+| S8 | `figures/supplementary/figureS8_abstention` and `tables/supplementary/tableS8_operating_points` | selective risk at 100%, 90% and 80% retained coverage -- what abstention buys, which E-AURC cannot express. Was a sixth panel of Figure 4 |
+| S9 | `tables/supplementary/tableS9_stratum_sensitivity` | RQ2b at Q20/Q80 instead of the quartile split |

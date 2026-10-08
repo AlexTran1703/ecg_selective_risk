@@ -1,0 +1,16 @@
+\begin{table}
+\caption{Supplementary Table S8. Selective risk at fixed retained coverage, averaged over the four held-out sources. R(1.00) is risk with every record reported; R(0.90) is risk on the 90% the model is most confident about, so dR(0.90) = R(1.00) - R(0.90) is what withholding the least-confident tenth for reacquisition or review would buy on the records still reported. The int8 column shows the same quantity survives quantisation. These are observational quantities computed on held-out predictions; no abstention workflow was clinically validated here.}
+\begin{tabular}{lrrrrrrr}
+\toprule
+ & float32 R(1.00) & float32 R(0.90) & float32 R(0.80) & float32 R(0.70) & float32 dR(0.90) & float32 dR(0.80) & int8 dR(0.90) \\
+model &  &  &  &  &  &  &  \\
+\midrule
+TinyCNN & 0.580400 & 0.571300 & 0.561000 & 0.549000 & 0.009000 & 0.019400 & 0.012300 \\
+DS-CNN & 0.563100 & 0.554200 & 0.543200 & 0.531500 & 0.008900 & 0.019900 & 0.012500 \\
+MobileNet1D & 0.510400 & 0.497600 & 0.482700 & 0.465300 & 0.012800 & 0.027600 & 0.017400 \\
+MBConv1D & 0.484400 & 0.471900 & 0.457600 & 0.441400 & 0.012500 & 0.026800 & 0.017600 \\
+TCN-Lite & 0.518600 & 0.508100 & 0.495400 & 0.481500 & 0.010500 & 0.023200 & 0.015500 \\
+ResNet1D-Lite & 0.464800 & 0.450800 & 0.433800 & 0.414300 & 0.014000 & 0.031100 & 0.020800 \\
+\bottomrule
+\end{tabular}
+\end{table}

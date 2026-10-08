@@ -29,6 +29,7 @@ from ecgmcu.models import build, n_params                      # noqa: E402
 from ecgmcu.specs import SPECS                                 # noqa: E402
 
 ORDER, NICE, TAB, STAB = A.ORDER, A.NICE, A.TAB, A.STAB
+PAPER_FS = 100          # the reported rate; 250 Hz is archived only
 SRAM_KB, FLASH_KB = A.SRAM_KB, A.FLASH_KB
 RESERVE_FLASH, RESERVE_SRAM = A.RESERVE_FLASH, A.RESERVE_SRAM
 
@@ -176,71 +177,6 @@ def table4(qr):
            "stratum. These are associations, not causal effects.", TAB)
 
 
-def table5(dep, acc):
-    lat = A.load_latency()
-    if not lat:
-        return
-    rows = []
-    for m in ORDER:
-        L = lat.get(m)
-        if not L:
-            continue
-        a = acc[acc.model == m] if not acc.empty else None
-        fkb = (L.get("total_flash_b") or 0) / 1024
-        rkb = (L.get("total_ram_b") or 0) / 1024
-        ms = L.get("ms_median")
-        # Two distinct questions. Physical fit is whether the image is
-        # smaller than the part, which is what actually ran. Practical fit
-        # asks whether a real product could also hold its application,
-        # drivers, acquisition buffers and bootloader, so it works against
-        # a reserved budget. A model occupying 508.8 of 512 KB passes the
-        # first and fails the second, and the second is the useful answer.
-        phys = fkb < FLASH_KB and rkb < SRAM_KB
-        prac = (fkb < FLASH_KB - RESERVE_FLASH
-                and rkb < SRAM_KB - RESERVE_SRAM)
-        if not phys:
-            v = "no"
-        elif prac:
-            v = "yes"
-        else:
-            v = "Flash-limited" if fkb >= FLASH_KB - RESERVE_FLASH \
-                else "SRAM-limited"
-        rows.append({
-            "model": NICE[m],
-            "Flash KB": round(fkb, 1),
-            "RAM KB": round(rkb, 1),
-            "MACs (M)": round((L.get("macc") or 0) / 1e6, 2),
-            "latency ms": round(ms, 1) if ms else np.nan,
-            "inference RTF": round(L["rtf"], 4) if L.get("rtf") else np.nan,
-            "float32 AUPRC": round(a.auprc_f32.mean(), 4)
-            if a is not None and len(a) else np.nan,
-            "int8 AUPRC": round(a.auprc_int8.mean(), 4)
-            if a is not None and len(a) else np.nan,
-            "dAUPRC": round(a.delta.mean(), 4)
-            if a is not None and len(a) else np.nan,
-            "practical fit": v})
-    A.emit(pd.DataFrame(rows).set_index("model"),
-           "tableS7_stm32f411_deployment",
-           f"Supplementary Table S7. STM32F411 deployment at {FS_OUT} Hz "
-           f"in int8. Figure 5 carries the scientific result; this is "
-           f"the numerical detail behind it. "
-           f"({SRAM_KB} KB SRAM, {FLASH_KB} KB Flash). Flash and RAM are "
-           f"totals including the generated ST Edge AI runtime, not "
-           f"weights alone. Latency is measured on the part: each model "
-           f"was built into a bare-metal firmware, flashed over SWD and "
-           f"timed with the DWT cycle counter at 100 MHz over 32 runs "
-           f"after a warm-up, and the median is reported. Inference RTF "
-           f"is that latency over the {SECONDS} s acquisition window; it "
-           f"excludes preprocessing, which is performed off-device. "
-           f"Practical fit is assessed against a reserved budget of "
-           f"{FLASH_KB - RESERVE_FLASH} KB Flash and "
-           f"{SRAM_KB - RESERVE_SRAM} KB SRAM, leaving {RESERVE_FLASH} KB "
-           f"and {RESERVE_SRAM} KB for application firmware, drivers, "
-           f"acquisition buffers and a bootloader. All six models are "
-           f"physically smaller than the part and all six ran on it.",
-           STAB)
-
-
 def supplementary(runs, qr):
     cls = json.loads((HERE.parent / "data" / "meta" / "classes.json")
                      .read_text())["abbreviations"]
@@ -348,7 +284,158 @@ def supplementary_rq3(qr):
            "effect sizes should be read with that in mind.", STAB)
 
 
+def _fit(L):
+    """Practical fit: does it leave room for the rest of the firmware?
+
+    Flash and RAM here already include the generated runtime, so the only
+    thing reserved is the application: 64 KB Flash and 16 KB SRAM for
+    drivers, acquisition buffers and a bootloader.
+    """
+    fkb = (L.get("total_flash_b") or 0) / 1024
+    rkb = (L.get("total_ram_b") or 0) / 1024
+    if fkb >= FLASH_KB or rkb >= SRAM_KB:
+        return "no"
+    if fkb >= FLASH_KB - RESERVE_FLASH:
+        return "Flash-limited"
+    if rkb >= SRAM_KB - RESERVE_SRAM:
+        return "SRAM-limited"
+    return "yes"
+
+
+def supplementary_deployment():
+    """S7: every deployment number, so the main text can stay prose.
+
+    Figure 5 carries the argument. This is what somebody reproducing it
+    needs: the measured footprint and latency beside what int8 did to
+    both discrimination and selective reliability.
+    """
+    lat = A.load_latency()
+    fp = A.S2D / "int8_preservation.json"
+    if not lat:
+        return
+    pres = {}
+    if fp.exists():
+        pres = {r["model"]: r for r in json.loads(fp.read_text())}
+    rows = []
+    for m in ORDER:
+        L = lat.get(m)
+        if not L:
+            continue
+        r = pres.get(m, {})
+        rows.append({
+            "model": NICE[m],
+            "Flash KB": round((L.get("total_flash_b") or 0) / 1024, 1),
+            "RAM KB": round((L.get("total_ram_b") or 0) / 1024, 1),
+            "MACs (M)": round((L.get("macc") or 0) / 1e6, 2),
+            "latency ms": round(L["ms_median"], 1)
+            if L.get("ms_median") else np.nan,
+            "RTF": round(L["rtf"], 4) if L.get("rtf") else np.nan,
+            "float32 AUPRC": round(r["auprc_f32"], 4) if r else np.nan,
+            "int8 AUPRC": round(r["auprc_int8"], 4) if r else np.nan,
+            "dAUPRC": round(r["d_auprc"], 4) if r else np.nan,
+            "float32 E-AURC": round(r["eaurc_f32"], 4) if r else np.nan,
+            "int8 E-AURC": round(r["eaurc_int8"], 4) if r else np.nan,
+            "dE-AURC": round(r["d_eaurc"], 4) if r else np.nan,
+            "practical fit": _fit(L),
+        })
+    A.emit(pd.DataFrame(rows).set_index("model"),
+           "tableS7_deployment_measurements",
+           "Supplementary Table S7. Complete STM32F411 deployment "
+           "measurements. Flash and RAM are totals including the "
+           "generated ST Edge AI runtime. Latency is the median of 32 "
+           "timed runs on the part at 100 MHz after a warm-up, and RTF is "
+           "that latency over the 10 s acquisition window, so RTF < 1 "
+           "means inference finishes inside the recording. The last six "
+           "columns are the quantisation comparison plotted in Figure "
+           "5(a-b), on identical records: dAUPRC is int8 minus float32 "
+           "discrimination, dE-AURC is int8 minus float32 selective "
+           "reliability, where a negative dE-AURC means the confidence "
+           "ordering was not degraded. Latency excludes preprocessing, "
+           "which is performed off-device. Practical fit reserves "
+           f"{RESERVE_FLASH} KB Flash and {RESERVE_SRAM} KB SRAM for "
+           "application firmware on top of the measured totals.", STAB)
+
+
+def supplementary_operating_points():
+    """S8: selective risk at fixed coverage, which E-AURC cannot express."""
+    fp = A.S2D / "int8_preservation.json"
+    if not fp.exists():
+        return
+    pres = {r["model"]: r for r in json.loads(fp.read_text())}
+    covs = ["1.0", "0.9", "0.8", "0.7"]
+    rows = []
+    for m in ORDER:
+        if m not in pres:
+            continue
+        rf = pres[m]["risk_f32"]
+        r8 = pres[m]["risk_int8"]
+        rec = {"model": NICE[m]}
+        for c in covs:
+            rec[f"float32 R({float(c):.2f})"] = round(rf[c], 4)
+        rec["float32 dR(0.90)"] = round(rf["1.0"] - rf["0.9"], 4)
+        rec["float32 dR(0.80)"] = round(rf["1.0"] - rf["0.8"], 4)
+        rec["int8 dR(0.90)"] = round(r8["1.0"] - r8["0.9"], 4)
+        rows.append(rec)
+    A.emit(pd.DataFrame(rows).set_index("model"),
+           "tableS8_operating_points",
+           "Supplementary Table S8. Selective risk at fixed retained "
+           "coverage, averaged over the four held-out sources. R(1.00) is "
+           "risk with every record reported; R(0.90) is risk on the 90% "
+           "the model is most confident about, so dR(0.90) = R(1.00) - "
+           "R(0.90) is what withholding the least-confident tenth for "
+           "reacquisition or review would buy on the records still "
+           "reported. The int8 column shows the same quantity survives "
+           "quantisation. These are observational quantities computed on "
+           "held-out predictions; no abstention workflow was clinically "
+           "validated here.", STAB)
+
+
+def supplementary_stratum_sensitivity():
+    """S9: do the quality associations survive a different stratum cut?"""
+    base = A.S2D / "quality_robustness.json"
+    alt = A.S2D / "quality_robustness_q20.json"
+    if not (base.exists() and alt.exists()):
+        print("  (no stratum sensitivity yet)")
+        return
+    b = pd.DataFrame(json.loads(base.read_text()))
+    a = pd.DataFrame(json.loads(alt.read_text()))
+    bp = b[b.model == "__pooled__"].set_index("label")
+    apd = a[a.model == "__pooled__"].set_index("label")
+    cols = [c for c in A.FACTOR_ORDER if c in bp.index]
+    rows = []
+    for c in cols:
+        rec = {
+            "indicator": c,
+            "Q25/Q75 dAUPRC": round(float(bp.loc[c, "delta"]), 4),
+            "Q25/Q75 lo": round(float(bp.loc[c, "lo"]), 4),
+            "Q25/Q75 hi": round(float(bp.loc[c, "hi"]), 4),
+            "sources": int(bp.loc[c, "sources_used"]),
+        }
+        if c in apd.index:
+            rec["Q20/Q80 dAUPRC"] = round(float(apd.loc[c, "delta"]), 4)
+            rec["Q20/Q80 lo"] = round(float(apd.loc[c, "lo"]), 4)
+            rec["Q20/Q80 hi"] = round(float(apd.loc[c, "hi"]), 4)
+        rows.append(rec)
+    A.emit(pd.DataFrame(rows).set_index("indicator"),
+           "tableS9_stratum_sensitivity",
+           "Supplementary Table S9. Sensitivity of the "
+           "quality-performance associations to how the strata are cut. "
+           "The primary analysis contrasts the within-source quartiles "
+           "(<=Q25 against >=Q75) for the three continuous indicators; "
+           "this repeats it at Q20 against Q80. The structural indicators "
+           "are present-versus-absent in both and so are unchanged by "
+           "the cut. The purpose is to show the principal associations "
+           "are not an artefact of one arbitrary threshold.", STAB)
+
+
 def main():
+    # Results are rate-tagged but figures/ and tables/ are not, so a build
+    # launched without ECG_FS quietly refills the paper with the archived
+    # 250 Hz numbers and still exits zero. Refuse instead.
+    if FS_OUT != PAPER_FS:
+        sys.exit(f"refusing to build at {FS_OUT} Hz: the paper reports "
+                 f"{PAPER_FS} Hz and the asset folders are shared across "
+                 f"rates. Re-run with ECG_FS={PAPER_FS}.")
     for d in (A.FIG, TAB, A.SFIG, STAB):
         d.mkdir(parents=True, exist_ok=True)
     q = A.quality()
@@ -375,7 +462,9 @@ def main():
     boot = table3(runs) if runs else {}
     table4(qr)
     supplementary_rq3(qr)
-    table5(dep, acc)   # -> supplementary S7
+    supplementary_deployment()
+    supplementary_operating_points()
+    supplementary_stratum_sensitivity()
 
     print("main figures:")
     A.figure1()                      # design, three RQ blocks
@@ -390,6 +479,7 @@ def main():
     A.figure4(dep, acc, f32)         # float32 vs int8 memory detail
     A.figureS2_risk_coverage()
     A.figureS5_quality_reliability()
+    A.figureS8_abstention()          # was figure 4(f)
     if runs:
         supplementary(runs, qr)
     print(f"\nmain: {A.FIG} | {TAB}\nsupp: {A.SFIG} | {STAB}")

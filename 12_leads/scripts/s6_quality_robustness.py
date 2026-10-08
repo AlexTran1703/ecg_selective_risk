@@ -116,7 +116,8 @@ def quality_frame() -> pd.DataFrame:
     return idx.merge(q[cols], on=["source", "record"], how="left")
 
 
-def split(v: np.ndarray, kind: str):
+def split(v: np.ndarray, kind: str, qlo: float = 25.0,
+          qhi: float = 75.0):
     """(lower-impairment index, higher-impairment index) within a source.
 
     Continuous indicators are cut at the within-source quartiles, so the
@@ -129,10 +130,11 @@ def split(v: np.ndarray, kind: str):
     ok = np.isfinite(v)
     if ok.sum() < 8:
         return np.array([], int), np.array([], int)
-    q25, q75 = np.nanpercentile(v, [25, 75])
-    if not np.isfinite(q25) or q25 == q75:
+    lo_c, hi_c = np.nanpercentile(v, [qlo, qhi])
+    if not np.isfinite(lo_c) or lo_c == hi_c:
         return np.array([], int), np.array([], int)
-    return np.flatnonzero(ok & (v <= q25)), np.flatnonzero(ok & (v >= q75))
+    return (np.flatnonzero(ok & (v <= lo_c)),
+            np.flatnonzero(ok & (v >= hi_c)))
 
 
 def main() -> None:
@@ -142,11 +144,17 @@ def main() -> None:
                     help="positives and negatives required per class "
                          "per stratum; 20 is primary, 10 is the "
                          "sensitivity analysis")
+    ap.add_argument("--quantile", type=float, default=25.0,
+                    help="lower cut for continuous indicators; the "
+                         "upper cut is its complement. 25 is primary, "
+                         "20 is the sensitivity analysis")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
     min_sup = args.min_support
     tag = "" if args.min_support == 20 else f"_s{args.min_support}"
+    if args.quantile != 25.0:
+        tag += f"_q{args.quantile:g}"
     dst = OUT / f"quality_robustness{tag}.json"
     if dst.exists() and not args.force:
         print(f"cached: {dst}")
@@ -173,7 +181,8 @@ def main() -> None:
                 continue
             r = runs[key]
             sub = qf.iloc[r["rows"]]
-            lo, hi = split(sub[col].to_numpy(), kind)
+            lo, hi = split(sub[col].to_numpy(), kind,
+                           args.quantile, 100.0 - args.quantile)
             if lo.size < min_sup or hi.size < min_sup:
                 continue
             y = r["y"]
@@ -278,7 +287,8 @@ def main() -> None:
                   f"{len(pools)} sources", flush=True)
     dst.write_text(json.dumps(rows, indent=1))
     print(f"\n-> {dst}  ({len(rows)} rows, {FS_OUT} Hz, B={args.reps}, "
-          f"seed=0, support {min_sup}+/{min_sup}-)")
+          f"seed=0, support {min_sup}+/{min_sup}-, "
+          f"Q{args.quantile:g}/Q{100 - args.quantile:g})")
 
 
 if __name__ == "__main__":

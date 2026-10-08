@@ -1,0 +1,16 @@
+\begin{table}
+\caption{Supplementary Table S7. Complete STM32F411 deployment measurements. Flash and RAM are totals including the generated ST Edge AI runtime. Latency is the median of 32 timed runs on the part at 100 MHz after a warm-up, and RTF is that latency over the 10 s acquisition window, so RTF < 1 means inference finishes inside the recording. The last six columns are the quantisation comparison plotted in Figure 5(a-b), on identical records: dAUPRC is int8 minus float32 discrimination, dE-AURC is int8 minus float32 selective reliability, where a negative dE-AURC means the confidence ordering was not degraded. Latency excludes preprocessing, which is performed off-device. Practical fit reserves 64 KB Flash and 16 KB SRAM for application firmware on top of the measured totals.}
+\begin{tabular}{lrrrrrrrrrrrl}
+\toprule
+ & Flash KB & RAM KB & MACs (M) & latency ms & RTF & float32 AUPRC & int8 AUPRC & dAUPRC & float32 E-AURC & int8 E-AURC & dE-AURC & practical fit \\
+model &  &  &  &  &  &  &  &  &  &  &  &  \\
+\midrule
+TinyCNN & 57.800000 & 27.300000 & 4.280000 & 222.400000 & 0.022200 & 0.502400 & 0.499900 & -0.002500 & 0.148300 & 0.133000 & -0.015300 & yes \\
+DS-CNN & 44.800000 & 28.600000 & 3.330000 & 282.900000 & 0.028300 & 0.519600 & 0.516400 & -0.003200 & 0.164400 & 0.148700 & -0.015700 & yes \\
+MobileNet1D & 48.200000 & 29.900000 & 2.670000 & 222.300000 & 0.022200 & 0.508900 & 0.507600 & -0.001300 & 0.148900 & 0.134500 & -0.014400 & yes \\
+MBConv1D & 133.500000 & 45.700000 & 9.990000 & 640.100000 & 0.064000 & 0.540000 & 0.537100 & -0.002900 & 0.143300 & 0.134200 & -0.009100 & yes \\
+TCN-Lite & 179.800000 & 53.500000 & 10.250000 & 1067.600000 & 0.106800 & 0.526100 & 0.524900 & -0.001200 & 0.150100 & 0.139200 & -0.010800 & yes \\
+ResNet1D-Lite & 508.800000 & 52.400000 & 54.470000 & 4247.100000 & 0.424700 & 0.549000 & 0.546700 & -0.002300 & 0.129600 & 0.123800 & -0.005800 & Flash-limited \\
+\bottomrule
+\end{tabular}
+\end{table}

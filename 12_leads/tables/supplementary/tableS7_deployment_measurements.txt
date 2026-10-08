@@ -1,0 +1,10 @@
+Supplementary Table S7. Complete STM32F411 deployment measurements. Flash and RAM are totals including the generated ST Edge AI runtime. Latency is the median of 32 timed runs on the part at 100 MHz after a warm-up, and RTF is that latency over the 10 s acquisition window, so RTF < 1 means inference finishes inside the recording. The last six columns are the quantisation comparison plotted in Figure 5(a-b), on identical records: dAUPRC is int8 minus float32 discrimination, dE-AURC is int8 minus float32 selective reliability, where a negative dE-AURC means the confidence ordering was not degraded. Latency excludes preprocessing, which is performed off-device. Practical fit reserves 64 KB Flash and 16 KB SRAM for application firmware on top of the measured totals.
+------------------------------------------------------------------------------
+               Flash KB  RAM KB  MACs (M)  latency ms     RTF  float32 AUPRC  int8 AUPRC  dAUPRC  float32 E-AURC  int8 E-AURC  dE-AURC  practical fit
+model                                                                                                                                                
+TinyCNN            57.8    27.3      4.28       222.4  0.0222         0.5024      0.4999 -0.0025          0.1483       0.1330  -0.0153            yes
+DS-CNN             44.8    28.6      3.33       282.9  0.0283         0.5196      0.5164 -0.0032          0.1644       0.1487  -0.0157            yes
+MobileNet1D        48.2    29.9      2.67       222.3  0.0222         0.5089      0.5076 -0.0013          0.1489       0.1345  -0.0144            yes
+MBConv1D          133.5    45.7      9.99       640.1  0.0640         0.5400      0.5371 -0.0029          0.1433       0.1342  -0.0091            yes
+TCN-Lite          179.8    53.5     10.25      1067.6  0.1068         0.5261      0.5249 -0.0012          0.1501       0.1392  -0.0108            yes
+ResNet1D-Lite     508.8    52.4     54.47      4247.1  0.4247         0.5490      0.5467 -0.0023          0.1296       0.1238  -0.0058  Flash-limited

@@ -251,29 +251,34 @@ def figure1():
     # ---- the spine ----------------------------------------------------
     elbow([(74, 69), (74, 65.5), (MID, 65.5)], (MID, 62.4))
 
+    # All three RQ boxes are the same height and carry a one-line
+    # subtitle. No period after the label: "RQ1. External" reads as a
+    # numbered sentence, "RQ1  External" reads as a tag.
     box(SPINE_L, 52, SPINE_R - SPINE_L, 10, "data",
-        "RQ1.  External generalisation",
-        "leave-one-source-out evaluation of six compact encoders")
+        "RQ1   External generalisation",
+        "LOSO evaluation of six compact encoders")
 
-    down(MID, 52, 44.4)
-    label(MID + 2, 48, "held-out predictions")
+    down(MID, 52, 42.4)
+    label(MID + 2, 47, "held-out predictions")
 
-    box(SPINE_L, 32, SPINE_R - SPINE_L, 12, "qual",
-        "RQ2.  Reliability under source and quality shift",
-        "quality characterisation, prevalence-matched dAUPRC," + NL +
-        "and selective reliability")
+    box(SPINE_L, 32, SPINE_R - SPINE_L, 10, "qual",
+        "RQ2   Reliability under source and quality shift",
+        "quality characterisation, dAUPRC, and selective reliability")
 
-    # The quality branch rejoins here, around the outside of the spine.
-    elbow([(26, 69), (26, 66.5), (13, 66.5), (13, 38)], (19.4, 38))
-    label(15.2, 41.0, "quality" + NL + "indicators")
+    # The quality branch runs down the outside and enters RQ2 on its left
+    # edge. The label sits along the run rather than floating beside the
+    # bend, which is where it used to collide with RQ1.
+    elbow([(26, 69), (26, 66.5), (12.5, 66.5), (12.5, 37)], (19.4, 37))
+    ax.text(10.8, 52, "quality descriptors", rotation=90, ha="center",
+            va="center", fontsize=6.6, color=INK2, style="italic",
+            zorder=4)
 
     down(MID, 32, 24.4)
     label(MID + 2, 28, "externally evaluated models")
 
     box(SPINE_L, 14, SPINE_R - SPINE_L, 10, "hw",
-        "RQ3.  Deployment-preserved performance",
-        "int8 on STM32F411: Flash, SRAM, latency," + NL +
-        "accuracy-resource trade-off")
+        "RQ3   Reliability-preserving embedded deployment",
+        "int8 preservation and STM32F411 operating points")
 
     fig.tight_layout(pad=0.2)
     save(fig, "figure1_design", FIG)
@@ -421,83 +426,124 @@ def figure4(dep, acc, f32):
 
 # ------------------------------------------------------------- figure 5
 def figure5(runs, dep):
-    """RQ3: what diagnostic performance each resource budget buys.
+    """RQ3: does deployment preserve what RQ1 and RQ2 established, and
+    what does that preservation cost?
 
-    Plotted on int8 accuracy, not float32: these are deployment operating
-    points, so the y-axis has to describe the model that actually runs on
-    the part. The frontier is left for the reader to read off the scatter
-    rather than ringed: with six points per panel the markers were doing
-    the work already, and the rings only added ink.
+    Two questions in the right order. The top row asks whether int8
+    changes the discrimination from RQ1 or the selective reliability from
+    RQ2 -- if quantisation scrambled the confidence ordering, every
+    selective conclusion would be void on the device that actually runs.
+    The bottom row asks what resources the preserved behaviour needs.
+
+    Plotted on int8 accuracy throughout: these are deployment operating
+    points, so the axes have to describe the model on the part.
     """
-    acc = {}
-    f8 = S3B / "int8.json"
-    if f8.exists():
-        a8 = pd.DataFrame(json.loads(f8.read_text()))
-        for m in ORDER:
-            sub = a8[a8.model == m]
-            if len(sub):
-                acc[m] = float(sub.auprc_int8.mean())
-    if not acc:                      # fall back to float32 if int8 absent
-        for m in ORDER:
-            v = [macro_ap(runs[(m, s)]["y"], runs[(m, s)]["p"])
-                 for s in SOURCES if (m, s) in runs]
-            if v:
-                acc[m] = float(np.mean(v))
+    from matplotlib.ticker import MaxNLocator, NullFormatter
+    lat = load_latency()
+    pres = {}
+    fp = S2D / "int8_preservation.json"
+    if fp.exists():
+        pres = {r["model"]: r for r in json.loads(fp.read_text())}
+    acc = {m: pres[m]["auprc_int8"] for m in ORDER if m in pres}
+    if not acc:
+        f8 = S3B / "int8.json"
+        if f8.exists():
+            a8 = pd.DataFrame(json.loads(f8.read_text()))
+            acc = {m: float(a8[a8.model == m].auprc_int8.mean())
+                   for m in ORDER if len(a8[a8.model == m])}
     if not acc:
         return
-    lat = load_latency()
-    fig, axes = plt.subplots(1, 3, figsize=(8.4, 3.2), facecolor=SURFACE)
+    models = [m for m in ORDER if m in acc]
     cmap = plt.get_cmap("tab10")
-    for i, m in enumerate(acc):
-        L0 = lat.get(m, {})
-        if L0.get("total_flash_b"):
-            axes[0].scatter(L0["total_flash_b"] / 1024, acc[m], s=48,
-                            color=cmap(i), edgecolor=SURFACE, lw=1.0,
-                            zorder=3, label=NICE[m])
-        L = lat.get(m, {})
-        if L.get("total_ram_b"):
-            axes[1].scatter(L["total_ram_b"] / 1024, acc[m], s=48,
-                            color=cmap(i), edgecolor=SURFACE, lw=1.0,
-                            zorder=3)
-        if L.get("ms_median"):
-            axes[2].scatter(L["ms_median"], acc[m], s=48, color=cmap(i),
-                            edgecolor=SURFACE, lw=1.0, zorder=3)
-    # matplotlib labels log minor ticks by default at narrow decade spans,
-    # which collides into an unreadable smear on a panel this wide.
-    from matplotlib.ticker import NullFormatter
-    axes[0].set_xscale("log")
-    axes[0].xaxis.set_minor_formatter(NullFormatter())
-    axes[0].axvline(FLASH_KB, color=INK, lw=1.0, ls="--")
-    axes[0].text(FLASH_KB, axes[0].get_ylim()[0], "F411 512 KB  ",
-                 fontsize=6.0, color=INK, rotation=90, va="bottom",
-                 ha="right")
-    axes[0].set_xlabel("measured total Flash (KB)", fontsize=7.4,
-                       color=INK)
-    axes[0].set_ylabel("int8 cross-source macro AUPRC", fontsize=7.4,
-                       color=INK)
-    axes[0].set_title("(a) int8 AUPRC vs Flash", fontsize=7.2,
-                      color=INK)
 
-    axes[1].axvline(SRAM_KB, color=INK, lw=1.0, ls="--")
-    axes[1].text(SRAM_KB, axes[1].get_ylim()[0], "F411 128 KB  ",
-                 fontsize=6.0, color=INK, rotation=90, va="bottom")
-    axes[1].set_xlabel("measured total RAM (KB)", fontsize=7.4, color=INK)
-    axes[1].set_title("(b) int8 AUPRC vs peak SRAM", fontsize=7.2,
-                      color=INK)
+    fig = plt.figure(figsize=(7.6, 4.9), facecolor=SURFACE)
+    # The rows answer different questions -- what quantisation cost, then
+    # what it costs to run -- so they are grouped rather than evenly
+    # spaced. The gap is only as wide as the row heading needs.
+    gs = fig.add_gridspec(2, 6, height_ratios=[1.0, 1.0], hspace=0.60,
+                          wspace=1.5, top=0.90, bottom=0.14, left=0.08,
+                          right=0.98)
+    for y_, t in ((0.965, "quantisation effect"),
+                  (0.505, "embedded operating points")):
+        fig.text(0.008, y_, t, fontsize=7.0, color=INK2, style="italic",
+                 ha="left", va="center")
 
-    axes[2].set_xscale("log")
-    axes[2].xaxis.set_minor_formatter(NullFormatter())
-    axes[2].set_xlabel("measured latency on F411 (ms)", fontsize=7.4,
-                       color=INK)
-    axes[2].set_title("(c) int8 AUPRC vs measured latency", fontsize=7.2,
-                      color=INK)
-    for ax in axes:
+    def preserve(ax, key, lo, hi, title, xlabel, worse_positive):
+        if not pres:
+            return
+        yy = np.arange(len(models))[::-1]
+        # Intervals are drawn as absolute endpoints rather than as xerr
+        # offsets. A full-data point estimate can fall outside its own
+        # bootstrap percentile range, and when it does that is something
+        # to show, not a reason for the figure to fail to render.
+        for y_, m in zip(yy, models):
+            v, a, b = pres[m][key], pres[m][lo], pres[m][hi]
+            ax.plot([a, b], [y_, y_], lw=1.1, color=INK2, zorder=2,
+                    solid_capstyle="butt")
+            for e in (a, b):
+                ax.plot([e, e], [y_ - 0.17, y_ + 0.17], lw=1.1,
+                        color=INK2, zorder=2)
+            ax.scatter(v, y_, s=34, color=cmap(ORDER.index(m)),
+                       edgecolor=SURFACE, lw=0.8, zorder=3)
+        ax.axvline(0, color=INK, lw=0.9, ls="--")
+        ax.set_yticks(yy)
+        ax.set_yticklabels([NICE[m] for m in models], fontsize=6.6)
+        ax.set_xlabel(xlabel, fontsize=6.9, color=INK)
+        ax.set_title(title, fontsize=7.2, color=INK, pad=4)
+        _frame(ax)
+        ax.xaxis.set_major_locator(MaxNLocator(4))
+        ax.tick_params(axis="x", labelsize=6.2)
+        ax.grid(axis="x", color=GRID, lw=0.5)
+
+    preserve(fig.add_subplot(gs[0, 0:3]), "d_auprc", "d_auprc_lo",
+             "d_auprc_hi", "(a) change in macro AUPRC after int8",
+             "dAUPRC, int8 minus float32", worse_positive=False)
+    preserve(fig.add_subplot(gs[0, 3:6]), "d_eaurc", "d_eaurc_lo",
+             "d_eaurc_hi", "(b) change in E-AURC after int8",
+             "dE-AURC, int8 minus float32", worse_positive=True)
+
+    def cost(ax, getter, lim, xlabel, title, logx=True, scale=1024.0):
+        for i_, m in enumerate(models):
+            v = getter(m)
+            if v:
+                ax.scatter(v / scale, acc[m], s=44,
+                           color=cmap(ORDER.index(m)), edgecolor=SURFACE,
+                           lw=1.0, zorder=3,
+                           label=NICE[m] if ax is first_cost else None)
+        if lim:
+            ax.axvline(lim, color=INK, lw=1.0, ls="--")
+            ax.text(lim, ax.get_ylim()[0], f"F411 {lim:.0f} KB  ",
+                    fontsize=5.8, color=INK, rotation=90, va="bottom",
+                    ha="right")
+        if logx:
+            ax.set_xscale("log")
+            ax.xaxis.set_minor_formatter(NullFormatter())
+        ax.set_xlabel(xlabel, fontsize=6.9, color=INK)
+        ax.set_title(title, fontsize=7.2, color=INK, pad=4)
         _frame(ax)
         ax.grid(color=GRID, lw=0.5)
-    axes[0].legend(fontsize=6.2, frameon=False, ncol=6,
-                   labelcolor=INK2, loc="upper center",
-                   bbox_to_anchor=(1.75, -0.22))
-    fig.tight_layout(pad=0.5, w_pad=1.4)
+
+    first_cost = fig.add_subplot(gs[1, 0:2])
+    first_cost.set_ylabel("int8 macro AUPRC", fontsize=6.9, color=INK)
+    cost(first_cost, lambda m: lat.get(m, {}).get("total_flash_b"),
+         FLASH_KB, "total Flash (KB)", "(c) int8 AUPRC vs Flash")
+    cost(fig.add_subplot(gs[1, 2:4]),
+         lambda m: lat.get(m, {}).get("total_ram_b"), SRAM_KB,
+         "total RAM (KB)", "(d) int8 AUPRC vs SRAM", logx=False)
+    ax_lat = fig.add_subplot(gs[1, 4:6])
+    cost(ax_lat, lambda m: lat.get(m, {}).get("ms_median"), None,
+         "measured latency (ms)", "(e) int8 AUPRC vs latency", scale=1.0)
+    # The real-time factors belong in the caption. In-panel commentary
+    # reads as a slide note and competes with the data it sits on; the
+    # range is printed by supplementary_deployment and quoted in the text.
+    rtf = [lat[m]["rtf"] for m in models if lat.get(m, {}).get("rtf")]
+    if rtf:
+        print(f"    RTF {min(rtf):.3f}-{max(rtf):.3f} (for the caption)")
+
+    handles, labels = first_cost.get_legend_handles_labels()
+    fig.legend(handles, labels, fontsize=6.3, frameon=False,
+               labelcolor=INK2, ncol=6, loc="lower center",
+               bbox_to_anchor=(0.5, -0.005))
     save(fig, "figure5_operating_points", FIG)
 
 
@@ -596,7 +642,7 @@ def figureS2_risk_coverage():
             if s in d["models"][models[0]].get("risk_coverage", {})]
     if not srcs:
         return
-    fig, axes = plt.subplots(1, len(srcs), figsize=(2.1 * len(srcs), 2.6),
+    fig, axes = plt.subplots(1, len(srcs), figsize=(2.1 * len(srcs), 3.1),
                              facecolor=SURFACE, sharey=True)
     cmap = plt.get_cmap("tab10")
     for k, s in enumerate(srcs):
@@ -613,12 +659,17 @@ def figureS2_risk_coverage():
             ax.set_ylabel("selective risk", fontsize=7.0, color=INK)
         _frame(ax)
         ax.grid(color=GRID, lw=0.5)
-    axes[0].legend(fontsize=5.8, frameon=False, labelcolor=INK2, ncol=3,
-                   loc="upper center", bbox_to_anchor=(2.2, -0.26))
-    fig.text(0.5, -0.10, "solid = selective risk under the model's own "
+    # The legend and the key sit below the panels. tight_layout only
+    # reserves space for artists inside the axes, so the margin is set
+    # explicitly and both are placed in figure coordinates.
+    fig.subplots_adjust(left=0.07, right=0.99, top=0.91, bottom=0.30,
+                        wspace=0.16)
+    fig.legend(*axes[0].get_legend_handles_labels(), fontsize=5.8,
+               frameon=False, labelcolor=INK2, ncol=6,
+               loc="lower center", bbox_to_anchor=(0.5, 0.10))
+    fig.text(0.5, 0.035, "solid = selective risk under the model's own "
              "confidence ranking;  dashed = that model's oracle",
              ha="center", fontsize=6.0, color=INK2, style="italic")
-    fig.tight_layout(pad=0.4, w_pad=1.0)
     save(fig, "figureS2_risk_coverage", SFIG)
 
 
@@ -693,16 +744,21 @@ def figure2_generalisation(boot):
 def figure4_reliability(qr):
     """RQ2c: can confidence identify unreliable external predictions?
 
-    Panels (a-d) are the risk-coverage curves themselves, one per held-out
-    source, so the reader sees the selective behaviour rather than only
-    its integrated scalar. Panel (e) is the integral, E-AURC, with
-    record-level bootstrap intervals.
+    Two things only: the selective behaviour, then its summary. Panels
+    (a-d) are the risk-coverage curves, one per held-out source; panel (e)
+    is the integral, E-AURC, with record-level bootstrap intervals.
 
     The risk axis is exactly the quantity E-AURC integrates: records are
     ranked by confidence, retained from most to least confident, and
     selective risk is the mean loss over the retained fraction. Using a
     different selective metric here because it plots more prettily would
     make the figure and the summary describe different things.
+
+    Selective risk at fixed coverage -- what withholding the least
+    confident tenth actually buys -- is the operational reading of the
+    same curves, and it is a supplementary figure rather than a sixth
+    panel here. Two summaries of one quantity side by side crowd each
+    other and neither is read.
     """
     f = S2D / "reliability_curves.json"
     if not f.exists():
@@ -718,32 +774,33 @@ def figure4_reliability(qr):
         return
 
     cmap = plt.get_cmap("tab10")
-    fig = plt.figure(figsize=(7.6, 4.3), facecolor=SURFACE)
-    # The legend sits in the gap between the rows, so the gap has to be
-    # big enough for it and no bigger.
-    gs = fig.add_gridspec(2, len(srcs), height_ratios=[1.0, 0.80],
-                          hspace=0.62, wspace=0.18,
-                          top=0.93, bottom=0.10, left=0.09, right=0.98)
+    fig = plt.figure(figsize=(7.4, 4.5), facecolor=SURFACE)
+    # One panel row, one summary row, and a gap between them sized for the
+    # shared legend and nothing else.
+    gs = fig.add_gridspec(2, len(srcs), height_ratios=[1.0, 0.82],
+                          hspace=0.72, wspace=0.18,
+                          top=0.93, bottom=0.11, left=0.09, right=0.98)
 
     ax0 = None
     for k, s in enumerate(srcs):
-        ax = fig.add_subplot(gs[0, k], sharey=ax0) if ax0 else \
-            fig.add_subplot(gs[0, k])
+        ax = fig.add_subplot(gs[0, k], sharey=ax0) if ax0 else             fig.add_subplot(gs[0, k])
         ax0 = ax0 or ax
         for m in models:
             rc = d["models"][m]["risk_coverage"][s]
             ax.plot(grid, rc["risk"], lw=1.3, color=cmap(ORDER.index(m)),
                     label=NICE[m] if k == 0 else None)
-        ax.set_title(f"({chr(97 + k)}) {sname(s)}", fontsize=7.4,
+        ax.set_title(f"({chr(97 + k)}) {sname(s)}", fontsize=7.6,
                      color=INK, pad=3)
-        ax.set_xlabel("coverage", fontsize=7.0, color=INK)
+        ax.set_xlabel("coverage", fontsize=7.2, color=INK)
         if k == 0:
-            ax.set_ylabel("selective risk", fontsize=7.0, color=INK)
+            ax.set_ylabel("selective risk", fontsize=7.2, color=INK)
         else:
             ax.tick_params(labelleft=False)
         _frame(ax)
         ax.grid(color=GRID, lw=0.5)
 
+    # (e) spans the full width: the intervals are the point of the panel,
+    # so they get the resolution rather than sharing the row.
     ax = fig.add_subplot(gs[1, :])
     order = sorted(models, key=lambda m: d["models"][m]["eaurc"])
     yy = np.arange(len(order))[::-1]
@@ -759,20 +816,74 @@ def figure4_reliability(qr):
                    color=cmap(ORDER.index(m)), edgecolor=SURFACE, lw=0.9,
                    zorder=3)
     ax.set_yticks(yy)
-    ax.set_yticklabels([NICE[m] for m in order], fontsize=7.0)
+    ax.set_yticklabels([NICE[m] for m in order], fontsize=7.2)
     ax.set_xlabel("mean E-AURC over four held-out sources, "
                   "lower = better error ranking", fontsize=7.2, color=INK)
     ax.set_title(f"({chr(97 + len(srcs))}) selective reliability, "
-                 f"record-level bootstrap 95% CI", fontsize=7.4,
+                 f"record-level bootstrap 95% CI", fontsize=7.6,
                  color=INK, pad=3)
     _frame(ax)
     ax.grid(axis="x", color=GRID, lw=0.5)
 
     handles, labels = ax0.get_legend_handles_labels()
-    fig.legend(handles, labels, fontsize=6.4, frameon=False,
+    fig.legend(handles, labels, fontsize=6.6, frameon=False,
                labelcolor=INK2, ncol=6, loc="upper center",
-               bbox_to_anchor=(0.5, 0.515))
+               bbox_to_anchor=(0.5, 0.495))
     save(fig, "figure4_reliability", FIG)
+
+
+def figureS8_abstention():
+    """Supplementary: what abstention buys, in units a reader can act on.
+
+    E-AURC is the rigorous summary and it is what Figure 4(e) ranks, but
+    it is an integral and says nothing directly about a deployment. This
+    is the same curves read at three operating points: selective risk with
+    everything retained, and after withholding the least-confident tenth
+    and fifth.
+
+    It was a sixth panel of Figure 4. Standing alone it is readable, and
+    Figure 4 is better without a second summary competing with (e).
+    """
+    fp = S2D / "int8_preservation.json"
+    f = S2D / "reliability_curves.json"
+    if not (fp.exists() and f.exists()):
+        return
+    pres = {r["model"]: r for r in json.loads(fp.read_text())}
+    d = json.loads(f.read_text())
+    order = sorted([m for m in ORDER if m in d["models"] and m in pres],
+                   key=lambda m: d["models"][m]["eaurc"])
+    if not order:
+        return
+
+    cmap = plt.get_cmap("tab10")
+    fig, ax = plt.subplots(figsize=(5.4, 2.9), facecolor=SURFACE)
+    yy = np.arange(len(order))[::-1]
+    for y_, m in zip(yy, order):
+        r = pres[m]["risk_f32"]
+        full, c90, c80 = r["1.0"], r["0.9"], r["0.8"]
+        ax.plot([c80, full], [y_, y_], lw=1.6,
+                color=cmap(ORDER.index(m)), alpha=0.45, zorder=2,
+                solid_capstyle="round")
+        ax.scatter(full, y_, s=40, color=cmap(ORDER.index(m)),
+                   edgecolor=SURFACE, lw=0.9, zorder=3,
+                   label="100% (no abstention)" if m == order[0] else None)
+        ax.scatter(c90, y_, s=26, marker="s", color=cmap(ORDER.index(m)),
+                   edgecolor=SURFACE, lw=0.8, zorder=3,
+                   label="90%" if m == order[0] else None)
+        ax.scatter(c80, y_, s=26, marker="D", facecolor="white",
+                   edgecolor=cmap(ORDER.index(m)), lw=1.1, zorder=3,
+                   label="80%" if m == order[0] else None)
+    ax.set_yticks(yy)
+    ax.set_yticklabels([NICE[m] for m in order], fontsize=7.4)
+    ax.set_xlabel("selective risk at retained coverage, lower = better",
+                  fontsize=7.4, color=INK)
+    _frame(ax)
+    ax.grid(axis="x", color=GRID, lw=0.5)
+    ax.legend(fontsize=6.4, frameon=False, labelcolor=INK2, ncol=3,
+              loc="upper center", bbox_to_anchor=(0.5, -0.24),
+              title="retained coverage", title_fontsize=6.4)
+    fig.subplots_adjust(left=0.20, right=0.98, top=0.95, bottom=0.30)
+    save(fig, "figureS8_abstention", SFIG)
 
 
 def figureS5_quality_reliability():
@@ -813,5 +924,3 @@ def figureS5_quality_reliability():
     ax.grid(axis="x", color=GRID, lw=0.5)
     fig.tight_layout(pad=0.4)
     save(fig, "figureS5_quality_reliability", SFIG)
-
-
