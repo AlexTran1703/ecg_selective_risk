@@ -1,0 +1,7 @@
+model,float32 levels,int8 levels,largest tie,nearest cov to 0.90,worst cov error,folds reaching 0.90 +-2pp
+TinyCNN,16494,11-32,32.4%,0.813-1.000,10.0%,0/4
+DS-CNN,16493,13-26,34.5%,0.803-1.000,10.0%,0/4
+MobileNet1D,16499,11-43,28.5%,0.822-1.000,10.0%,0/4
+MBConv1D,16529,18-43,22.2%,0.832-0.918,6.8%,1/4
+TCN-Lite,16503,21-33,26.1%,0.810-1.000,10.0%,0/4
+ResNet1D-Lite,16533,25-44,21.5%,0.882-0.926,2.6%,3/4

@@ -368,13 +368,11 @@ def supplementary_operating_points():
         if m not in pres:
             continue
         rf = pres[m]["risk_f32"]
-        r8 = pres[m]["risk_int8"]
         rec = {"model": NICE[m]}
         for c in covs:
             rec[f"float32 R({float(c):.2f})"] = round(rf[c], 4)
         rec["float32 dR(0.90)"] = round(rf["1.0"] - rf["0.9"], 4)
         rec["float32 dR(0.80)"] = round(rf["1.0"] - rf["0.8"], 4)
-        rec["int8 dR(0.90)"] = round(r8["1.0"] - r8["0.9"], 4)
         rows.append(rec)
     A.emit(pd.DataFrame(rows).set_index("model"),
            "tableS8_operating_points",
@@ -384,10 +382,62 @@ def supplementary_operating_points():
            "the model is most confident about, so dR(0.90) = R(1.00) - "
            "R(0.90) is what withholding the least-confident tenth for "
            "reacquisition or review would buy on the records still "
-           "reported. The int8 column shows the same quantity survives "
-           "quantisation. These are observational quantities computed on "
+           "reported. These are float32 quantities: the model has about "
+           "16,500 distinct confidence values per fold, so a threshold "
+           "achieving exactly this coverage exists. The int8 graphs do "
+           "not have that property and are reported separately in Table "
+           "S10, because reading them at a nominal coverage would "
+           "interpolate across tie blocks spanning up to a third of the "
+           "records. These are observational quantities computed on "
            "held-out predictions; no abstention workflow was clinically "
            "validated here.", STAB)
+
+
+def supplementary_lattice():
+    """S10: the int8 confidence lattice, and what coverage it permits.
+
+    Quantisation preserves discrimination (Table S7) but collapses the
+    number of distinct confidence values. Selective prediction thresholds
+    that confidence, so the achievable coverages are the cumulative sizes
+    of the tied blocks and nothing between them. A nominal 90% operating
+    point is not guaranteed to exist.
+    """
+    f = A.S2D / "confidence_lattice.json"
+    if not f.exists():
+        return
+    d = pd.DataFrame(json.loads(f.read_text()))
+    rows = []
+    for m in ORDER:
+        g = d[(d.model == m) & (d.precision == "int8")]
+        gf = d[(d.model == m) & (d.precision == "float32")]
+        if g.empty:
+            continue
+        near = [t["0.90"]["nearest_cov"] for t in g.targets]
+        err = [t["0.90"]["cov_error"] for t in g.targets]
+        rows.append({
+            "model": NICE[m],
+            "float32 levels": int(gf.levels.mean()),
+            "int8 levels": f"{int(g.levels.min())}-{int(g.levels.max())}",
+            "largest tie": f"{g.max_tie.max():.1%}",
+            "nearest cov to 0.90": f"{min(near):.3f}-{max(near):.3f}",
+            "worst cov error": f"{max(err):.1%}",
+            "folds reaching 0.90 +-2pp": f"{int((np.array(err) <= 0.02).sum())}/4",
+        })
+    A.emit(pd.DataFrame(rows).set_index("model"),
+           "tableS10_confidence_lattice",
+           "Supplementary Table S10. The int8 confidence lattice. "
+           "Levels is the number of distinct confidence values across a "
+           "held-out fold; in float32 this is of the order of one per "
+           "record, and after int8 quantisation it is a few dozen. "
+           "Because a selective threshold can only fall between adjacent "
+           "levels, the attainable coverages are the cumulative sizes of "
+           "the tied blocks. The last three columns report how close a "
+           "deployment can get to a nominal 90% operating point: across "
+           "the 24 model-by-source folds, 20 miss it by more than two "
+           "percentage points and in 8 the nearest alternative to "
+           "withholding the least-confident tenth is withholding nothing "
+           "at all. Discrimination survives quantisation; the resolution "
+           "of the confidence ranking does not.", STAB)
 
 
 def supplementary_stratum_sensitivity():
@@ -436,7 +486,7 @@ def main():
         sys.exit(f"refusing to build at {FS_OUT} Hz: the paper reports "
                  f"{PAPER_FS} Hz and the asset folders are shared across "
                  f"rates. Re-run with ECG_FS={PAPER_FS}.")
-    for d in (A.FIG, TAB, A.SFIG, STAB):
+    for d in (A.FIG, TAB):
         d.mkdir(parents=True, exist_ok=True)
     q = A.quality()
     runs = A.load_runs()
@@ -461,29 +511,14 @@ def main():
     table2(dep)
     boot = table3(runs) if runs else {}
     table4(qr)
-    supplementary_rq3(qr)
-    supplementary_deployment()
-    supplementary_operating_points()
-    supplementary_stratum_sensitivity()
 
     print("main figures:")
     A.figure1()                      # design, three RQ blocks
-    A.figure2_generalisation(boot)   # RQ1  external generalisation
-    A.figure2(q)                     # RQ2a -> figure3_signal_quality
-    A.figure4_reliability(qr)        # RQ2c  risk-coverage + E-AURC
-    if runs:
-        A.figure5(runs, dep)         # RQ3  -> figure5_operating_points
-
-    print("supplementary:")
-    A.figure3_reliability()          # E-AURC by held-out source
-    A.figure4(dep, acc, f32)         # float32 vs int8 memory detail
-    A.figureS2_risk_coverage()
-    A.figureS5_quality_reliability()
-    A.figureS8_abstention()          # was figure 4(f)
-    if runs:
-        supplementary(runs, qr)
-    print(f"\nmain: {A.FIG} | {TAB}\nsupp: {A.SFIG} | {STAB}")
-
+    A.figure2_generalisation(boot)   # RQ1  source vs architecture
+    A.figure3_diagnosis_transfer()   # RQ2  diagnosis-level transfer
+    A.figure4_reliability(qr)        # RQ3  selective reliability
+    print(f"\nfigures: {A.FIG}"
+          f"\ntables:  {TAB}")
 
 if __name__ == "__main__":
     main()

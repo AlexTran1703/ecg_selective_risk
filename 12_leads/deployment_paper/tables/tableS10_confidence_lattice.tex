@@ -1,0 +1,16 @@
+\begin{table}
+\caption{Supplementary Table S10. The int8 confidence lattice. Levels is the number of distinct confidence values across a held-out fold; in float32 this is of the order of one per record, and after int8 quantisation it is a few dozen. Because a selective threshold can only fall between adjacent levels, the attainable coverages are the cumulative sizes of the tied blocks. The last three columns report how close a deployment can get to a nominal 90% operating point: across the 24 model-by-source folds, 20 miss it by more than two percentage points and in 8 the nearest alternative to withholding the least-confident tenth is withholding nothing at all. Discrimination survives quantisation; the resolution of the confidence ranking does not.}
+\begin{tabular}{lrlllll}
+\toprule
+ & float32 levels & int8 levels & largest tie & nearest cov to 0.90 & worst cov error & folds reaching 0.90 +-2pp \\
+model &  &  &  &  &  &  \\
+\midrule
+TinyCNN & 16494 & 11-32 & 32.4\% & 0.813-1.000 & 10.0\% & 0/4 \\
+DS-CNN & 16493 & 13-26 & 34.5\% & 0.803-1.000 & 10.0\% & 0/4 \\
+MobileNet1D & 16499 & 11-43 & 28.5\% & 0.822-1.000 & 10.0\% & 0/4 \\
+MBConv1D & 16529 & 18-43 & 22.2\% & 0.832-0.918 & 6.8\% & 1/4 \\
+TCN-Lite & 16503 & 21-33 & 26.1\% & 0.810-1.000 & 10.0\% & 0/4 \\
+ResNet1D-Lite & 16533 & 25-44 & 21.5\% & 0.882-0.926 & 2.6\% & 3/4 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,12 +1,12 @@
-# Cross-source robustness and resource-constrained deployment of
-lightweight 12-lead ECG classifiers
+# Source heterogeneity dominates architecture in external 12-lead ECG
+classification, and selective reliability inherits it
 
-**Four clinical sources, leave-one-source-out evaluation, and measured
-STM32F411 deployment at 100 Hz.**
+**Four clinical sources, six compact encoders, leave-one-source-out
+evaluation at 100 Hz.**
 
-> Can compact ECG classifiers stay reliable under real-world source and
-> signal-quality shift, and does that reliability survive deployment on
-> a microcontroller?
+> When a 12-lead ECG classifier is applied to a clinical source it has
+> never seen, how much of what happens is about the model, how much is
+> about the source, and can the model tell when it is wrong?
 
 Everything here answers that one question in three stages. External
 generalisation is the spine: the quality analysis explains failures in
@@ -17,36 +17,64 @@ source-out predictions.
 
 | | question | evidence |
 |---|---|---|
-| **RQ1** | How well do compact ECG encoders generalise to each of the four evaluated clinical sources when it is held out entirely? | Figure 2, Table III |
-| **RQ2** | How are source-specific signal characteristics and record-level impairments associated with external performance, and can selective prediction identify unreliable cases? | Figure 3, Table III, Figure 4 |
-| **RQ3** | Do the externally evaluated models retain **both** discrimination and selective reliability after int8 deployment, and what accuracy-resource operating points do they offer? | Figure 5 |
+| **RQ1** | How much does external performance vary across unseen sources, relative to variation across architectures? | Figure 2 |
+| **RQ2** | Which diagnostic-distribution and signal-quality differences are associated with that variation? | Figure 3, Table III |
+| **RQ3** | Does model confidence identify unreliable predictions consistently across unseen sources? | Figure 4 |
 
 ```
-Generalises?  ->  Can we trust it?  ->  Can we deploy it?
+How much does the site matter?  ->  What about it?  ->  Can the model tell?
 ```
 
-Four public sources, 77,333 records. Six encoder families trained
-leave-one-source-out at 100 Hz. **Every deployment number was measured
-on the part**: each quantised model was compiled into a bare-metal
-firmware, flashed to an STM32F411 over SWD, and timed with the DWT
-cycle counter at 100 MHz.
+Each question is the previous answer's leftover. RQ1 finds that the
+held-out source explains 92% of the variance in external AUPRC and the
+architecture 6%, so RQ2 asks what it is about a source that matters --
+and finds that it is not signal quality, which runs the wrong way.
+RQ3 then asks whether a model can at least recognise when it is in
+trouble, and finds that confidence does rank errors in every source --
+but that selective reliability varies across sources more than across
+architectures, exactly as discrimination does.
+
+Four public sources, 77,333 records, 13 harmonised labels. Six encoder
+families trained leave-one-source-out at 100 Hz, so every reported number
+comes from a source the model never saw in training, under one frozen
+input specification.
 
 ## What is, and is not, claimed as new
 
 Cross-dataset ECG evaluation is not new, and a benchmark of six familiar
 1D CNNs is not a contribution by itself. Neither is claimed here.
 
-The contribution is the chain, on one cohort and one frozen input
-specification: compact encoders transfer unevenly across clinical
-sources (RQ1); specific measured impairments track that unevenness, and
-confidence degrades alongside discrimination rather than compensating
-for it (RQ2); and the same externally evaluated models then run on a
-Cortex-M4 with their accuracy essentially intact (RQ3).
+Three claims are made, on one cohort and one frozen input
+specification, and two of them are negative.
 
-The deployment constraint is fixed first and carried unrelaxed through
-every analysis, so the accuracy numbers belong to models that
-demonstrably run on the part -- not to a model zoo deployed as an
-afterthought.
+1. **The held-out source, not the architecture, decides external
+   performance.** The held-out source accounts for 91.9% of the variance
+   in external macro AUPRC and the encoder for 6.4%, with an interaction
+   of 1.7% (RQ1). Benchmarks that rank architectures on a single
+   held-out split are measuring the split.
+
+2. **Signal quality does not explain which sources are hard, and runs
+   the wrong way.** The cleanest corpus in this cohort is the worst to be
+   tested on and the dirtiest is the best (RQ2a). What tracks external
+   performance instead is how far the site's label distribution sits
+   from the training pool, and part of the residual is the sources
+   disagreeing about what a diagnosis means -- separable from
+   generalisation failure because AUROC survives where AUPRC collapses.
+   Poor signal quality does cost discrimination *within* a source
+   (RQ2b); it is not what distinguishes the sources from each other.
+
+3. **Confidence remains informative under transfer, but inherits the
+   same source dependence.** Selective risk falls with coverage for every
+   encoder on every held-out source, so abstention is not merely tracking
+   source difficulty. Yet E-AURC spans 0.130-0.161 across architectures
+   and 0.104-0.202 across the 24 model-by-source folds, and degradation
+   compounds: where a measured quality defect costs discrimination, the
+   confidence ordering degrades with it (RQ3). An abstention budget
+   calibrated on one source is not a reliability guarantee on another.
+
+What is *not* claimed: a causal account of the
+cross-source spread. Four sources give four points, and Findings 1c and
+1d establish sign and consistency, not effect size.
 
 ```
 12_leads/
@@ -72,23 +100,19 @@ s9_reliability.py         RQ2b   excess-risk curves, E-AURC
 s6_quality_robustness.py  RQ2b   prevalence-matched dAUPRC
 s10_quality_reliability.py RQ2c  quality-stratified E-AURC
 s3_analyze.py             RQ3    float32 envelope
-s3b_int8.py               RQ3    int8 PTQ + footprint
-s8_latency.py             RQ3    build, flash, time on the F411
 s7_manuscript.py          assembles figures 1-5 and tables I-V
 ```
 
-`s8_latency.py` needs the board attached and the STM32CubeIDE toolchain;
-every other stage runs from the cached cohort alone.
 
 ---
 
 ## Stage 0 - the input specification, fixed before anything is trained
 
-A 10 s 12-lead record at 100 Hz is 12,000 samples: **11.7 KB as int8**,
-against 46.9 KB at float32 and 117 KB at 250 Hz float32. The input buffer
-alone decides feasibility before any architecture does, so the
-specification -- **10 s, 12 leads, 100 Hz, int8** -- is settled first and
-then frozen.
+The input specification -- **10 s, 12 leads, 100 Hz** -- is settled
+first and then frozen, so that no later result is the product of having
+tuned the representation to it. 100 Hz was chosen because it costs
+nothing against 250 Hz and helps the smallest encoders (Finding 3); the
+250 Hz runs are archived rather than discarded.
 
 **Quality is measured before decimation, at 500 Hz.** A 100 Hz signal has
 a 50 Hz Nyquist limit, so mains interference and high-frequency content
@@ -99,7 +123,7 @@ the two branches explicitly.
 
 ---
 
-## RQ1 - external-source generalisation
+## RQ1 - is it the model or the site?
 
 66,379 records after dropping those with no label in the harmonised
 13-class space. Everything except the encoder is held constant.
@@ -108,7 +132,7 @@ one. 24 runs. **Figure 2**.
 
 ### Discrimination across held-out sources
 
-Macro AUPRC by held-out source, **float32** -- the primary analysis. E-AURC sits alongside it in Table III, and what int8 costs is kept separate so deployment does not contaminate the modelling result.
+Macro AUPRC by held-out source, **float32**. AUROC is reported beside it per diagnosis in Figure 3(b), because average precision has a prevalence floor and the two metrics do not agree on which source is hardest.
 
 | model | PTB-XL | Georgia | Chapman | Ningbo | **macro** |
 |---|---|---|---|---|---|
@@ -119,8 +143,30 @@ Macro AUPRC by held-out source, **float32** -- the primary analysis. E-AURC sits
 | TCN-Lite | 0.425 | 0.524 | 0.569 | 0.589 | 0.526 |
 | **ResNet1D-Lite** | 0.435 | 0.544 | 0.599 | 0.618 | **0.549** |
 
+> **Finding 1b. The held-out source decides external performance; the
+> architecture barely participates.** Decomposing the 6 x 4 table of
+> external macro AUPRC into a source term, an architecture term and
+> their interaction, over the 13 diagnoses scorable in all four sources
+> (400 record-level bootstrap replicates, seed 0):
+>
+> | component | share of variance | 95% CI |
+> |---|---|---|
+> | held-out source | **91.9%** | 90.8%, 92.9% |
+> | architecture | 6.4% | 5.6%, 7.2% |
+> | interaction | **1.7%** | 1.3%, 2.3% |
+>
+> The source effect spans 0.163 AUPRC against 0.047 for the architecture
+> effect, a ratio of **3.5x** (3.3, 3.8). The interaction share is the
+> one that carries a design consequence: at 1.7% there is almost no
+> architecture-by-site matching to exploit, so the choice of encoder is
+> close to separable from where the device will be used. For a
+> deployment constrained in cost, latency or power, that is permission
+> to take the cheapest encoder that suffices rather than the most
+> accurate one.
+> **Figure 2(c).**
+
 > **Finding 2. PTB-XL is the hardest held-out source for every encoder**
-> (0.396-0.432 against 0.557-0.614 for Ningbo), even though RQ2a shows
+> (0.399-0.434 against 0.558-0.618 for Ningbo), even though RQ2a shows
 > it is the *cleanest* source on every indicator. The cross-source gap is
 > therefore not signal quality. It must be acquisition, population or
 > labelling -- which is what makes the quality audit explanatory rather
@@ -135,7 +181,7 @@ Macro AUPRC by held-out source, **float32** -- the primary analysis. E-AURC sits
 > sequence a small encoder has to summarise. The 250 Hz runs supporting
 > this comparison are in `archive_250hz/`.
 
-## RQ2 - reliability under source and quality shift
+## RQ2 - what is it about a source that matters?
 
 RQ1 shows that external performance depends on which source is held
 out. This asks why, and whether the model can tell. Three steps: what
@@ -143,11 +189,16 @@ differs between the sources, whether those differences track the
 performance gap, and whether confidence recognises the records it gets
 wrong. **Figure 3**, **Table III**, **Figure 4**.
 
-### RQ2a - what shifts between sources
+### RQ2a - it is not signal quality
 
-All 77,333 records, six indicators reported separately. No composite
-index, which would bury arbitrary weights under a scientific-looking
-decimal. **Figure 2**, one panel per indicator.
+RQ1 leaves a 0.163 AUPRC spread between sources to account for. Signal
+quality is the obvious candidate and the one this study was originally
+built around. It does not survive contact with the data.
+
+All 77,333 records, six indicators reported separately, measured on the
+native 500 Hz signal before decimation. No composite index, which would
+bury arbitrary weights under a scientific-looking decimal.
+One indicator per panel, all 77,333 records.
 
 > **Finding 1. The four sources differ on one axis, not six.** The three
 > spectral indicators -- HF noise, baseline wander, mains -- are nearly
@@ -157,9 +208,101 @@ decimal. **Figure 2**, one panel per indicator.
 > implausible RR intervals differ far less. A "noise robustness" framing
 > would have looked in the wrong place entirely.
 
+> **Finding 1c. Signal quality does not explain the cross-source spread.
+> It anti-correlates with it.** Taking each source's mean indicator value
+> against its external macro AUPRC, five of seven indicators correlate
+> *positively* -- worse measured quality, better external performance:
+>
+> | source | HF noise | flat leads | clipping | external mAP |
+> |---|---|---|---|---|
+> | PTB-XL | 0.0030 | 0.0000 | 0.0006 | **0.434** |
+> | Georgia | 0.0038 | 0.0009 | 0.0007 | 0.537 |
+> | Chapman | 0.0047 | 0.0037 | 0.0008 | 0.580 |
+> | Ningbo | 0.0052 | 0.2011 | 0.0173 | **0.609** |
+>
+> PTB-XL is the cleanest corpus on nearly every indicator and the worst
+> source to be tested on; Ningbo has flat leads in a fifth of its records
+> and is the best. The correlations are +0.94 for baseline wander and
+> +0.97 for HF noise. With four sources these are four points and
+> establish sign, not effect size -- but the sign is the opposite of the
+> one a quality-driven account requires. **Figure 3(a).**
+
+> **Finding 1d. A source-level association with label-distribution
+> shift does not survive moving to the diagnosis level.** Across the
+> four sources, the L1 distance between a held-out source's prevalence
+> vector and its training pool correlates -0.79 with external AUPRC, and
+> -0.74 to -0.81 for each architecture separately. That is four points,
+> and it does not hold up when the unit of analysis is the 13 x 4
+> diagnosis-by-source cells, where the dependence can be modelled:
+>
+> | test | estimate | 95% CI | p |
+> |---|---|---|---|
+> | mixed model, random intercept per diagnosis | -0.011 | -0.046, +0.024 | 0.54 |
+> | sign test over 13 within-diagnosis slopes | 9/13 negative | -- | 0.27 |
+>
+> AUROC is the outcome rather than AP, so that a prevalence difference is
+> not partly regressed on itself. **The honest reading is that this study
+> does not demonstrate a mechanism for the cross-source spread.** The
+> source-level correlation is reported because it is what the aggregate
+> data shows, and the diagnosis-level null is reported beside it because
+> it is the stronger test. Finding 1b stands on its own: the spread is
+> real and large whatever produces it. **Figure 3(c).**
+
+> **Finding 1f. Average precision and AUROC disagree about which source
+> is hardest, and that disagreement is informative.** Averaging over the
+> 13 diagnoses and six encoders:
+>
+> | source | mean AP | mean AUROC | AP rank | AUROC rank |
+> |---|---|---|---|---|
+> | PTB-XL | 0.425 | 0.864 | 1 (worst) | 2 |
+> | Georgia | 0.523 | 0.846 | 2 | **1 (worst)** |
+> | Chapman | 0.562 | 0.911 | 3 | 3 |
+> | Ningbo | 0.587 | 0.928 | 4 | 4 |
+>
+> PTB-XL is the worst source by average precision and the second-worst by
+> rank-based discrimination; by AUROC it is Georgia. PTB-XL's AP deficit
+> is therefore substantially a precision problem rather than a ranking
+> problem -- the model is ordering its records roughly as well as it
+> orders Georgia's, and losing precision against a different labelling
+> convention (Finding 1e). This is the quantitative form of the SB case.
+>
+> A prevalence-standardised sensitivity check rules out the mechanical
+> explanation: replacing AP with (AP - pi) / (1 - pi) per diagnosis ranks
+> the four sources **identically**, so the AP ordering is not an artefact
+> of the prevalence floor. **Figure 3(a-b).**
+
+> **Finding 1e. Some of the gap is the sources disagreeing about what a
+> label means.** Comparing each source's labelling propensity for a given
+> diagnosis -- how often it applies the label relative to how often the
+> model, trained on the other sources, finds the pattern -- against the
+> median of its peer sources isolates convention from case mix, because
+> the model reads the same signal everywhere. Eleven of 52
+> source-by-diagnosis cells deviate by more than a doubling, and **seven
+> of the eleven are PTB-XL**.
+>
+> The clearest is sinus bradycardia. In PTB-XL the model reaches
+> **AUROC 0.930** -- it ranks the bradycardic records correctly -- while
+> AUPRC collapses to 0.196 against 0.985 elsewhere, because PTB-XL
+> labels SB at roughly **one eighth** the rate its peers do given the
+> same evidence. That is an annotation convention, not a generalisation
+> failure, and AUROC/AUPRC divergence is what separates the two.
+>
+> It does **not** account for the aggregate spread: removing every
+> flagged diagnosis leaves the cross-source range at 0.195, slightly
+> *wider* than the 0.163 over all 13. Label-definition drift is
+> demonstrably present and concentrated in one corpus; it is not the
+> mechanism behind Finding 1b. **Figure 3(c).**
+
 ---
 
 ### RQ2b - does the shift matter diagnostically?
+
+Scope, stated before the numbers: everything in RQ2b and RQ2c is a
+**within-source** contrast. Records are split into impaired and clean
+strata inside each held-out source and matched per diagnosis, so these
+results say what a bad recording costs relative to a good one *at the
+same site*. They are not an account of the between-source spread, and
+Finding 1c is the reason that distinction is drawn so sharply.
 
 For each indicator, strata are
 formed **within each held-out source** -- a threshold applied to the
@@ -186,142 +329,145 @@ Pooled across the six encoders with 95% record-level bootstrap intervals, 200 re
 > baseline wander, mains -- show slightly **higher** AUPRC in the more
 > impaired stratum, and the three *structural* indicators show clearly
 > lower AUPRC. These are associations, not causal effects: the strata
-> differ in whatever else travels with the indicator, and only label
-> count is matched, so the positive columns should not be read as noise
-> improving anything. The defensible claim is the contrast between the
+> differ in whatever else travels with the indicator even once every
+> diagnosis prevalence is matched, so the positive columns should not be
+> read as noise improving anything. The defensible claim is the contrast between the
 > two families, and that the largest negative association is on exactly
 > the indicator where the sources differ by a factor of 920.
 
-> **Finding 5. Vulnerability does not follow accuracy.** On flat or
-> clipped leads TinyCNN is the *most* damaged (-0.180) despite being the
-> least accurate, and ResNet1D-Lite the least damaged (-0.140) despite
-> being the most accurate. The intuition that capacity is paid for with
-> fragility does not hold here. Supplementary Table S4 reports the same
-> contrast relative to each encoder's own baseline, which matters because
-> a weaker model has less accuracy available to lose.
-
----
-
-
-### RQ2c - does confidence degrade with the signal?
-
-RQ2b shows impaired records are harder. Figure 4(e) shows confidence
-ranks errors to some degree. Neither says whether the two interact, and
-the interaction is what a referral deployment depends on:
-
-    dE-AURC = E-AURC(impaired) - E-AURC(clean)
-
-Positive means degradation produces errors the model is *also* worse at
-recognising. Restricted to the three structural indicators, since those
-are the ones RQ2b found consistently associated with lower
-discrimination. **Figure S5**, 1000 replicates, seed 0:
-
-| indicator | dE-AURC (95% CI) | sources |
-|---|---|---|
-| flat/clipped lead | **+0.038** (+0.028, +0.049) | 1 |
-| RR implausibility | **+0.034** (+0.024, +0.044) | 3 |
-| QRS failure | **+0.031** (+0.021, +0.042) | 3 |
-
-> **Finding. Degradation is compounding: discrimination falls and the
-> confidence ordering falls with it.** All three structural indicators
-> show higher E-AURC in the impaired stratum, with intervals clear of
-> zero. The practical consequence is the unwelcome one -- abstaining on
-> low-confidence records is *least* dependable exactly on the records
-> where discrimination has already dropped, so selective prediction
-> cannot be relied on to absorb poor signal quality. A deployment that
-> wants to defer on bad recordings should gate on the measured quality
-> indicator directly, not on model confidence.
-
----
-## RQ3 - reliability-preserving embedded deployment
-
-Target confirmed over SWD: **STM32F411xC/E, Cortex-M4, 128 KB SRAM,
-512 KB Flash**, ST-Link V2. Toolchain: ST Edge AI Core v2.2.0, GNU Arm
-13.3.rel1 bundled with STM32CubeIDE 1.18.1, STM32CubeProgrammer 2.20.0.
-
-### RQ3a - does quantisation preserve the benchmark conclusions?
-
-ST Edge AI imports quantised models; it does not quantise. The int8 graphs
-are built with ONNX Runtime static PTQ in QDQ form, calibrated on 256
-records drawn **only from each fold's training sources**. Both precisions
-are scored on the same records.
-
-### RQ3b - what does it cost on the part?
-
-Each model was compiled into a bare-metal firmware (`firmware/`), flashed
-over SWD, and timed with the DWT cycle counter at 100 MHz: 32 runs after
-one warm-up, median reported, results read back from a fixed SRAM address.
-RTF is latency over the 10 s acquisition window.
-
-**Supplementary Table S7 carries the full numbers; every row ran on the board.**
-
-| model | Flash KB | left | RAM KB | MACC M | **latency ms** | RTF | int8 AUPRC | dAUPRC |
-|---|---|---|---|---|---|---|---|---|
-| TinyCNN | 57.8 | 454.2 | 27.3 | 4.28 | **222.4** | 0.022 | 0.4999 | -0.0025 |
-| DS-CNN | 44.8 | 467.2 | 28.6 | 3.33 | **282.9** | 0.028 | 0.5164 | -0.0032 |
-| MobileNet1D | 48.2 | 463.8 | 29.9 | 2.67 | **222.3** | 0.022 | 0.5076 | -0.0013 |
-| MBConv1D | 133.5 | 378.5 | 45.7 | 9.99 | **640.1** | 0.064 | 0.5371 | -0.0029 |
-| TCN-Lite | 179.8 | 332.2 | 53.5 | 10.25 | **1067.6** | 0.107 | 0.5249 | -0.0012 |
-| ResNet1D-Lite | 508.8 | **3.2** | 52.4 | 54.47 | **4247.1** | 0.425 | 0.5467 | -0.0023 |
-
-Flash and RAM are totals including the generated ST Edge AI runtime
-(about 26 KB Flash and 4.7 KB RAM), not weights alone.
-
-> **Finding 6. All six run, and all six are faster than real time.** RTF
-> spans 0.022 to 0.425, so even the heaviest encoder finishes a 10 s
-> record in 4.2 s. On this part latency is not the binding constraint --
-> Flash is.
-
-> **Finding 7. int8 is free.** The largest accuracy change across the six
-> encoders is -0.0032, one to two orders of magnitude below the gaps
-> between architectures. Quantisation is not a trade-off here; it is a
-> precondition that costs nothing.
+> **Finding 5. Vulnerability tends to follow accuracy rather than
+> resist it.** On flat or clipped leads, per encoder, with the contrast
+> also expressed relative to that encoder's own clean-stratum baseline
+> because a weaker model has less accuracy available to lose:
 >
-> The selective half holds too. dE-AURC spans **-0.0157 to -0.0058**,
-> so the confidence ordering survives quantisation along with the
-> discrimination -- which is what RQ2c needs in order to mean anything
-> on the device that actually runs. The sign is negative throughout,
-> but that is read here as *quantisation-induced change in E-AURC was
-> small*, not as int8 improving reliability: the shifts are an order of
-> magnitude below the spread between architectures (0.130 to 0.161),
-> and the E-AURC bootstrap is mildly biased in this setting
-> (Limitations).
+> | model | mean AUPRC | dAUPRC | relative |
+> |---|---|---|---|
+> | TinyCNN | 0.502 | -0.133 | -20.0% |
+> | DS-CNN | 0.520 | **-0.122** | **-17.4%** |
+> | MobileNet1D | 0.509 | -0.164 | -22.9% |
+> | MBConv1D | 0.540 | -0.155 | -21.6% |
+> | TCN-Lite | 0.526 | -0.153 | -21.2% |
+> | ResNet1D-Lite | **0.549** | **-0.172** | **-23.2%** |
+>
+> The most accurate encoder is the most damaged in both absolute and
+> relative terms, and correlation across the six is -0.55 (absolute) and
+> -0.39 (relative). With six models and a contrast resting on Ningbo
+> alone this is a tendency, not a law -- DS-CNN breaks the ordering --
+> but it points the opposite way to the comforting reading that capacity
+> buys robustness. Nothing here licenses choosing a smaller encoder for
+> resilience.
 
-> **Finding 8. MACC mis-ranks latency, and by a factor of two.**
-> MobileNet1D has **36% fewer MACC than TinyCNN and identical latency**
-> (222.3 against 222.4 ms). Measured cost spans 52 ms per MMACC for
-> TinyCNN to 104 ms per MMACC for TCN-Lite. Plain convolutions vectorise;
-> depthwise convolutions are memory-bound; dilated convolutions break
-> access locality. A benchmark reporting MACC or parameter count as a
-> latency proxy would order these encoders wrongly -- which is the whole
-> argument for measuring on the part.
+---
 
-> **Finding 9. Physical fit and practical fit are different questions.**
-> ResNet1D-Lite occupies 508.8 of 512 KB and did run on the board, so it
-> fits physically. Against a reserved budget of 448 KB Flash and 112 KB
-> SRAM -- leaving 64 KB and 16 KB for application firmware, drivers,
-> acquisition buffers and a bootloader -- it is **Flash-limited**, and
-> the other five pass. So int8 brings five of six reference
-> architectures inside a realistic F411 envelope. ResNet is also 6.6x
-> slower than MBConv1D for **+0.009 AUPRC**, which makes **MBConv1D**
-> the practical choice: 98% of the best accuracy, 15% of the latency,
-> 26% of the Flash.
+
+## RQ3 - does confidence stay informative under transfer?
+
+RQ1 establishes that the held-out source dominates external
+discrimination. RQ2 fails to find a mechanism for it. Neither says
+whether a deployed model can *tell* when it is in trouble, which is the
+property an abstention or referral workflow would rest on.
+
+Selective prediction is evaluated on exactly the same leave-one-source-out
+predictions, so the discrimination and reliability results describe the
+same models on the same records. Records are ranked by confidence
+`min_c |p_c - 0.5|`, retained from most to least confident, and selective
+risk is the mean record-wise Jaccard loss over the retained fraction.
+E-AURC is the area between that curve and the model's own oracle, so it
+measures ranking quality and not the difficulty of the source.
+
+> **Threshold protocol.** No operating threshold is fitted on a held-out
+> source. The curves and E-AURC are label-free in their ordering -- the
+> confidence score uses only model outputs -- and every reported
+> coverage is a property of that ordering, not a tuned cut. Any
+> deployment threshold would have to be chosen on training sources and
+> would not be guaranteed to land on the same coverage, which is stated
+> here because it is the point at which these numbers stop being
+> directly actionable.
+
+**Figure 4(a-d)**, risk-coverage per held-out source; **Figure 4(e)**,
+E-AURC with the per-source values shown beside the mean.
+
+> **Finding 6. Confidence does rank errors, in every source.** Selective
+> risk falls monotonically as coverage is reduced for all six encoders on
+> all four held-out sources, and every model's E-AURC is clear of its own
+> oracle. Withholding the least-confident tenth lowers record-wise risk
+> by 0.009 to 0.014, and the least-confident fifth by 0.019 to 0.031
+> Confidence is informative
+> under transfer; it is not merely tracking source difficulty.
+
+> **Finding 7. But reliability is source-dependent in the same way
+> discrimination is, and more strongly than it is architecture-dependent.**
+> E-AURC spans **0.130 to 0.161** across the six architectures and
+> **0.104 to 0.202** across the twenty-four model-by-source folds. The
+> ordering of sources is not the ordering of discrimination either:
+> ResNet1D-Lite ranks errors best on Ningbo (0.104) and worst on Chapman
+> (0.177), while DS-CNN is worst overall yet reaches 0.124 on Ningbo.
+>
+> The practical consequence is that an abstention budget calibrated on
+> one source does not transfer as a reliability guarantee to another,
+> for the same reason an accuracy estimate does not. **Figure 4(e).**
+
+> **Finding 8. Degradation is compounding: where discrimination falls,
+> the confidence ordering falls with it.** Restricted to the three
+> structural quality indicators, E-AURC is higher in the impaired
+> stratum than the clean one for all three, with intervals clear of
+> zero: flat/clipped lead **+0.038** (+0.028, +0.049), RR implausibility
+> **+0.034** (+0.024, +0.044), QRS failure **+0.031** (+0.021, +0.042);
+> 1000 replicates, seed 0.
+>
+> This is the unwelcome direction. Abstaining on low-confidence records
+> is *least* dependable exactly on the records where discrimination has
+> already dropped, so selective prediction cannot be relied on to absorb
+> poor signal quality. A deployment that wants to defer on bad
+> recordings should gate on the measured quality indicator directly
+> rather than trusting the model to be suitably unconfident.
+> The flat/clipped contrast rests on Ningbo alone, so that row in
+> particular should be read as indicative.
 
 ---
 
 ## Limitations
 
-0. **The percentile bootstrap is mildly biased for E-AURC.** Resampling records
-   with replacement introduces duplicates, which changes the tie structure that
-   a confidence ranking depends on, and E-AURC is a non-linear functional of
-   that ranking. The consequence is visible in Figure 5(b): for TCN-Lite the
-   full-data estimate (-0.0108) lies just outside its own 1000-replicate
-   interval (-0.0132, -0.0111). It did not close when replicates were raised
-   from 20 to 1000, so it is bias rather than noise. Intervals on E-AURC and
-   on dE-AURC should therefore be read as indicating width, not as exact
-   coverage; the point estimates are unaffected. Intervals are drawn as 
-   absolute endpoints so that a point outside its interval is shown rather
-   than hidden.
+0. **The percentile bootstrap is mildly biased for E-AURC in principle,
+   though not visibly here.** Resampling records with replacement
+   introduces duplicates, which changes the tie structure a confidence
+   ranking depends on, and E-AURC is a non-linear functional of that
+   ranking. In an earlier analysis comparing precisions this bias was
+   large enough to put a point estimate outside its own 1000-replicate
+   interval. In the float32 results reported here it is not detectable:
+   all six E-AURC point estimates fall inside their own intervals
+   (Figure 4(e)). The caution is recorded because the mechanism is real
+   and would matter to anyone bootstrapping E-AURC on coarser scores;
+   intervals are drawn as absolute endpoints so that a point falling
+   outside its interval would be shown rather than hidden.
+
+0. **Four databases, but about three annotation domains.** Chapman and
+   Ningbo come from the same group (Zheng et al., sharing first and
+   senior authors) and their diagnosis prevalence vectors are nearly
+   identical: L1 distance **0.196**, against 0.658-0.676 for every other
+   pair involving them and ~1.6 for every PTB-XL pair. SB is 0.450 and
+   0.438, NSR 0.211 and 0.218, STach 0.182 and 0.196. Different
+   hospitals, but one labelling convention.
+
+   Three consequences, none of which invalidate the decomposition but
+   all of which narrow what it licenses. First, "four held-out sources"
+   overstates the domain diversity actually sampled, so the source-level
+   inference in Findings 1c and 1d rests on roughly three independent
+   points rather than four. Second, when Chapman or Ningbo is held out
+   its training pool contains a near-twin, and when PTB-XL is held out
+   it does not -- so the label-shift correlation in Finding 1d partly
+   measures whether a source has a twin in training, which is a real
+   mechanism but a narrower claim than "distribution shift costs
+   performance". Third, the peer-median baseline in Finding 1e is a
+   median over three sources of which two share a convention, so the
+   consensus it compares against is weighted toward the Zheng
+   convention; that is one reason seven of eleven drift flags land on
+   PTB-XL, and the flags should be read as deviation from that
+   consensus rather than from a neutral standard.
+
+   The observation is worth reporting in its own right: a four-database
+   public-ECG benchmark of this shape samples fewer independent
+   annotation domains than its source count suggests.
 
 0. **Four source domains, not a sample of them.** The intervals throughout
    are record-level bootstraps: they quantify sampling variation of records
@@ -335,10 +481,12 @@ Flash and RAM are totals including the generated ST Edge AI runtime
    acquisition hardware, population and labelling protocol at once.
    Finding 2 shows the gap is not signal quality; it cannot say which of
    the remaining three it is.
-2. **Prevalence matching is on label count, not label identity.** A
-   stratum may still contain a different *mix* of diagnoses rather than a
-   different *number*. The residual gap is reported in Supplementary
-   Table S4 rather than left for a reviewer to find.
+2. **Prevalence matching equalises each diagnosis, not the joint
+   label distribution.** For every class the two strata are sampled to a
+   common n+ and n-, so the per-diagnosis confound is removed. What
+   remains free is co-occurrence: a record carrying three diagnoses and
+   one carrying one are not distinguished, so the strata can still
+   differ in multi-label structure even with every marginal matched.
 3. **Quality indicators are heuristic**, with stated but not externally
    validated thresholds and no expert-adjudicated quality reference.
 4. **One seed per configuration.** Intervals cover sampling variation in
@@ -349,8 +497,6 @@ Flash and RAM are totals including the generated ST Edge AI runtime
    and a bad energy number is worse than none.
 6. **Preprocessing is not timed.** The reported latency is inference
    only.
-7. **Post-training quantisation only.** QAT was not attempted.
-8. **Labels are the dataset authors'**, with the inconsistency that
    implies across four independently annotated sources.
 
 ---
@@ -363,9 +509,6 @@ Flash and RAM are totals including the generated ST Edge AI runtime
 | RQ1, 24 LOSO runs at 100 Hz | measured |
 | RQ2b, per-diagnosis matched, 1000 replicates | measured |
 | RQ2c, quality-stratified E-AURC, 1000 replicates | measured |
-| int8 accuracy, 24 folds | measured |
-| Flash and RAM including generated runtime | measured, ST Edge AI with ARM gcc |
-| **On-device latency, all six encoders** | **measured on the STM32F411** |
 | Energy per inference | **not done** - no calibrated instrumentation |
 | Preprocessing latency | **not done** - out of scope |
 | QAT | **not attempted** |
@@ -383,16 +526,16 @@ encoders. RQ2 uses those held-out predictions together with the source-specific
 quality indicators to study reliability under source and signal-quality shift,
 through descriptive characterisation, prevalence-matched quality-performance
 association, and selective reliability. RQ3 evaluates whether the externally
-assessed models retain useful diagnostic performance after int8 deployment on
-the STM32F411. In short: generalises? can we trust it? can we deploy it?
+assessed models rank their own errors informatively on sources they have
+never seen. In short: how much does the source matter, what about it, and
+can the model tell?
 
 | | file | answers |
 |---|---|---|
 | 1 | `figures/figure1_design` | the experimental logic, three RQs |
-| 2 | `figures/figure2_generalisation` | **RQ1** do the encoders generalise? AUPRC by held-out source, and the mean with bootstrap CI |
-| 3 | `figures/figure3_signal_quality` | **RQ2a** how do the sources differ? six indicators, native 500 Hz |
-| 4 | `figures/figure4_reliability` | **RQ2c** can confidence identify unreliable predictions? risk-coverage per held-out source (a-d), and mean E-AURC with bootstrap CI (e) |
-| 5 | `figures/figure5_operating_points` | **RQ3** top row, what int8 changed: macro AUPRC (a) and E-AURC (b). Bottom row, what the preserved operating points cost: Flash (c), SRAM (d) and measured latency (e). RTF spans 0.022-0.425, so every encoder finishes inside the 10 s window |
+| 2 | `figures/figure2_generalisation` | **RQ1** AUPRC by held-out source (a), mean with bootstrap CI (b), and the source/architecture/interaction variance decomposition (c) |
+| 3 | `figures/figure3_diagnosis_transfer` | **RQ2** transfer at the diagnosis level: average precision (a) and AUROC (b) for all 13 x 4 cells, which disagree on the hardest source, and the dependence-aware test of prevalence shift against discrimination (c), which is null |
+| 4 | `figures/figure4_reliability` | **RQ3** does confidence identify unreliable predictions? risk-coverage per held-out source (a-d), and E-AURC (e) with the per-source values beside the mean, showing that selective reliability varies more across sources than architectures |
 
 ## Main tables
 
@@ -410,25 +553,5 @@ Two tables were deliberately removed rather than demoted. The leave-one-
 source-out discrimination table is gone entirely: Figure 2 carries both its
 halves, the per-source values in the heatmap and the mean with its interval
 in the dot plot, so reprinting 24 numbers underneath would be a second container
-for evidence the reader has just seen. The deployment table moved to the
-supplement: Figure 5 answers what performance a resource budget buys, which is
-the scientific question, and the kilobyte-level detail is reproducibility material.
+for evidence the reader has just seen.
 
-The one thing the deployment table carried that Figure 5 does not is that int8
-costs almost nothing. That belongs in prose: across the six encoders the change
-in mean external macro AUPRC spans **-0.0032 to -0.0012**, one to two orders of
-magnitude below the gaps between architectures.
-
-## Supplementary
-
-| | file | shows |
-|---|---|---|
-| S1 | `tables/supplementary/tableS1_per_diagnosis` | AUPRC for each of the 13 diagnoses |
-| S2 | `figures/supplementary/figureS2_risk_coverage` | risk-coverage per source with each model's oracle drawn in |
-| S3 | `figures/supplementary/figureS3_deployment_detail` | float32 against int8 Flash and SRAM, and the quantisation cost |
-| S4 | `figures/supplementary/figureS4_eaurc_by_source` and `tables/supplementary/tableS4_quality_robustness_full` | E-AURC by held-out source; full quality-association output |
-| S5 | `figures/supplementary/figureS5_quality_reliability` | **RQ2c extension** whether confidence degrades along with the signal |
-| S6 | `tables/supplementary/tableS6_auroc` | macro AUROC by held-out source |
-| S7 | `tables/supplementary/tableS7_deployment_measurements` | every deployment number behind Figure 5: Flash, SRAM, MACC, measured latency, RTF, both precisions of AUPRC and E-AURC, and practical fit |
-| S8 | `figures/supplementary/figureS8_abstention` and `tables/supplementary/tableS8_operating_points` | selective risk at 100%, 90% and 80% retained coverage -- what abstention buys, which E-AURC cannot express. Was a sixth panel of Figure 4 |
-| S9 | `tables/supplementary/tableS9_stratum_sensitivity` | RQ2b at Q20/Q80 instead of the quartile split |

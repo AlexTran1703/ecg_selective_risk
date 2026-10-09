@@ -249,21 +249,24 @@ def figure1():
         "model input: 12 x 1000")
 
     # ---- the spine ----------------------------------------------------
-    elbow([(74, 69), (74, 65.5), (MID, 65.5)], (MID, 62.4))
+    elbow([(74, 69), (74, 65.5), (MID, 65.5)], (MID, 63.4))
 
     # All three RQ boxes are the same height and carry a one-line
     # subtitle. No period after the label: "RQ1. External" reads as a
     # numbered sentence, "RQ1  External" reads as a tag.
-    box(SPINE_L, 52, SPINE_R - SPINE_L, 10, "data",
-        "RQ1   External generalisation",
-        "LOSO evaluation of six compact encoders")
+    box(SPINE_L, 51, SPINE_R - SPINE_L, 12, "data",
+        "RQ1   Generalisation heterogeneity",
+        "leave-one-source-out: train on three sources, test on the"
+        + NL + "fourth, four rotations. Source, architecture and"
+        + NL + "interaction effects on external AUPRC")
 
-    down(MID, 52, 42.4)
-    label(MID + 2, 47, "held-out predictions")
+    down(MID, 51, 42.4)
+    label(MID + 2, 46.5, "held-out predictions")
 
     box(SPINE_L, 32, SPINE_R - SPINE_L, 10, "qual",
-        "RQ2   Reliability under source and quality shift",
-        "quality characterisation, dAUPRC, and selective reliability")
+        "RQ2   Characterising transfer failure",
+        "diagnosis-level performance, prevalence shift,"
+        + NL + "labelling convention and signal quality")
 
     # The quality branch runs down the outside and enters RQ2 on its left
     # edge. The label sits along the run rather than floating beside the
@@ -277,8 +280,9 @@ def figure1():
     label(MID + 2, 28, "externally evaluated models")
 
     box(SPINE_L, 14, SPINE_R - SPINE_L, 10, "hw",
-        "RQ3   Reliability-preserving embedded deployment",
-        "int8 preservation and STM32F411 operating points")
+        "RQ3   Reliability under transfer",
+        "does confidence rank errors consistently"
+        + NL + "across the same unseen sources?")
 
     fig.tight_layout(pad=0.2)
     save(fig, "figure1_design", FIG)
@@ -286,7 +290,7 @@ def figure1():
 
 
 # ------------------------------------------------------------- figure 2
-def figure2(q):
+def figure2(q, dest=None, name="figure3_signal_quality"):
     fig, axes = plt.subplots(2, 3, figsize=(7.2, 4.3), facecolor=SURFACE)
     cmap = plt.get_cmap("tab10")
     srcs = [s for s in SOURCES if s in set(q.source)]
@@ -342,7 +346,7 @@ def figure2(q):
     axes[0][0].legend(fontsize=6.2, frameon=False, labelcolor=INK2,
                       loc="lower right")
     fig.tight_layout(pad=0.5, w_pad=1.2, h_pad=1.4)
-    save(fig, "figure3_signal_quality", FIG)
+    save(fig, name, dest or FIG)
 
 
 # ------------------------------------------------------------- figure 3
@@ -498,9 +502,48 @@ def figure5(runs, dep):
     preserve(fig.add_subplot(gs[0, 0:3]), "d_auprc", "d_auprc_lo",
              "d_auprc_hi", "(a) change in macro AUPRC after int8",
              "dAUPRC, int8 minus float32", worse_positive=False)
-    preserve(fig.add_subplot(gs[0, 3:6]), "d_eaurc", "d_eaurc_lo",
-             "d_eaurc_hi", "(b) change in E-AURC after int8",
-             "dE-AURC, int8 minus float32", worse_positive=True)
+    # (b) was the int8 E-AURC change, which is not comparable across
+    # precisions: it is a functional of the confidence ranking, and the
+    # two rankings have ~16,500 and ~24 distinct levels. The lattice
+    # that makes it incomparable is the finding, so it is plotted here.
+    lf = S2D / "confidence_lattice.json"
+    if lf.exists():
+        ax = fig.add_subplot(gs[0, 3:6])
+        lat_d = pd.DataFrame(json.loads(lf.read_text()))
+        i8 = lat_d[lat_d.precision == "int8"]
+        yy = np.arange(len(models))[::-1]
+        for y_, m in zip(yy, models):
+            g = i8[i8.model == m]
+            if g.empty:
+                continue
+            near = np.array([t["0.90"]["nearest_cov"] for t in g.targets])
+            ax.plot([near.min(), near.max()], [y_, y_], lw=1.1,
+                    color=INK2, zorder=2, solid_capstyle="butt")
+            for v in near:
+                ax.scatter(v, y_, s=30,
+                           color=cmap(ORDER.index(m)),
+                           marker="X" if v > 0.999 else "o",
+                           edgecolor=SURFACE, lw=0.8, zorder=3)
+        ax.axvline(0.90, color=INK, lw=1.0, ls="--", zorder=1)
+        ax.annotate("target", xy=(0.90, len(models) - 0.45),
+                    fontsize=5.8, color=INK, ha="center", va="bottom")
+        # Annotated in the empty bottom-right rather than as a legend
+        # box, which landed on top of the ResNet row.
+        ax.annotate("X = target not reachable,"
+                    + chr(10) + "nearest option is no abstention",
+                    xy=(1.018, -0.46), ha="right", va="bottom",
+                    fontsize=5.6, color=INK2, style="italic",
+                    linespacing=1.3)
+        ax.set_yticks(yy)
+        ax.set_yticklabels([NICE[m] for m in models], fontsize=7.0)
+        ax.set_xlabel("nearest achievable coverage to a 0.90 target, "
+                      "one point per held-out source",
+                      fontsize=6.6, color=INK)
+        ax.set_title("(b) int8 confidence lattice", fontsize=7.2,
+                     color=INK, pad=4)
+        ax.set_xlim(0.78, 1.025)
+        _frame(ax)
+        ax.grid(axis="x", color=GRID, lw=0.5)
 
     def cost(ax, getter, lim, xlabel, title, logx=True, scale=1024.0):
         for i_, m in enumerate(models):
@@ -545,6 +588,228 @@ def figure5(runs, dep):
                labelcolor=INK2, ncol=6, loc="lower center",
                bbox_to_anchor=(0.5, -0.005))
     save(fig, "figure5_operating_points", FIG)
+
+
+def figure3_diagnosis_transfer():
+    """RQ2 at the diagnosis level, where the units are not four.
+
+    The source-level version of this analysis had four points and could
+    not carry an explanatory claim. This one works on the 13 x 4
+    diagnosis-by-source cells and reports the dependence honestly.
+
+    (a) and (b) are the same cells under two metrics. Average precision
+    has a prevalence floor; AUROC is rank-only and has none. Printing
+    both lets a reader separate "this diagnosis is rare in this source"
+    from "the model cannot discriminate it here" -- and they disagree
+    about which source is hardest, which is the point.
+
+    (c) tests whether prevalence shift tracks discrimination, with AUROC
+    as the outcome so that a prevalence difference is not partly
+    regressed on itself. The 52 cells are not 52 independent
+    observations, so the pooled slope is a mixed model with a random
+    intercept per diagnosis, shown beside a sign test over the 13
+    within-diagnosis slopes that assumes nothing.
+    """
+    f = S2D / "diagnosis_level.json"
+    if not f.exists():
+        print("  (no diagnosis-level analysis)")
+        return
+    d = json.loads(f.read_text())
+    t = pd.DataFrame(d["cells"])
+    srcs = [s for s in d["sources"]]
+    classes = [c for c in d["classes"] if c in set(t["class"])]
+    order = (t.groupby("class").ap.mean().reindex(classes)
+             .sort_values(ascending=False).index.tolist())
+
+    fig = plt.figure(figsize=(7.9, 3.5), facecolor=SURFACE)
+    gs = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.0, 1.12],
+                          wspace=0.48, left=0.085, right=0.975,
+                          top=0.87, bottom=0.17)
+
+    def heat(ax, col, title, cmap_name, lo, hi):
+        M = np.full((len(order), len(srcs)), np.nan)
+        for _, r in t.iterrows():
+            M[order.index(r["class"]), srcs.index(r["source"])] = r[col]
+        im = ax.imshow(M, cmap=cmap_name, vmin=lo, vmax=hi, aspect="auto")
+        ax.set_xticks(range(len(srcs)))
+        ax.set_xticklabels([sname(x) for x in srcs], fontsize=6.2,
+                           rotation=20, ha="right")
+        ax.set_yticks(range(len(order)))
+        ax.set_yticklabels(order, fontsize=5.9)
+        ax.set_title(title, fontsize=7.3, color=INK, pad=4)
+        ax.tick_params(length=0, colors=INK2)
+        cb = fig.colorbar(im, ax=ax, fraction=0.045, pad=0.03)
+        cb.ax.tick_params(labelsize=5.6, colors=INK2, length=2)
+        return M
+
+    heat(fig.add_subplot(gs[0, 0]), "ap",
+         "(a) average precision", "YlGnBu", 0.0, 1.0)
+    ax = fig.add_subplot(gs[0, 1])
+    heat(ax, "auroc", "(b) AUROC, no prevalence floor", "YlGnBu", 0.5, 1.0)
+    ax.set_yticklabels([])
+
+    # (c) the dependence-aware test, and it is null.
+    ax = fig.add_subplot(gs[0, 2])
+    cmap = plt.get_cmap("Dark2")
+    for i, src in enumerate(srcs):
+        g = t[t.source == src]
+        ax.scatter(g.abs_log2_shift, g.auroc, s=22, color=cmap(i),
+                   edgecolor=SURFACE, lw=0.6, zorder=3, label=sname(src))
+    xg = np.linspace(0, t.abs_log2_shift.max() * 1.03, 20)
+    b0 = t.auroc.mean() - d["mixed_slope"] * t.abs_log2_shift.mean()
+    ax.plot(xg, b0 + d["mixed_slope"] * xg, lw=1.2, ls="--", color=INK,
+            zorder=2)
+    ax.fill_between(xg, b0 + d["mixed_lo"] * xg, b0 + d["mixed_hi"] * xg,
+                    color=INK2, alpha=0.13, lw=0, zorder=1)
+    ax.set_xlabel("|log2 prevalence shift| from training pool",
+                  fontsize=6.8, color=INK)
+    ax.set_ylabel("AUROC", fontsize=6.8, color=INK)
+    ax.set_title("(c) shift does not predict\ndiscrimination",
+                 fontsize=7.3, color=INK, pad=4)
+    ax.annotate(f"mixed model slope {d['mixed_slope']:+.3f}" + chr(10)
+                + f"95% CI ({d['mixed_lo']:+.3f}, {d['mixed_hi']:+.3f}),"
+                + f" p = {d['mixed_p']:.2f}" + chr(10)
+                + f"sign test {d['sign_neg']}/{d['sign_n']} negative, "
+                + f"p = {d['sign_p']:.2f}",
+                xy=(0.97, 0.04), xycoords="axes fraction", ha="right",
+                va="bottom", fontsize=5.7, color=INK2, linespacing=1.45)
+    ax.legend(fontsize=5.8, frameon=False, labelcolor=INK2, ncol=2,
+              loc="upper left", bbox_to_anchor=(-0.01, 1.02),
+              handletextpad=0.3, columnspacing=0.8)
+    ax.set_ylim(0.45, 1.17)
+    _frame(ax)
+    ax.grid(color=GRID, lw=0.5)
+    save(fig, "figure3_diagnosis_transfer", FIG)
+
+
+def figure3_explaining_spread():
+    """RQ2: what accounts for the spread Figure 2 found between sources?
+
+    The obvious candidate is signal quality, and it is wrong. Panel (a)
+    correlates each source-level quality indicator with that source's
+    external AUPRC and almost every one comes out positive: the cleanest
+    corpus is the worst to be tested on and the dirtiest is the best. A
+    quality-driven account of cross-source generalisation would need
+    these bars to be negative.
+
+    Panel (b) is the candidate that does track performance -- how far the
+    held-out source's label distribution sits from the pool the model was
+    trained on. Panel (c) is the sharper, narrower version of the same
+    idea: individual diagnoses where a source applies the label at a
+    different rate than its peers do, given the same signal evidence.
+
+    Four sources is four points. These panels establish sign and
+    consistency, not effect size, and the caption says so.
+    """
+    f = S2D / "label_drift.json"
+    if not f.exists():
+        print("  (no label drift)")
+        return
+    d = json.loads(f.read_text())
+    runs = load_runs()
+    q = quality()
+    srcs = [s for s in SOURCES if ("tiny", s) in runs]
+    if not srcs:
+        return
+
+    mAP = {}
+    for s in srcs:
+        mAP[s] = float(np.mean([macro_ap(runs[(m, s)]["y"], runs[(m, s)]["p"])
+                                for m in ORDER if (m, s) in runs]))
+    Y = {s: runs[("tiny", s)]["y"] for s in srcs}
+    P = {s: np.array([Y[s][:, c].mean() for c in range(Y[s].shape[1])])
+         for s in srcs}
+    L1 = {}
+    for s in srcs:
+        tr = [t for t in srcs if t != s]
+        w = np.array([Y[t].shape[0] for t in tr], dtype=float)
+        L1[s] = float(np.abs(P[s] - np.average([P[t] for t in tr], axis=0,
+                                               weights=w)).sum())
+
+    IND = [("hf_rel", "HF noise"), ("bw_rel", "baseline wander"),
+           ("pli_rel", "mains"), ("rr_implaus", "RR implausibility"),
+           ("qrs_fail", "QRS failure"), ("flat_leads", "flat leads"),
+           ("clip_frac", "clipping")]
+    gq = q.groupby("source")[[k for k, _ in IND]].mean()
+    y = np.array([mAP[s] for s in srcs])
+    rs = [float(np.corrcoef(np.array([gq.loc[s, k] for s in srcs]), y)[0, 1])
+          for k, _ in IND]
+
+    fig = plt.figure(figsize=(7.6, 2.9), facecolor=SURFACE)
+    gs = fig.add_gridspec(1, 3, width_ratios=[1.05, 0.85, 1.15],
+                          wspace=0.52, left=0.14, right=0.985,
+                          top=0.86, bottom=0.21)
+    WRONG, RIGHT = "#d9792b", "#3f7cbf"
+
+    # (a) every quality indicator, so nothing is cherry-picked.
+    ax = fig.add_subplot(gs[0, 0])
+    yy = np.arange(len(IND))[::-1]
+    ax.barh(yy, rs, height=0.62, zorder=2,
+            color=[WRONG if v > 0 else RIGHT for v in rs])
+    ax.axvline(0, color=INK, lw=0.9)
+    ax.set_yticks(yy)
+    ax.set_yticklabels([n for _, n in IND], fontsize=6.6)
+    ax.set_xlim(-1.05, 1.05)
+    ax.set_xlabel("corr(indicator, source AUPRC)" + chr(10)
+                  + "right of zero = worse quality, better AUPRC",
+                  fontsize=6.4, color=INK, linespacing=1.4)
+    ax.set_title("(a) signal quality does not\nexplain the spread",
+                 fontsize=7.3, color=INK, pad=4)
+    _frame(ax)
+    ax.grid(axis="x", color=GRID, lw=0.5)
+
+    # (b) the candidate that does track it.
+    ax = fig.add_subplot(gs[0, 1])
+    cmap = plt.get_cmap("Dark2")
+    for i, s in enumerate(srcs):
+        ax.scatter(L1[s], mAP[s], s=52, color=cmap(i), edgecolor=SURFACE,
+                   lw=1.0, zorder=3)
+        ax.annotate(sname(s), (L1[s], mAP[s]), textcoords="offset points",
+                    xytext=(0, -11), ha="center", fontsize=6.2, color=INK2)
+    xs = np.array([L1[s] for s in srcs])
+    b = np.polyfit(xs, y, 1)
+    xg = np.linspace(xs.min() * 0.92, xs.max() * 1.04, 20)
+    ax.plot(xg, np.polyval(b, xg), lw=1.0, ls="--", color=INK2, zorder=1)
+    r = float(np.corrcoef(xs, y)[0, 1])
+    ax.annotate(f"r = {r:+.2f}", xy=(0.95, 0.93), xycoords="axes fraction",
+                ha="right", va="top", fontsize=6.6, color=INK)
+    ax.set_xlabel("label-distribution shift\nfrom training pool (L1)",
+                  fontsize=6.9, color=INK)
+    ax.set_ylabel("external macro AUPRC", fontsize=6.9, color=INK)
+    ax.set_title("(b) label-distribution\nshift does", fontsize=7.3, color=INK,
+                 pad=4)
+    ax.margins(x=0.20, y=0.24)
+    _frame(ax)
+    ax.grid(color=GRID, lw=0.5)
+
+    # (c) per-diagnosis labelling propensity against the peer sources.
+    ax = fig.add_subplot(gs[0, 2])
+    per = d["per_class"]
+    classes = sorted({r["class"] for r in per})
+    M = np.full((len(classes), len(srcs)), np.nan)
+    for r in per:
+        if r["source"] in srcs:
+            M[classes.index(r["class"]), srcs.index(r["source"])] = r["drift"]
+    v = np.nanmax(np.abs(M))
+    im = ax.imshow(M, cmap="RdBu_r", vmin=-v, vmax=v, aspect="auto")
+    for r in per:
+        if r["source"] in srcs and r.get("flagged"):
+            ax.scatter(srcs.index(r["source"]), classes.index(r["class"]),
+                       s=9, marker="o", facecolor="none", edgecolor=INK,
+                       lw=0.8, zorder=3)
+    ax.set_xticks(range(len(srcs)))
+    ax.set_xticklabels([sname(s) for s in srcs], fontsize=6.3, rotation=20,
+                       ha="right")
+    ax.set_yticks(range(len(classes)))
+    ax.set_yticklabels(classes, fontsize=5.9)
+    ax.set_title("(c) label-definition drift\nper diagnosis", fontsize=7.3,
+                 color=INK, pad=4)
+    ax.tick_params(length=0, colors=INK2)
+    cb = fig.colorbar(im, ax=ax, fraction=0.045, pad=0.03)
+    cb.ax.tick_params(labelsize=5.6, colors=INK2, length=2)
+    cb.set_label("log2 labelling propensity\nvs peer sources", fontsize=5.6,
+                 color=INK2, linespacing=1.3)
+    save(fig, "figureS12_source_level", SFIG)
 
 
 def figure3_reliability():
@@ -690,9 +955,13 @@ def figure2_generalisation(boot):
     mat = np.array([[macro_ap(runs[(m, s)]["y"], runs[(m, s)]["p"])
                      for s in srcs] for m in models])
 
+    vd = S2D / "variance_decomposition.json"
+    dec = json.loads(vd.read_text()) if vd.exists() else None
     fig, axes = plt.subplots(
-        1, 2, figsize=(7.4, 3.0), facecolor=SURFACE,
-        gridspec_kw={"width_ratios": [1.0, 0.95]})
+        1, 3 if dec else 2,
+        figsize=(8.4 if dec else 7.4, 3.0), facecolor=SURFACE,
+        gridspec_kw={"width_ratios": [1.0, 0.95, 0.72] if dec
+                     else [1.0, 0.95]})
     ax = axes[0]
     im = ax.imshow(mat, cmap="YlGnBu", aspect="auto")
     ax.set_xticks(range(len(srcs)))
@@ -737,6 +1006,44 @@ def figure2_generalisation(boot):
                 color=INK2)
     _frame(ax)
     ax.grid(axis="x", color=GRID, lw=0.5)
+
+    # (c) The heatmap is read row-wise as an architecture ranking. Read
+    # column-wise the columns differ far more, and this is that
+    # comparison made explicit rather than left to the reader's eye.
+    if dec:
+        ax = axes[2]
+        # Three bars rather than one stacked bar: the stack needed a
+        # legend, the legend sat on the bar, and stacking hid the
+        # intervals, which are the reason this is a decomposition and
+        # not an assertion.
+        parts = [("held-out\nsource", "share_source", "#3f7cbf"),
+                 ("architecture", "share_model", "#d9792b"),
+                 ("interaction", "share_interaction", "#8a8a85")]
+        yy = np.arange(len(parts))[::-1]
+        for y_, (name, key, col) in zip(yy, parts):
+            v = dec[key] * 100
+            lo, hi = dec[key + "_lo"] * 100, dec[key + "_hi"] * 100
+            ax.barh([y_], [v], height=0.52, color=col, zorder=2)
+            ax.plot([lo, hi], [y_, y_], lw=1.1, color=INK, zorder=3,
+                    solid_capstyle="butt")
+            ax.text(v + 4, y_, f"{v:.0f}%", va="center", ha="left",
+                    fontsize=7.0, color=INK, fontweight="bold", zorder=4)
+        ax.set_yticks(yy)
+        ax.set_yticklabels([n for n, _, _ in parts], fontsize=6.8,
+                           linespacing=1.2)
+        ax.set_xlim(0, 118)
+        ax.set_xticks([0, 25, 50, 75, 100])
+        ax.set_xlabel("share of variance in the table at (a)",
+                      fontsize=6.9, color=INK)
+        ax.set_title("(c) what decides external AUPRC",
+                     fontsize=7.2, color=INK, pad=4)
+        ax.annotate(f"source effect is {dec['ratio']:.1f}x the "
+                    f"architecture effect;\nbars are 95% CI",
+                    xy=(0.5, -0.30), xycoords="axes fraction",
+                    ha="center", fontsize=6.0, color=INK2,
+                    linespacing=1.3)
+        _frame(ax)
+        ax.grid(axis="x", color=GRID, lw=0.5)
     fig.tight_layout(pad=0.5, w_pad=1.8)
     save(fig, "figure2_generalisation", FIG)
 
@@ -811,17 +1118,34 @@ def figure4_reliability(qr):
           for m in order]
     ax.errorbar(pt, yy, xerr=[lo, hi], fmt="none", ecolor=INK2,
                 elinewidth=1.1, capsize=2.6, zorder=2)
+    # The per-source values are plotted behind the mean. The question is
+    # not only which encoder ranks errors best but whether any of them
+    # ranks them consistently, and a mean alone cannot show that: the
+    # spread across sources dwarfs the spread across architectures here
+    # exactly as it does for discrimination in Figure 2.
+    smap = plt.get_cmap("Dark2")
+    for y_, m in zip(yy, order):
+        by = d["models"][m].get("eaurc_by_source", {})
+        for k, src in enumerate(srcs):
+            if src in by:
+                ax.scatter(by[src], y_ + 0.26, s=13, color=smap(k),
+                           edgecolor=SURFACE, lw=0.4, zorder=3,
+                           label=sname(src) if m == order[0] else None)
     for y_, m in zip(yy, order):
         ax.scatter(d["models"][m]["eaurc"], y_, s=42,
                    color=cmap(ORDER.index(m)), edgecolor=SURFACE, lw=0.9,
-                   zorder=3)
+                   zorder=4)
     ax.set_yticks(yy)
     ax.set_yticklabels([NICE[m] for m in order], fontsize=7.2)
-    ax.set_xlabel("mean E-AURC over four held-out sources, "
-                  "lower = better error ranking", fontsize=7.2, color=INK)
-    ax.set_title(f"({chr(97 + len(srcs))}) selective reliability, "
-                 f"record-level bootstrap 95% CI", fontsize=7.6,
-                 color=INK, pad=3)
+    ax.set_xlabel("E-AURC, lower = better error ranking.  Large marker = "
+                  "mean over sources with bootstrap 95% CI;  small "
+                  "markers = individual held-out sources",
+                  fontsize=6.6, color=INK)
+    ax.set_title(f"({chr(97 + len(srcs))}) selective reliability varies "
+                 f"more across sources than across architectures",
+                 fontsize=7.6, color=INK, pad=3)
+    ax.legend(fontsize=5.9, frameon=False, labelcolor=INK2, ncol=1,
+              loc="upper right", handletextpad=0.3, labelspacing=0.3)
     _frame(ax)
     ax.grid(axis="x", color=GRID, lw=0.5)
 

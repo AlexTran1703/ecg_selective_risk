@@ -124,34 +124,6 @@
   year      = {2020}
 }
 
-@inproceedings{Jacob2018Quantization,
-  author    = {Jacob, Benoit and Kligys, Skirmantas and Chen, Bo and Zhu, Menglong and Tang, Matthew and Howard, Andrew and Adam, Hartwig and Kalenichenko, Dmitry},
-  title     = {Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference},
-  booktitle = {2018 IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-  year      = {2018},
-  pages     = {2704--2713},
-  doi       = {10.1109/CVPR.2018.00286}
-}
-
-@inproceedings{Lin2020MCUNet,
-  author    = {Lin, Ji and Chen, Wei-Ming and Lin, Yujun and Cohn, John and Gan, Chuang and Han, Song},
-  title     = {{MCUNet}: Tiny Deep Learning on {IoT} Devices},
-  booktitle = {Advances in Neural Information Processing Systems},
-  year      = {2020},
-  volume    = {33}
-}
-
-@article{Zambrano2026TinyMLECG,
-  author  = {Zambrano-de la Torre, Misael and Guzman-Alfaro, Sebastian and Acu{\~n}a-Correa, Andrea and Soto-Murillo, Manuel A. and Guzm{\'a}n-Fern{\'a}ndez, Maximiliano and Robles-Ortiz, Ricardo and Villagrana-Ba{\~n}uelos, Karen E. and Arceo-Olague, Jose G. and Espino-Salinas, Carlos H. and S{\'a}nchez-Reyna, Ana G. and Cuevas-Rodriguez, Erik O.},
-  title   = {Real-Time Cardiac Arrhythmia Classification Using {TinyML} on Ultra-Low-Cost Microcontrollers: A Feasibility Study for Resource-Constrained Environments},
-  journal = {Bioengineering},
-  year    = {2026},
-  volume  = {13},
-  number  = {5},
-  pages   = {532},
-  doi     = {10.3390/bioengineering13050532}
-}
-
 @article{Ashraf2025EffNet,
   author  = {Ashraf, Bilal and Ali, Husan and Khan, Muhammad Aseer and Albogamy, Fahad R.},
   title   = {{EffNet}: an efficient one-dimensional convolutional neural networks for efficient classification of long-term {ECG} fragments},
@@ -194,3 +166,82 @@
   journal = {arXiv preprint arXiv:1803.01271},
   year    = {2018}
 }
+
+% =====================================================================
+% Added for the cross-source reframe (RQ1 source-vs-architecture,
+% RQ2 label-distribution shift, RQ3 selective prediction under shift).
+%
+% All five entries verified against Crossref (and arXiv for the TMLR
+% paper) on 2026-10-09: title, full author list, journal, volume, issue
+% and article number confirmed from the publisher record, not copied
+% from the reviewer note. Author lists below are complete -- no "et al."
+% =====================================================================
+
+% Verified: Crossref 10.1016/j.compbiomed.2024.109271. The protocol
+% citation -- LOSO must be motivated by this, not claimed as novel.
+@article{Leinonen2024MultiSource,
+  author  = {Leinonen, Tuija and Wong, David and Vasankari, Antti and Wahab, Ali and Nadarajah, Ramesh and Kaisti, Matti and Airola, Antti},
+  title   = {Empirical investigation of multi-source cross-validation in clinical {ECG} classification},
+  journal = {Computers in Biology and Medicine},
+  year    = {2024},
+  volume  = {183},
+  pages   = {109271},
+  doi     = {10.1016/j.compbiomed.2024.109271}
+}
+
+% Verified: Crossref 10.1016/j.bspc.2025.107912. Establishes that
+% label-distribution shift is already recognised in ECG; cite so RQ2
+% does not overclaim novelty.
+@article{An2025IDANet,
+  author  = {An, Ran and Shang, Zuogang and Liu, Yuhong and Wu, Xin and Ren, Jing and Zhao, Zhibin},
+  title   = {Imbalanced domain adaptation Net for multi-class electrocardiography signals classification},
+  journal = {Biomedical Signal Processing and Control},
+  year    = {2025},
+  volume  = {108},
+  pages   = {107912},
+  doi     = {10.1016/j.bspc.2025.107912}
+}
+
+% Verified: arXiv 2405.05160, journal-ref "Accepted to Transactions on
+% Machine Learning Research (TMLR), ISSN 2835-8856, 2024". TMLR has no
+% DOI. The URL in the reviewer note (mlanthology.org) was not canonical
+% and is not used; OpenReview could not be reached to confirm its forum
+% id, so the arXiv identifier is given as the stable pointer.
+@article{Liang2024SelectiveShift,
+  author  = {Liang, Hengyue and Peng, Le and Sun, Ju},
+  title   = {Selective Classification Under Distribution Shifts},
+  journal = {Transactions on Machine Learning Research},
+  year    = {2024},
+  issn    = {2835-8856},
+  note    = {arXiv:2405.05160}
+}
+
+% Verified: Crossref 10.1038/s41598-025-33057-9. Full author list is
+% five, not "and others". NOTE the year: Crossref issued/published-online
+% is 2025-12-21 while the volume is 16 and the issue carries a 2026 date.
+% 2025 is used here because that is the publication date of record; if
+% the publisher's own citation line reads "(2026)", change it and the
+% key together.
+@article{Li2025ECGDomain,
+  author  = {Li, Runwen and Aierken, Yierpani and Xu, Yu and Liu, Jiang and Tang, Yongjiang},
+  title   = {Research on cross-dataset cardiac signal domain generalization and feature interpretability},
+  journal = {Scientific Reports},
+  year    = {2025},
+  volume  = {16},
+  number  = {1},
+  pages   = {3138},
+  doi     = {10.1038/s41598-025-33057-9}
+}
+
+% Verified: Crossref 10.1371/journal.pdig.0001623. Full 20-author list.
+@article{Khattak2026Distribution,
+  author  = {Khattak, Gul Rukh and Patlatzoglou, Konstantinos and Barker, Joseph and Pastika, Libor and Zeidaabadi, Boroumand and Birdi, Aidan R. and Huo, Jiayu and El-Medany, Ahmed and Aggour, Hesham and Liang, Yixiu and Ribeiro, Antonio H. and Annis, Jeffrey and Ribeiro, Antonio Luiz Pinho and Ge, Junbo and Kramer, Daniel B. and Waks, Jonathan W. and Brittain, Evan and Peters, Nicholas and Ng, Fu Siong and Sau, Arunashis},
+  title   = {Data distribution impacts the performance and generalisability of contrastive learning-based foundation models of electrocardiograms},
+  journal = {PLOS Digital Health},
+  year    = {2026},
+  volume  = {5},
+  number  = {9},
+  pages   = {e0001623},
+  doi     = {10.1371/journal.pdig.0001623}
+}
+
