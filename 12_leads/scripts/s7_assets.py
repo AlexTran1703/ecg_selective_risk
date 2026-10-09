@@ -41,6 +41,7 @@ RATE_TAG = "" if FS_OUT == 250 else f"_{FS_OUT}hz"
 S1D = HERE / "results" / "study1"
 S2D = HERE / "results" / ("study2" if FS_OUT == 250 else f"study2{RATE_TAG}")
 S3D = HERE / "results" / f"study3{RATE_TAG}"
+S16 = HERE / "results" / f"study16{RATE_TAG}"
 S3B = HERE / "results" / f"study3b{RATE_TAG}"
 FIG, TAB = HERE / "figures", HERE / "tables"
 SFIG, STAB = FIG / "supplementary", TAB / "supplementary"
@@ -264,9 +265,9 @@ def figure1():
     label(MID + 2, 46.5, "held-out predictions")
 
     box(SPINE_L, 32, SPINE_R - SPINE_L, 10, "qual",
-        "RQ2   Characterising transfer failure",
-        "diagnosis-level performance, prevalence shift,"
-        + NL + "labelling convention and signal quality")
+        "RQ2   Examining explanations for source heterogeneity",
+        "diagnostic distribution, annotation heterogeneity,"
+        + NL + "and signal-quality associations")
 
     # The quality branch runs down the outside and enters RQ2 on its left
     # edge. The label sits along the run rather than floating beside the
@@ -664,12 +665,15 @@ def figure3_diagnosis_transfer():
     ax.set_xlabel("|log2 prevalence shift| from training pool",
                   fontsize=6.8, color=INK)
     ax.set_ylabel("AUROC", fontsize=6.8, color=INK)
-    ax.set_title("(c) shift does not predict\ndiscrimination",
+    ax.set_title("(c) no consistent association\ndetected",
                  fontsize=7.3, color=INK, pad=4)
-    ax.annotate(f"mixed model slope {d['mixed_slope']:+.3f}" + chr(10)
+    ax.annotate("unit: diagnosis x source cell (n = 52)" + chr(10)
+                + "mixed model, random intercept per diagnosis" + chr(10)
+                + f"slope {d['mixed_slope']:+.3f}" + chr(10)
                 + f"95% CI ({d['mixed_lo']:+.3f}, {d['mixed_hi']:+.3f}),"
                 + f" p = {d['mixed_p']:.2f}" + chr(10)
-                + f"sign test {d['sign_neg']}/{d['sign_n']} negative, "
+                + f"sign test over {d['sign_n']} diagnoses: "
+                + f"{d['sign_neg']} negative, "
                 + f"p = {d['sign_p']:.2f}",
                 xy=(0.97, 0.04), xycoords="axes fraction", ha="right",
                 va="bottom", fontsize=5.7, color=INK2, linespacing=1.45)
@@ -1035,10 +1039,12 @@ def figure2_generalisation(boot):
         ax.set_xticks([0, 25, 50, 75, 100])
         ax.set_xlabel("share of variance in the table at (a)",
                       fontsize=6.9, color=INK)
-        ax.set_title("(c) what decides external AUPRC",
+        ax.set_title("(c) decomposition of observed" + chr(10)
+                     + "AUPRC variation",
                      fontsize=7.2, color=INK, pad=4)
-        ax.annotate(f"source effect is {dec['ratio']:.1f}x the "
-                    f"architecture effect;\nbars are 95% CI",
+        ax.annotate(f"variance of the observed 6x4 matrix; source effect" + chr(10)
+                    + f" is {dec['ratio']:.1f}x the "
+                    f"architecture effect, bars are 95% CI",
                     xy=(0.5, -0.30), xycoords="axes fraction",
                     ha="center", fontsize=6.0, color=INK2,
                     linespacing=1.3)
@@ -1081,11 +1087,11 @@ def figure4_reliability(qr):
         return
 
     cmap = plt.get_cmap("tab10")
-    fig = plt.figure(figsize=(7.4, 4.5), facecolor=SURFACE)
+    fig = plt.figure(figsize=(7.6, 4.7), facecolor=SURFACE)
     # One panel row, one summary row, and a gap between them sized for the
     # shared legend and nothing else.
     gs = fig.add_gridspec(2, len(srcs), height_ratios=[1.0, 0.82],
-                          hspace=0.72, wspace=0.18,
+                          hspace=0.95, wspace=0.42,
                           top=0.93, bottom=0.11, left=0.09, right=0.98)
 
     ax0 = None
@@ -1108,7 +1114,7 @@ def figure4_reliability(qr):
 
     # (e) spans the full width: the intervals are the point of the panel,
     # so they get the resolution rather than sharing the row.
-    ax = fig.add_subplot(gs[1, :])
+    ax = fig.add_subplot(gs[1, 0:2])
     order = sorted(models, key=lambda m: d["models"][m]["eaurc"])
     yy = np.arange(len(order))[::-1]
     pt = [d["models"][m]["eaurc"] for m in order]
@@ -1137,22 +1143,59 @@ def figure4_reliability(qr):
                    zorder=4)
     ax.set_yticks(yy)
     ax.set_yticklabels([NICE[m] for m in order], fontsize=7.2)
-    ax.set_xlabel("E-AURC, lower = better error ranking.  Large marker = "
-                  "mean over sources with bootstrap 95% CI;  small "
-                  "markers = individual held-out sources",
+    ax.set_xlabel("E-AURC, lower = better.  Large = mean with 95% CI",
                   fontsize=6.6, color=INK)
-    ax.set_title(f"({chr(97 + len(srcs))}) selective reliability varies "
-                 f"more across sources than across architectures",
-                 fontsize=7.6, color=INK, pad=3)
-    ax.legend(fontsize=5.9, frameon=False, labelcolor=INK2, ncol=1,
-              loc="upper right", handletextpad=0.3, labelspacing=0.3)
+    ax.set_title(f"({chr(97 + len(srcs))}) reliability varies more "
+                 f"across sources than architectures",
+                 fontsize=7.3, color=INK, pad=3)
+    src_handles = ax.collections[:len(srcs)]
     _frame(ax)
     ax.grid(axis="x", color=GRID, lw=0.5)
+
+    # (f) An ordering is not an operating point. This is the coverage a
+    # threshold actually delivers when it is fixed on the training-side
+    # validation split and carried to the held-out source unchanged --
+    # the only way a deployment could set it.
+    tf = S2D / "threshold_transfer.json"
+    if tf.exists():
+        th = pd.DataFrame(json.loads(tf.read_text()))
+        ax = fig.add_subplot(gs[1, 2:])
+        yy = np.arange(len(order))[::-1]
+        for y_, m in zip(yy, order):
+            for k, src in enumerate(srcs):
+                g = th[(th.model == m) & (th.source == src)
+                       & (th.target == 0.90)]
+                if not g.empty:
+                    ax.scatter(float(g.coverage.iloc[0]), y_, s=24,
+                               color=smap(k), edgecolor=SURFACE, lw=0.5,
+                               zorder=3)
+        ax.axvline(0.90, color=INK, lw=1.0, ls="--", zorder=1)
+        ax.set_yticks(yy)
+        ax.set_yticklabels([NICE[m] for m in order], fontsize=7.2)
+        ax.set_xlabel("coverage achieved on the held-out source",
+                      fontsize=6.6, color=INK)
+        ax.set_title("(f) a 0.90 target, fixed on training-side"
+                     + chr(10) + "validation, transfers within a few points",
+                     fontsize=7.3, color=INK, pad=3)
+        err = (th[th.target == 0.90].coverage - 0.90).abs()
+        ax.annotate(f"mean |error| {err.mean():.3f}, worst {err.max():.3f}",
+                    xy=(0.03, 0.04), xycoords="axes fraction", ha="left",
+                    va="bottom", fontsize=5.9, color=INK2)
+        _frame(ax)
+        ax.grid(axis="x", color=GRID, lw=0.5)
 
     handles, labels = ax0.get_legend_handles_labels()
     fig.legend(handles, labels, fontsize=6.6, frameon=False,
                labelcolor=INK2, ncol=6, loc="upper center",
-               bbox_to_anchor=(0.5, 0.495))
+               bbox_to_anchor=(0.5, 0.545))
+    smap2 = plt.get_cmap("Dark2")
+    fig.legend([plt.Line2D([], [], marker="o", ls="", ms=4,
+                           color=smap2(k)) for k in range(len(srcs))],
+               [sname(x) for x in srcs], fontsize=6.0, frameon=False,
+               labelcolor=INK2, ncol=4, loc="upper center",
+               bbox_to_anchor=(0.5, 0.495),
+               title="held-out source, panels (e) and (f)",
+               title_fontsize=6.0)
     save(fig, "figure4_reliability", FIG)
 
 

@@ -18,11 +18,11 @@ source-out predictions.
 | | question | evidence |
 |---|---|---|
 | **RQ1** | How much does external performance vary across unseen sources, relative to variation across architectures? | Figure 2 |
-| **RQ2** | Which diagnostic-distribution and signal-quality differences are associated with that variation? | Figure 3, Table III |
+| **RQ2** | Which diagnostic-distribution, annotation and signal-quality differences are associated with that variation? | Figure 3, Table III |
 | **RQ3** | Does model confidence identify unreliable predictions consistently across unseen sources? | Figure 4 |
 
 ```
-How much does the site matter?  ->  What about it?  ->  Can the model tell?
+How much does the source matter?  ->  Why?  ->  Can the model tell?
 ```
 
 Each question is the previous answer's leftover. RQ1 finds that the
@@ -165,6 +165,43 @@ Macro AUPRC by held-out source, **float32**. AUROC is reported beside it per dia
 > accurate one.
 > **Figure 2(c).**
 
+> **Finding 1g. Most of the spread is not a transfer penalty. It is how
+> hard the source is.** Finding 1b says the held-out source decides
+> external performance, but not whether that is because the model never
+> saw the source or because its diagnoses are harder there. Those are
+> different claims and only one of them is about generalisation.
+>
+> Each source was split patient-disjointly in half. The external arm is
+> the LOSO model reported everywhere else, scored on one half. The
+> reference arm is the same architecture trained with the *other* half
+> swapped into the pool -- and an equal number of records removed from
+> the other three sources, so both arms train on the same record count,
+> epochs, optimiser, schedule and seed. Only representation differs.
+>
+> | held-out source | external AP | reference AP | transfer gap | CI excludes 0 |
+> |---|---|---|---|---|
+> | PTB-XL | 0.429 | 0.468 | **+0.039** | 6/6 |
+> | Georgia | 0.522 | 0.545 | +0.023 | 6/6 |
+> | Chapman | 0.566 | 0.591 | +0.026 | 6/6 |
+> | Ningbo | 0.586 | 0.608 | +0.022 | 6/6 |
+>
+> There is a real penalty -- all 24 model-by-source intervals exclude
+> zero -- and PTB-XL's is roughly 1.7x the others, which is the first
+> result here that connects RQ1's heterogeneity to RQ2's annotation
+> findings rather than leaving them adjacent.
+>
+> But the penalty is small against the thing it was invoked to explain.
+> The spread across sources is **0.157** externally and **0.140** when
+> every source is represented in training: **89% of the cross-source
+> spread survives**, and only about **11%** is attributable to transfer.
+> Training on a source barely closes the gap to it.
+>
+> This is the result that makes RQ2 interpretable. The search for a
+> mechanism behind the spread kept coming up empty because most of the
+> spread is not a transfer effect to have a mechanism for -- it is
+> intrinsic difficulty of the source, its case mix and its label
+> definitions. **Table IV.**
+
 > **Finding 2. PTB-XL is the hardest held-out source for every encoder**
 > (0.399-0.434 against 0.558-0.618 for Ningbo), even though RQ2a shows
 > it is the *cleanest* source on every indicator. The cross-source gap is
@@ -181,7 +218,7 @@ Macro AUPRC by held-out source, **float32**. AUROC is reported beside it per dia
 > sequence a small encoder has to summarise. The 250 Hz runs supporting
 > this comparison are in `archive_250hz/`.
 
-## RQ2 - what is it about a source that matters?
+## RQ2 - examining explanations for source heterogeneity
 
 RQ1 shows that external performance depends on which source is held
 out. This asks why, and whether the model can tell. Three steps: what
@@ -191,9 +228,13 @@ wrong. **Figure 3**, **Table III**, **Figure 4**.
 
 ### RQ2a - it is not signal quality
 
-RQ1 leaves a 0.163 AUPRC spread between sources to account for. Signal
-quality is the obvious candidate and the one this study was originally
-built around. It does not survive contact with the data.
+RQ1 leaves a spread between sources to account for -- though Finding 1g
+has already removed about 89% of it from the brief, since that part is
+present even when the source is in the training set and is therefore not
+a transfer effect at all. What follows asks what distinguishes the
+sources, transfer or not. Signal quality is the obvious candidate and
+the one this study was originally built around. It does not survive
+contact with the data.
 
 All 77,333 records, six indicators reported separately, measured on the
 native 500 Hz signal before decimation. No composite index, which would
@@ -407,6 +448,26 @@ E-AURC with the per-source values shown beside the mean.
 > one source does not transfer as a reliability guarantee to another,
 > for the same reason an accuracy estimate does not. **Figure 4(e).**
 
+> **Finding 9. An abstention threshold fixed before deployment lands
+> close to its target on an unseen source.** The risk-coverage curves and
+> E-AURC are statements about *ordering*. A deployment cannot use an
+> ordering; it has to fix a number in advance. So the confidence quantile
+> retaining 90% of the training-side validation split was computed, then
+> applied unchanged to the held-out source -- no labels, predictions or
+> recalibration from the target.
+>
+> Achieved coverage spans **0.866 to 0.916** against the 0.90 target:
+> mean absolute error **0.012**, worst case 0.034. At a 0.80 target,
+> 0.752 to 0.820, mean error 0.018, worst 0.048. By source the mean
+> error is 0.010 for PTB-XL, Chapman and Ningbo, and 0.030 for Georgia.
+>
+> So the operational form of selective prediction survives the source
+> change, which does not follow from the curves alone and is the
+> positive result of this section. The caveat is that the error is not
+> negligible at a clinical scale: a service planning for a 10% referral
+> rate should expect roughly 8.4% to 11.6%, and should monitor the
+> realised rate rather than assume it. **Figure 4(f).**
+
 > **Finding 8. Degradation is compounding: where discrimination falls,
 > the confidence ordering falls with it.** Restricted to the three
 > structural quality indicators, E-AURC is higher in the impaired
@@ -535,15 +596,16 @@ can the model tell?
 | 1 | `figures/figure1_design` | the experimental logic, three RQs |
 | 2 | `figures/figure2_generalisation` | **RQ1** AUPRC by held-out source (a), mean with bootstrap CI (b), and the source/architecture/interaction variance decomposition (c) |
 | 3 | `figures/figure3_diagnosis_transfer` | **RQ2** transfer at the diagnosis level: average precision (a) and AUROC (b) for all 13 x 4 cells, which disagree on the hardest source, and the dependence-aware test of prevalence shift against discrimination (c), which is null |
-| 4 | `figures/figure4_reliability` | **RQ3** does confidence identify unreliable predictions? risk-coverage per held-out source (a-d), and E-AURC (e) with the per-source values beside the mean, showing that selective reliability varies more across sources than architectures |
+| 4 | `figures/figure4_reliability` | **RQ3** does confidence identify unreliable predictions? Risk-coverage per held-out source (a-d); E-AURC (e) with per-source values beside the mean, showing reliability varies more across sources than architectures; and (f) the coverage a 0.90 abstention threshold actually achieves when fixed on training-side validation and carried to the unseen source |
 
 ## Main tables
 
 | | file | answers |
 |---|---|---|
-| I | `tables/table1_datasets` | what data |
+| I | `tables/table1_datasets` | what data, from which institutions, under whose annotation protocol -- including that Chapman and Ningbo share one |
 | II | `tables/table2_architectures` | what models |
 | III | `tables/table3_quality_association` | **RQ2b** do the source differences matter diagnostically? |
+| IV | `tables/table4_transfer_gap` | **RQ1** is there a measured transfer penalty, or only heterogeneity? External versus target-represented models on shared test records, matched training budget |
 
 Tables I and II define the experimental objects. Table III is the one result
 that does not compress into a figure: model x indicator estimates with intervals.

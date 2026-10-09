@@ -39,24 +39,50 @@ def table1():
     idx = pd.read_csv(HERE / "data" / "index.csv")
     lab = np.load(HERE / "data" / "labels.npy")
     npos = lab.sum(1)
+    # Provenance matters to how the LOSO factor should be read: two of
+    # the four databases come from the same group, so "four sources" is
+    # not four independent annotation domains.
+    PROV = {
+        "PTBXL": ("Physikalisch-Technische Bundesanstalt, Germany",
+                  "cardiologist report, SCP-ECG statements"),
+        "Georgia": ("Emory University, Georgia, USA",
+                    "PhysioNet/CinC 2020 challenge release"),
+        "Chapman": ("Chapman University and Shaoxing People's Hospital",
+                    "Zheng et al.; licensed cardiologist review"),
+        "Ningbo": ("Ningbo First Hospital (Zheng et al. group)",
+                   "Zheng et al.; same labelling protocol as Chapman"),
+    }
+    pat = rec.groupby("source").patient.nunique().to_dict()
     rows = []
     for s in SOURCES:
         sel = (idx.source == s).to_numpy()
+        inst, ann = PROV[s]
         rows.append({
             "source": A.sname(s),
+            "institution": inst,
+            "annotation provenance": ann,
+            "patients": int(pat.get(s, 0)),
             "records, original": int((rec.source == s).sum()),
             "retained": int(sel.sum()),
             "labels per record": round(float(npos[sel].mean()), 2),
             "original Fs (Hz)": 500,
-            "duration (s)": SECONDS,
-            "model input Fs (Hz)": FS_OUT,
-            "model input": f"{N_LEADS} leads x {FS_OUT * SECONDS} samples"})
+            "model input": f"{N_LEADS} x {FS_OUT * SECONDS} @ {FS_OUT} Hz"})
     A.emit(pd.DataFrame(rows).set_index("source"), "table1_datasets",
-           "Table I. The four clinical sources. A record is retained when "
-           "at least one of its labels falls inside the harmonised "
-           "13-class space. Signal-quality characteristics are reported in "
-           "Figure 2 and are measured on the native 500 Hz signal, not on "
-           "the decimated model input.", TAB)
+           "Table I. The four clinical sources and their provenance. A "
+           "record is retained when at least one of its labels falls "
+           "inside the harmonised 13-class space; all records are 10 s. "
+           "Only PTB-XL contains repeated patients (21,837 records from "
+           "18,885 patients), and the leave-one-source-out partitions are "
+           "by source, so no patient appears in both training and test. "
+           "**Chapman and Ningbo are not independent annotation "
+           "domains**: both were released by the Zheng et al. group under "
+           "the same labelling protocol, and their diagnosis prevalence "
+           "vectors differ by an L1 distance of 0.196 against 0.658-0.676 "
+           "for every other pair involving them and about 1.6 for every "
+           "pair involving PTB-XL. The source factor in Figure 2(c) "
+           "therefore samples roughly three independent annotation "
+           "domains, not four, and the source-level analyses should be "
+           "read accordingly.", TAB)
 
 
 def table2(dep):
@@ -151,10 +177,12 @@ def table4(qr):
             **{c: f"{pv.loc[c, 'delta']:+.3f} ({pv.loc[c, 'lo']:+.3f}, "
                   f"{pv.loc[c, 'hi']:+.3f})" for c in cols},
         }
-        rows["held-out sources"] = {
-            c: str(int(pv.loc[c, "sources_used"])) for c in cols}
     t = pd.DataFrame(rows).T[cols]
     t.index.name = "model"
+    if not qp.empty:
+        pv = qp.set_index("label")
+        t.columns = [f"{c}  [{int(pv.loc[c, 'sources_used'])} of 4 "
+                     f"sources]" for c in cols]
     A.emit(t, "table3_quality_association",
            "Table III. Prevalence-matched association between signal-quality "
            "strata and diagnostic discrimination. Values are dAUPRC = "
@@ -171,10 +199,64 @@ def table4(qr):
            "prevalence-matched class-specific AP contrasts rather than "
            "macro AUPRC on one common matched set. A diagnosis enters only "
            "where both strata supply 20 positives and 20 negatives, which "
-           "is why the last row differs by column: flat/clipped leads are "
-           "too rare outside Ningbo to support the contrast there. "
+           "is why the bracketed source count in each column header differs: "
+           "flat/clipped leads are too rare outside Ningbo to support the "
+           "contrast there, so that column is a single-source result and "
+           "must not be read as a replicated cross-source effect. "
            "Negative indicates lower discrimination in the more impaired "
            "stratum. These are associations, not causal effects.", TAB)
+
+
+def table4_transfer_gap():
+    """Table IV: is there a measured transfer penalty, or only heterogeneity?
+
+    Every other result in this paper compares sources to each other. None
+    of them can say whether a source scores low externally because the
+    model never saw it, or because its diagnoses are simply harder there.
+    This is the contrast that separates the two, on shared test records
+    under a matched training budget.
+    """
+    f = A.S16 / "transfer_gap.json"
+    if not f.exists():
+        print("  (no transfer-gap run)")
+        return
+    t = pd.DataFrame(json.loads(f.read_text()))
+    rows = []
+    for src in SOURCES:
+        g = t[t.source == src]
+        if g.empty:
+            continue
+        rows.append({
+            "held-out source": A.sname(src),
+            "test records": int(g.n_test.iloc[0]),
+            "external AP": round(float(g.ap_external.mean()), 4),
+            "reference AP": round(float(g.ap_reference.mean()), 4),
+            "transfer gap": round(float(g.delta.mean()), 4),
+            "range over 6 encoders": f"{g.delta.min():+.3f} to "
+                                     f"{g.delta.max():+.3f}",
+            "encoders with CI above 0": f"{int((g.lo > 0).sum())}/{len(g)}",
+            "external AUROC": round(float(g.auroc_external.mean()), 4),
+            "reference AUROC": round(float(g.auroc_reference.mean()), 4)})
+    A.emit(pd.DataFrame(rows).set_index("held-out source"),
+           "table4_transfer_gap",
+           "Table IV. Measured transfer penalty by held-out source. The "
+           "external arm is the leave-one-source-out model reported "
+           "everywhere else in this paper, scored on a patient-disjoint "
+           "half of the target source. The reference arm is the same "
+           "architecture trained with that source represented -- the other "
+           "half of the target is swapped into the training pool, and an "
+           "equal number of records is removed from the other three "
+           "sources, so both arms train on the same record count for the "
+           "same twelve epochs with the same optimiser, schedule and seed. "
+           "Both are then scored on the identical held-out half. The "
+           "transfer gap is reference minus external macro AP, averaged "
+           "over the six encoders; the final columns give the spread "
+           "across encoders and how many of the six have a paired "
+           "record-level bootstrap interval excluding zero (B = 400, seed "
+           "0). A positive gap is a measured performance contrast under "
+           "this protocol, not a causal estimate of distribution shift: it "
+           "does not say whether acquisition, population or labelling "
+           "produced it.", TAB)
 
 
 def supplementary(runs, qr):
@@ -511,6 +593,7 @@ def main():
     table2(dep)
     boot = table3(runs) if runs else {}
     table4(qr)
+    table4_transfer_gap()
 
     print("main figures:")
     A.figure1()                      # design, three RQ blocks

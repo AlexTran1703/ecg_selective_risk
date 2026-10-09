@@ -1,5 +1,5 @@
-source,"records, original",retained,labels per record,original Fs (Hz),duration (s),model input Fs (Hz),model input
-PTB-XL,21837,20487,1.53,500,10,100,12 leads x 1000 samples
-Georgia,10344,8302,1.44,500,10,100,12 leads x 1000 samples
-Chapman,10247,8634,1.34,500,10,100,12 leads x 1000 samples
-Ningbo,34905,28956,1.36,500,10,100,12 leads x 1000 samples
+source,institution,annotation provenance,patients,"records, original",retained,labels per record,original Fs (Hz),model input
+PTB-XL,"Physikalisch-Technische Bundesanstalt, Germany","cardiologist report, SCP-ECG statements",18885,21837,20487,1.53,500,12 x 1000 @ 100 Hz
+Georgia,"Emory University, Georgia, USA",PhysioNet/CinC 2020 challenge release,10344,10344,8302,1.44,500,12 x 1000 @ 100 Hz
+Chapman,Chapman University and Shaoxing People's Hospital,Zheng et al.; licensed cardiologist review,10247,10247,8634,1.34,500,12 x 1000 @ 100 Hz
+Ningbo,Ningbo First Hospital (Zheng et al. group),Zheng et al.; same labelling protocol as Chapman,34905,34905,28956,1.36,500,12 x 1000 @ 100 Hz

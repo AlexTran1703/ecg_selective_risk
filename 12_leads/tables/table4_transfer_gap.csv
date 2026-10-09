@@ -1,0 +1,5 @@
+held-out source,test records,external AP,reference AP,transfer gap,range over 6 encoders,encoders with CI above 0,external AUROC,reference AUROC
+PTB-XL,10201,0.4287,0.4675,0.0388,+0.022 to +0.047,6/6,0.8663,0.8946
+Georgia,4151,0.5216,0.5447,0.0231,+0.010 to +0.034,6/6,0.845,0.8719
+Chapman,4317,0.5655,0.5909,0.0255,+0.012 to +0.032,6/6,0.9111,0.9361
+Ningbo,14478,0.5856,0.6078,0.0222,+0.013 to +0.030,6/6,0.9283,0.9352
