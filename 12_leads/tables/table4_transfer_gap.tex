@@ -1,14 +1,14 @@
 \begin{table}
-\caption{Table IV. Measured transfer penalty by held-out source. The external arm is the leave-one-source-out model reported everywhere else in this paper, scored on a patient-disjoint half of the target source. The reference arm is the same architecture trained with that source represented -- the other half of the target is swapped into the training pool, and an equal number of records is removed from the other three sources, so both arms train on the same record count for the same twelve epochs with the same optimiser, schedule and seed. Both are then scored on the identical held-out half. The transfer gap is reference minus external macro AP, averaged over the six encoders; the final columns give the spread across encoders and how many of the six have a paired record-level bootstrap interval excluding zero (B = 400, seed 0). A positive gap is a measured performance contrast under this protocol, not a causal estimate of distribution shift: it does not say whether acquisition, population or labelling produced it.}
-\begin{tabular}{lrrrrllrr}
+\caption{Table IV. Measured transfer penalty by held-out source. The external arm is the leave-one-source-out model reported everywhere else in this paper, scored on a patient-disjoint half of the target source. The reference arm is the same architecture trained with that source represented -- the other half of the target is swapped into the training pool, and an equal number of records is removed from the other three sources, so both arms train on the same record count for the same twelve epochs with the same optimiser, schedule and seed. Both are then scored on the identical held-out half. The transfer gap is reference minus external macro AP, averaged over the six encoders. Its interval is a paired record-level bootstrap of that mean: one resample of the shared test records, all six encoders rescored on it, then averaged (B = 400, seed 0) -- not an interval assembled from six marginal ones. The last columns give the spread across encoders and how many individually exclude zero. A positive gap is a measured performance contrast under this protocol, not a causal estimate of distribution shift: it does not say whether acquisition, population or labelling produced it.}
+\begin{tabular}{lrrrrlllrr}
 \toprule
- & test records & external AP & reference AP & transfer gap & range over 6 encoders & encoders with CI above 0 & external AUROC & reference AUROC \\
-held-out source &  &  &  &  &  &  &  &  \\
+ & test records & external AP & reference AP & transfer gap & 95\% CI on the gap & range over 6 encoders & encoders with CI above 0 & external AUROC & reference AUROC \\
+held-out source &  &  &  &  &  &  &  &  &  \\
 \midrule
-PTB-XL & 10201 & 0.428700 & 0.467500 & 0.038800 & +0.022 to +0.047 & 6/6 & 0.866300 & 0.894600 \\
-Georgia & 4151 & 0.521600 & 0.544700 & 0.023100 & +0.010 to +0.034 & 6/6 & 0.845000 & 0.871900 \\
-Chapman & 4317 & 0.565500 & 0.590900 & 0.025500 & +0.012 to +0.032 & 6/6 & 0.911100 & 0.936100 \\
-Ningbo & 14478 & 0.585600 & 0.607800 & 0.022200 & +0.013 to +0.030 & 6/6 & 0.928300 & 0.935200 \\
+PTB-XL & 10201 & 0.428700 & 0.467500 & 0.038800 & (+0.0350, +0.0416) & +0.022 to +0.047 & 6/6 & 0.866300 & 0.894600 \\
+Georgia & 4151 & 0.521600 & 0.544700 & 0.023100 & (+0.0195, +0.0257) & +0.010 to +0.034 & 6/6 & 0.845000 & 0.871900 \\
+Chapman & 4317 & 0.565500 & 0.590900 & 0.025500 & (+0.0192, +0.0305) & +0.012 to +0.032 & 6/6 & 0.911100 & 0.936100 \\
+Ningbo & 14478 & 0.585600 & 0.607800 & 0.022200 & (+0.0173, +0.0264) & +0.013 to +0.030 & 6/6 & 0.928300 & 0.935200 \\
 \bottomrule
 \end{tabular}
 \end{table}

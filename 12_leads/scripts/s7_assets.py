@@ -646,7 +646,7 @@ def figure3_diagnosis_transfer():
     heat(fig.add_subplot(gs[0, 0]), "ap",
          "(a) average precision", "YlGnBu", 0.0, 1.0)
     ax = fig.add_subplot(gs[0, 1])
-    heat(ax, "auroc", "(b) AUROC, no prevalence floor", "YlGnBu", 0.5, 1.0)
+    heat(ax, "auroc", "(b) diagnosis-level AUROC", "YlGnBu", 0.5, 1.0)
     ax.set_yticklabels([])
 
     # (c) the dependence-aware test, and it is null.
@@ -667,16 +667,15 @@ def figure3_diagnosis_transfer():
     ax.set_ylabel("AUROC", fontsize=6.8, color=INK)
     ax.set_title("(c) no consistent association\ndetected",
                  fontsize=7.3, color=INK, pad=4)
-    ax.annotate("unit: diagnosis x source cell (n = 52)" + chr(10)
-                + "mixed model, random intercept per diagnosis" + chr(10)
-                + f"slope {d['mixed_slope']:+.3f}" + chr(10)
-                + f"95% CI ({d['mixed_lo']:+.3f}, {d['mixed_hi']:+.3f}),"
-                + f" p = {d['mixed_p']:.2f}" + chr(10)
-                + f"sign test over {d['sign_n']} diagnoses: "
-                + f"{d['sign_neg']} negative, "
-                + f"p = {d['sign_p']:.2f}",
-                xy=(0.97, 0.04), xycoords="axes fraction", ha="right",
-                va="bottom", fontsize=5.7, color=INK2, linespacing=1.45)
+    # Lower-right of the scatter is empty at every shift value,
+    # so the model specification sits there rather than over the data
+    # or, worse, over the axis labels.
+    ax.annotate(f"n = 52 diagnosis x source cells" + chr(10)
+                + f"mixed model, random intercept per diagnosis:" + chr(10)
+                + f"slope {d['mixed_slope']:+.3f} (CI {d['mixed_lo']:+.3f}, {d['mixed_hi']:+.3f}), p = {d['mixed_p']:.2f}" + chr(10)
+                + f"sign test {d['sign_neg']}/{d['sign_n']} negative, p = {d['sign_p']:.2f}",
+                xy=(0.98, 0.02), xycoords="axes fraction", ha="right",
+                va="bottom", fontsize=5.5, color=INK2, linespacing=1.4)
     ax.legend(fontsize=5.8, frameon=False, labelcolor=INK2, ncol=2,
               loc="upper left", bbox_to_anchor=(-0.01, 1.02),
               handletextpad=0.3, columnspacing=0.8)
@@ -742,7 +741,7 @@ def figure3_explaining_spread():
     fig = plt.figure(figsize=(7.6, 2.9), facecolor=SURFACE)
     gs = fig.add_gridspec(1, 3, width_ratios=[1.05, 0.85, 1.15],
                           wspace=0.52, left=0.14, right=0.985,
-                          top=0.86, bottom=0.21)
+                          top=0.88, bottom=0.23)
     WRONG, RIGHT = "#d9792b", "#3f7cbf"
 
     # (a) every quality indicator, so nothing is cherry-picked.
@@ -1087,12 +1086,12 @@ def figure4_reliability(qr):
         return
 
     cmap = plt.get_cmap("tab10")
-    fig = plt.figure(figsize=(7.6, 4.7), facecolor=SURFACE)
+    fig = plt.figure(figsize=(7.6, 4.6), facecolor=SURFACE)
     # One panel row, one summary row, and a gap between them sized for the
     # shared legend and nothing else.
-    gs = fig.add_gridspec(2, len(srcs), height_ratios=[1.0, 0.82],
-                          hspace=0.95, wspace=0.42,
-                          top=0.93, bottom=0.11, left=0.09, right=0.98)
+    gs = fig.add_gridspec(2, len(srcs), height_ratios=[1.0, 0.80],
+                          hspace=0.70, wspace=0.42,
+                          top=0.94, bottom=0.235, left=0.09, right=0.98)
 
     ax0 = None
     for k, s in enumerate(srcs):
@@ -1114,7 +1113,7 @@ def figure4_reliability(qr):
 
     # (e) spans the full width: the intervals are the point of the panel,
     # so they get the resolution rather than sharing the row.
-    ax = fig.add_subplot(gs[1, 0:2])
+    ax = fig.add_subplot(gs[1, :])
     order = sorted(models, key=lambda m: d["models"][m]["eaurc"])
     yy = np.arange(len(order))[::-1]
     pt = [d["models"][m]["eaurc"] for m in order]
@@ -1145,8 +1144,8 @@ def figure4_reliability(qr):
     ax.set_yticklabels([NICE[m] for m in order], fontsize=7.2)
     ax.set_xlabel("E-AURC, lower = better.  Large = mean with 95% CI",
                   fontsize=6.6, color=INK)
-    ax.set_title(f"({chr(97 + len(srcs))}) reliability varies more "
-                 f"across sources than architectures",
+    ax.set_title(f"({chr(97 + len(srcs))}) E-AURC: reliability varies "
+                 f"more across sources than architectures",
                  fontsize=7.3, color=INK, pad=3)
     src_handles = ax.collections[:len(srcs)]
     _frame(ax)
@@ -1156,47 +1155,97 @@ def figure4_reliability(qr):
     # threshold actually delivers when it is fixed on the training-side
     # validation split and carried to the held-out source unchanged --
     # the only way a deployment could set it.
-    tf = S2D / "threshold_transfer.json"
-    if tf.exists():
-        th = pd.DataFrame(json.loads(tf.read_text()))
-        ax = fig.add_subplot(gs[1, 2:])
-        yy = np.arange(len(order))[::-1]
-        for y_, m in zip(yy, order):
-            for k, src in enumerate(srcs):
-                g = th[(th.model == m) & (th.source == src)
-                       & (th.target == 0.90)]
-                if not g.empty:
-                    ax.scatter(float(g.coverage.iloc[0]), y_, s=24,
-                               color=smap(k), edgecolor=SURFACE, lw=0.5,
-                               zorder=3)
-        ax.axvline(0.90, color=INK, lw=1.0, ls="--", zorder=1)
-        ax.set_yticks(yy)
-        ax.set_yticklabels([NICE[m] for m in order], fontsize=7.2)
-        ax.set_xlabel("coverage achieved on the held-out source",
-                      fontsize=6.6, color=INK)
-        ax.set_title("(f) a 0.90 target, fixed on training-side"
-                     + chr(10) + "validation, transfers within a few points",
-                     fontsize=7.3, color=INK, pad=3)
-        err = (th[th.target == 0.90].coverage - 0.90).abs()
-        ax.annotate(f"mean |error| {err.mean():.3f}, worst {err.max():.3f}",
-                    xy=(0.03, 0.04), xycoords="axes fraction", ha="left",
-                    va="bottom", fontsize=5.9, color=INK2)
-        _frame(ax)
-        ax.grid(axis="x", color=GRID, lw=0.5)
-
     handles, labels = ax0.get_legend_handles_labels()
     fig.legend(handles, labels, fontsize=6.6, frameon=False,
-               labelcolor=INK2, ncol=6, loc="upper center",
-               bbox_to_anchor=(0.5, 0.545))
+               labelcolor=INK2, ncol=6, loc="lower center",
+               bbox_to_anchor=(0.5, 0.088))
     smap2 = plt.get_cmap("Dark2")
     fig.legend([plt.Line2D([], [], marker="o", ls="", ms=4,
                            color=smap2(k)) for k in range(len(srcs))],
-               [sname(x) for x in srcs], fontsize=6.0, frameon=False,
-               labelcolor=INK2, ncol=4, loc="upper center",
-               bbox_to_anchor=(0.5, 0.495),
-               title="held-out source, panels (e) and (f)",
-               title_fontsize=6.0)
+               [sname(x) for x in srcs], fontsize=6.2, frameon=False,
+               labelcolor=INK2, ncol=4, loc="lower center",
+               bbox_to_anchor=(0.5, 0.004),
+               title="held-out source, panel (e)",
+               title_fontsize=6.2)
     save(fig, "figure4_reliability", FIG)
+
+
+def figure5_threshold_transfer():
+    """RQ3b: does a threshold chosen before deployment still behave?
+
+    Figure 4 is about ranking: given an ordering of records by
+    confidence, how well does it separate the errors. A deployment
+    cannot use an ordering. It has to commit to a number, on data it has
+    before the device is shipped, and then live with what that number
+    does on a source nobody has seen.
+
+    So the confidence quantile retaining 90% of the *training-side*
+    validation split is computed and applied unchanged. (a) is what
+    coverage that actually buys. (b) is the part that matters more and
+    that (a) cannot show: whether the records it keeps are equally
+    trustworthy from one source to the next. They are not, and that is
+    the result -- coverage stability and reliability stability are
+    different properties.
+    """
+    f = S2D / "reliability_curves.json"
+    tf = S2D / "threshold_transfer.json"
+    if not (f.exists() and tf.exists()):
+        print("  (no threshold-transfer run)")
+        return
+    d = json.loads(f.read_text())
+    models = [m for m in ORDER if m in d["models"]]
+    srcs = [s for s in SOURCES
+            if s in d["models"][models[0]].get("risk_coverage", {})]
+    order = sorted(models, key=lambda m: d["models"][m]["eaurc"])
+    th = pd.DataFrame(json.loads(tf.read_text()))
+    th = th[th.target == 0.90]
+    smap = plt.get_cmap("Dark2")
+
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.3), facecolor=SURFACE)
+    yy = np.arange(len(order))[::-1]
+
+    def by_model(ax, col, ci, line, title, xlabel, ylab):
+        # Sources are offset within the row so the intervals stay legible
+        # where two of them land on nearly the same value.
+        off = np.linspace(0.26, -0.26, len(srcs))
+        for y_, m in zip(yy, order):
+            for k, src in enumerate(srcs):
+                g = th[(th.model == m) & (th.source == src)]
+                if g.empty:
+                    continue
+                v = float(g[col].iloc[0])
+                lo, hi = g[ci + "_lo"].iloc[0], g[ci + "_hi"].iloc[0]
+                yk = y_ + off[k]
+                ax.plot([lo, hi], [yk, yk], lw=0.9, color=smap(k),
+                        alpha=0.55, zorder=2, solid_capstyle="butt")
+                ax.scatter(v, yk, s=22, color=smap(k), edgecolor=SURFACE,
+                           lw=0.5, zorder=3,
+                           label=sname(src) if m == order[0] else None)
+        if line is not None:
+            ax.axvline(line, color=INK, lw=1.0, ls="--", zorder=1)
+        ax.set_yticks(yy)
+        ax.set_yticklabels([NICE[m] for m in order] if ylab else [],
+                           fontsize=7.2)
+        ax.set_xlabel(xlabel, fontsize=6.9, color=INK)
+        ax.set_title(title, fontsize=7.4, color=INK, pad=4)
+        _frame(ax)
+        ax.grid(axis="x", color=GRID, lw=0.5)
+
+    err = (th.coverage - 0.90).abs()
+    by_model(axes[0], "coverage", "cov", 0.90,
+             f"(a) coverage achieved: mean |error| {err.mean():.3f}",
+             "coverage on the held-out source, 95% CI", True)
+    by_model(axes[1], "risk", "risk", None,
+             "(b) but the retained records are not equally reliable",
+             "selective risk among retained records, 95% CI", True)
+
+    h, l = axes[0].get_legend_handles_labels()
+    fig.legend(h, l, fontsize=6.2, frameon=False, labelcolor=INK2,
+               ncol=4, loc="lower center", bbox_to_anchor=(0.5, 0.0),
+               title="held-out source", title_fontsize=6.2)
+    fig.subplots_adjust(left=0.14, right=0.985, top=0.88, bottom=0.30,
+                        wspace=0.46)
+    save(fig, "figure5_threshold_transfer", FIG)
 
 
 def figureS8_abstention():

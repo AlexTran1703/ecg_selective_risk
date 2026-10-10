@@ -425,8 +425,12 @@ measures ranking quality and not the difficulty of the source.
 > here because it is the point at which these numbers stop being
 > directly actionable.
 
-**Figure 4(a-d)**, risk-coverage per held-out source; **Figure 4(e)**,
-E-AURC with the per-source values shown beside the mean.
+Reliability is reported in two parts, because ranking and operating
+points are different claims. **RQ3a** asks whether confidence orders
+errors at all (Figure 4). **RQ3b** asks whether a threshold fixed
+before deployment still behaves on an unseen source (Figure 5).
+
+### RQ3a - does confidence rank errors across sources?
 
 > **Finding 6. Confidence does rank errors, in every source.** Selective
 > risk falls monotonically as coverage is reduced for all six encoders on
@@ -448,6 +452,10 @@ E-AURC with the per-source values shown beside the mean.
 > one source does not transfer as a reliability guarantee to another,
 > for the same reason an accuracy estimate does not. **Figure 4(e).**
 
+---
+
+### RQ3b - does a threshold fixed before deployment transfer?
+
 > **Finding 9. An abstention threshold fixed before deployment lands
 > close to its target on an unseen source.** The risk-coverage curves and
 > E-AURC are statements about *ordering*. A deployment cannot use an
@@ -462,11 +470,47 @@ E-AURC with the per-source values shown beside the mean.
 > error is 0.010 for PTB-XL, Chapman and Ningbo, and 0.030 for Georgia.
 >
 > So the operational form of selective prediction survives the source
-> change, which does not follow from the curves alone and is the
-> positive result of this section. The caveat is that the error is not
-> negligible at a clinical scale: a service planning for a 10% referral
-> rate should expect roughly 8.4% to 11.6%, and should monitor the
-> realised rate rather than assume it. **Figure 4(f).**
+> change, which does not follow from the curves alone. The threshold is
+> also close to optimal: the risk it achieves is within 0.002 of what an
+> oracle threshold placed at exactly the realised coverage would have
+> achieved, on every source. Nothing is lost by fixing it in advance.
+>
+> Two caveats, and the second is the sharper one. The error is not
+> negligible at a clinical scale: a service planning a 10% referral rate
+> should expect roughly 8.4% to 11.6% and should monitor the realised
+> rate. And it is not noise -- holding tau fixed and resampling the
+> target records, **17 of the 24 folds have a 95% interval on achieved
+> coverage that excludes 0.90**. The threshold misses its target
+> systematically, by a small but real amount, and in a direction that
+> differs by source. **Figure 5(a).**
+
+> **Finding 10. Coverage stability is not reliability stability.** The
+> same frozen threshold retains about 90% of records everywhere, but
+> what it retains is not equally trustworthy. Selective risk among the
+> retained records, at the transferred threshold:
+>
+> | held-out source | retained risk | risk on all records | reduction |
+> |---|---|---|---|
+> | Ningbo | **0.421** | 0.435 | 0.014 |
+> | Chapman | 0.483 | 0.490 | 0.007 |
+> | PTB-XL | 0.525 | 0.542 | **0.018** |
+> | Georgia | **0.603** | 0.614 | 0.011 |
+>
+> Across the 24 model-by-source folds retained risk spans **0.33 to
+> 0.65**, against a mean 95% interval width of **0.010** on any single
+> fold -- the between-source difference is roughly thirty times the
+> sampling uncertainty within one. A workflow calibrated on one source
+> and deployed on another
+> gets the acceptance rate it planned for and an error rate among
+> accepted cases that can be half as large again. The benefit of
+> abstaining also varies by a factor of about 2.5, and is largest on
+> PTB-XL -- the source with the biggest transfer penalty and the most
+> annotation divergence.
+>
+> Coverage and reliability are separate properties and only the first
+> one transfers. This is the practical statement of RQ3 and it is not
+> visible in a risk-coverage curve, an E-AURC ranking, or an achieved
+> coverage figure taken alone. **Figure 5(b).**
 
 > **Finding 8. Degradation is compounding: where discrimination falls,
 > the confidence ordering falls with it.** Restricted to the three
@@ -596,7 +640,8 @@ can the model tell?
 | 1 | `figures/figure1_design` | the experimental logic, three RQs |
 | 2 | `figures/figure2_generalisation` | **RQ1** AUPRC by held-out source (a), mean with bootstrap CI (b), and the source/architecture/interaction variance decomposition (c) |
 | 3 | `figures/figure3_diagnosis_transfer` | **RQ2** transfer at the diagnosis level: average precision (a) and AUROC (b) for all 13 x 4 cells, which disagree on the hardest source, and the dependence-aware test of prevalence shift against discrimination (c), which is null |
-| 4 | `figures/figure4_reliability` | **RQ3** does confidence identify unreliable predictions? Risk-coverage per held-out source (a-d); E-AURC (e) with per-source values beside the mean, showing reliability varies more across sources than architectures; and (f) the coverage a 0.90 abstention threshold actually achieves when fixed on training-side validation and carried to the unseen source |
+| 4 | `figures/figure4_reliability` | **RQ3a** *reliability as ranking.* Risk-coverage per held-out source (a-d), and E-AURC (e) with per-source values beside the mean, showing reliability varies more across sources than architectures |
+| 5 | `figures/figure5_threshold_transfer` | **RQ3b** *reliability as deployment.* A threshold targeting 0.90 coverage is fixed on training-side validation and applied unchanged: (a) the coverage it achieves, (b) the selective risk among the records it retains. Coverage transfers; reliability does not |
 
 ## Main tables
 

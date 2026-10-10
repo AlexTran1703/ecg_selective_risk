@@ -43,14 +43,10 @@ def table1():
     # the four databases come from the same group, so "four sources" is
     # not four independent annotation domains.
     PROV = {
-        "PTBXL": ("Physikalisch-Technische Bundesanstalt, Germany",
-                  "cardiologist report, SCP-ECG statements"),
-        "Georgia": ("Emory University, Georgia, USA",
-                    "PhysioNet/CinC 2020 challenge release"),
-        "Chapman": ("Chapman University and Shaoxing People's Hospital",
-                    "Zheng et al.; licensed cardiologist review"),
-        "Ningbo": ("Ningbo First Hospital (Zheng et al. group)",
-                   "Zheng et al.; same labelling protocol as Chapman"),
+        "PTBXL": ("PTB, Germany", "SCP-ECG cardiologist report"),
+        "Georgia": ("Emory, USA", "CinC 2020 release"),
+        "Chapman": ("Shaoxing, China", "Zheng et al."),
+        "Ningbo": ("Ningbo, China", "Zheng et al."),
     }
     pat = rec.groupby("source").patient.nunique().to_dict()
     rows = []
@@ -64,25 +60,18 @@ def table1():
             "patients": int(pat.get(s, 0)),
             "records, original": int((rec.source == s).sum()),
             "retained": int(sel.sum()),
-            "labels per record": round(float(npos[sel].mean()), 2),
-            "original Fs (Hz)": 500,
-            "model input": f"{N_LEADS} x {FS_OUT * SECONDS} @ {FS_OUT} Hz"})
+            "labels per record": round(float(npos[sel].mean()), 2)})
     A.emit(pd.DataFrame(rows).set_index("source"), "table1_datasets",
-           "Table I. The four clinical sources and their provenance. A "
-           "record is retained when at least one of its labels falls "
-           "inside the harmonised 13-class space; all records are 10 s. "
-           "Only PTB-XL contains repeated patients (21,837 records from "
-           "18,885 patients), and the leave-one-source-out partitions are "
-           "by source, so no patient appears in both training and test. "
-           "**Chapman and Ningbo are not independent annotation "
-           "domains**: both were released by the Zheng et al. group under "
-           "the same labelling protocol, and their diagnosis prevalence "
-           "vectors differ by an L1 distance of 0.196 against 0.658-0.676 "
-           "for every other pair involving them and about 1.6 for every "
-           "pair involving PTB-XL. The source factor in Figure 2(c) "
-           "therefore samples roughly three independent annotation "
-           "domains, not four, and the source-level analyses should be "
-           "read accordingly.", TAB)
+           "Table I. The four clinical sources. All records are 10 s, "
+           "acquired at 500 Hz and decimated to 100 Hz for the model "
+           f"input ({N_LEADS} leads x {FS_OUT * SECONDS} samples); "
+           "quality indicators are measured before decimation. A record "
+           "is retained when at least one label falls inside the "
+           "harmonised 13-class space. Only PTB-XL repeats patients. "
+           "Chapman and Ningbo were released by the same group under one "
+           "labelling protocol and are not independent annotation "
+           "domains (Methods); the source factor therefore samples about "
+           "three such domains, not four.", TAB)
 
 
 def table2(dep):
@@ -220,18 +209,24 @@ def table4_transfer_gap():
     if not f.exists():
         print("  (no transfer-gap run)")
         return
-    t = pd.DataFrame(json.loads(f.read_text()))
+    raw = json.loads(f.read_text())
+    t = pd.DataFrame(raw["cells"])
+    mean_ci = {m["source"]: m for m in raw.get("means", [])}
     rows = []
     for src in SOURCES:
         g = t[t.source == src]
         if g.empty:
             continue
+        mc = mean_ci.get(src)
+        ci = (f"({mc['mean_lo']:+.4f}, {mc['mean_hi']:+.4f})" if mc
+              else "n/a")
         rows.append({
             "held-out source": A.sname(src),
             "test records": int(g.n_test.iloc[0]),
             "external AP": round(float(g.ap_external.mean()), 4),
             "reference AP": round(float(g.ap_reference.mean()), 4),
             "transfer gap": round(float(g.delta.mean()), 4),
+            "95% CI on the gap": ci,
             "range over 6 encoders": f"{g.delta.min():+.3f} to "
                                      f"{g.delta.max():+.3f}",
             "encoders with CI above 0": f"{int((g.lo > 0).sum())}/{len(g)}",
@@ -250,10 +245,13 @@ def table4_transfer_gap():
            "same twelve epochs with the same optimiser, schedule and seed. "
            "Both are then scored on the identical held-out half. The "
            "transfer gap is reference minus external macro AP, averaged "
-           "over the six encoders; the final columns give the spread "
-           "across encoders and how many of the six have a paired "
-           "record-level bootstrap interval excluding zero (B = 400, seed "
-           "0). A positive gap is a measured performance contrast under "
+           "over the six encoders. Its interval is a paired record-level "
+           "bootstrap of that mean: one resample of the shared test "
+           "records, all six encoders rescored on it, then averaged "
+           "(B = 400, seed 0) -- not an interval assembled from six "
+           "marginal ones. The last columns give the spread across "
+           "encoders and how many individually exclude zero. A positive "
+           "gap is a measured performance contrast under "
            "this protocol, not a causal estimate of distribution shift: it "
            "does not say whether acquisition, population or labelling "
            "produced it.", TAB)
@@ -599,7 +597,8 @@ def main():
     A.figure1()                      # design, three RQ blocks
     A.figure2_generalisation(boot)   # RQ1  source vs architecture
     A.figure3_diagnosis_transfer()   # RQ2  diagnosis-level transfer
-    A.figure4_reliability(qr)        # RQ3  selective reliability
+    A.figure4_reliability(qr)        # RQ3a ranking: curves + E-AURC
+    A.figure5_threshold_transfer()   # RQ3b a threshold, transferred
     print(f"\nfigures: {A.FIG}"
           f"\ntables:  {TAB}")
 

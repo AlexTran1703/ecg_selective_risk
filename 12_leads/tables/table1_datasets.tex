@@ -1,14 +1,14 @@
 \begin{table}
-\caption{Table I. The four clinical sources and their provenance. A record is retained when at least one of its labels falls inside the harmonised 13-class space; all records are 10 s. Only PTB-XL contains repeated patients (21,837 records from 18,885 patients), and the leave-one-source-out partitions are by source, so no patient appears in both training and test. **Chapman and Ningbo are not independent annotation domains**: both were released by the Zheng et al. group under the same labelling protocol, and their diagnosis prevalence vectors differ by an L1 distance of 0.196 against 0.658-0.676 for every other pair involving them and about 1.6 for every pair involving PTB-XL. The source factor in Figure 2(c) therefore samples roughly three independent annotation domains, not four, and the source-level analyses should be read accordingly.}
-\begin{tabular}{lllrrrrrl}
+\caption{Table I. The four clinical sources. All records are 10 s, acquired at 500 Hz and decimated to 100 Hz for the model input (12 leads x 1000 samples); quality indicators are measured before decimation. A record is retained when at least one label falls inside the harmonised 13-class space. Only PTB-XL repeats patients. Chapman and Ningbo were released by the same group under one labelling protocol and are not independent annotation domains (Methods); the source factor therefore samples about three such domains, not four.}
+\begin{tabular}{lllrrrr}
 \toprule
- & institution & annotation provenance & patients & records, original & retained & labels per record & original Fs (Hz) & model input \\
-source &  &  &  &  &  &  &  &  \\
+ & institution & annotation provenance & patients & records, original & retained & labels per record \\
+source &  &  &  &  &  &  \\
 \midrule
-PTB-XL & Physikalisch-Technische Bundesanstalt, Germany & cardiologist report, SCP-ECG statements & 18885 & 21837 & 20487 & 1.530000 & 500 & 12 x 1000 @ 100 Hz \\
-Georgia & Emory University, Georgia, USA & PhysioNet/CinC 2020 challenge release & 10344 & 10344 & 8302 & 1.440000 & 500 & 12 x 1000 @ 100 Hz \\
-Chapman & Chapman University and Shaoxing People's Hospital & Zheng et al.; licensed cardiologist review & 10247 & 10247 & 8634 & 1.340000 & 500 & 12 x 1000 @ 100 Hz \\
-Ningbo & Ningbo First Hospital (Zheng et al. group) & Zheng et al.; same labelling protocol as Chapman & 34905 & 34905 & 28956 & 1.360000 & 500 & 12 x 1000 @ 100 Hz \\
+PTB-XL & PTB, Germany & SCP-ECG cardiologist report & 18885 & 21837 & 20487 & 1.530000 \\
+Georgia & Emory, USA & CinC 2020 release & 10344 & 10344 & 8302 & 1.440000 \\
+Chapman & Shaoxing, China & Zheng et al. & 10247 & 10247 & 8634 & 1.340000 \\
+Ningbo & Ningbo, China & Zheng et al. & 34905 & 34905 & 28956 & 1.360000 \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -73,6 +73,7 @@ def main() -> None:
     ap.add_argument("--sources", nargs="+", default=list(SOURCES))
     ap.add_argument("--batch-size", type=int, default=256)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--reps", type=int, default=1000)
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
@@ -122,10 +123,27 @@ def main() -> None:
                 k = max(int(round(t * c_te.size)), 1)
                 idx = np.argsort(-c_te, kind="stable")[:k]
                 risk_oracle = float(loss_te[idx].mean())
+                # tau is held fixed and the target records are
+                # resampled, which is the sampling variation a deployment
+                # faces: the threshold is already chosen, the patients
+                # are what vary.
+                rng = np.random.default_rng(args.seed)
+                nte = c_te.size
+                cb = np.empty(args.reps)
+                rb = np.empty(args.reps)
+                for b in range(args.reps):
+                    i = rng.integers(0, nte, nte)
+                    kp = c_te[i] >= tau
+                    cb[b] = kp.mean()
+                    rb[b] = loss_te[i][kp].mean() if kp.any() else np.nan
                 rows.append({
                     "source": src, "model": name, "target": t,
                     "tau": tau, "coverage": cov, "cov_error": cov - t,
+                    "cov_lo": float(np.percentile(cb, 2.5)),
+                    "cov_hi": float(np.percentile(cb, 97.5)),
                     "risk": risk, "risk_full": risk_full,
+                    "risk_lo": float(np.nanpercentile(rb, 2.5)),
+                    "risk_hi": float(np.nanpercentile(rb, 97.5)),
                     "risk_at_target_coverage": risk_oracle,
                     "n_test": int(y_te.shape[0])})
 

@@ -165,8 +165,13 @@ def main() -> None:
     coh = Cohort()
     pid = patient_ids(coh)
     rows_out = []
+    means = []
 
     for src in args.sources:
+        # Per-source prediction store, so the mean gap over encoders can
+        # be bootstrapped on the shared records rather than assembled
+        # from six marginal intervals, which would not be a CI on a mean.
+        store = {}
         dev, test = split_target(coh, pid, src, seed=args.seed)
         pool_all = np.flatnonzero(coh.source != src)
         print(f"\n=== {src}: dev {dev.size}, test {test.size}, "
@@ -211,12 +216,40 @@ def main() -> None:
                 "auroc_external": macro_auroc(y_te, p_ext),
                 "auroc_reference": macro_auroc(y_te, p_ref),
                 "val_auprc": val})
+            store[name] = (y_te, p_ext, p_ref)
+            np.savez_compressed(OUT / f"{name}__{src}_pred.npz",
+                                y=y_te.astype(np.int8),
+                                p_external=p_ext.astype(np.float32),
+                                p_reference=p_ref.astype(np.float32))
             print(f"  [{name:10s}] external {ap_e:.4f}  reference "
                   f"{ap_r:.4f}  delta {ap_r - ap_e:+.4f} "
                   f"({lo:+.4f}, {hi:+.4f})  "
                   f"{(time.time() - t0) / 60:.1f} min", flush=True)
 
-    dst.write_text(json.dumps(rows_out, indent=1))
+        # CI on the mean gap across encoders: one resample of the shared
+        # test records, every encoder re-scored on it, then averaged.
+        if store:
+            rng = np.random.default_rng(args.seed)
+            names = list(store)
+            n = store[names[0]][0].shape[0]
+            dm = np.empty(args.reps)
+            for b in range(args.reps):
+                i = rng.integers(0, n, n)
+                dm[b] = np.mean([
+                    macro_auprc(store[k][0][i], store[k][2][i])
+                    - macro_auprc(store[k][0][i], store[k][1][i])
+                    for k in names])
+            means.append({
+                "source": src,
+                "mean_delta": float(np.mean([r["delta"] for r in rows_out
+                                             if r["source"] == src])),
+                "mean_lo": float(np.percentile(dm, 2.5)),
+                "mean_hi": float(np.percentile(dm, 97.5))})
+            m = means[-1]
+            print(f"  mean over encoders {m['mean_delta']:+.4f} "
+                  f"({m['mean_lo']:+.4f}, {m['mean_hi']:+.4f})", flush=True)
+
+    dst.write_text(json.dumps({"cells": rows_out, "means": means}, indent=1))
     t = pd.DataFrame(rows_out)
     print("\n=== transfer gap by source, mean over encoders ===")
     print(t.groupby("source")[["ap_external", "ap_reference", "delta"]]
