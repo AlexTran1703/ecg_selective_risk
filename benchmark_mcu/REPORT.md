@@ -109,20 +109,60 @@ fold's weights are deployed per combination.
 
 ## RQ1 - external discrimination
 
-> **Finding 1. At a fixed MCU budget, architecture choice is nearly
-> irrelevant to accuracy -- provided the family fits the budget at all.**
-> Six of ten configurations sit within **0.010** equal-source
-> macro-AUPRC of the best at each budget, with bootstrap intervals
-> overlapping for almost every pair within that group. A 2016 ResNet and
-> a 2024 RepViT are separated by **0.0035** (compact) and **0.0012**
-> (standard).
+> **Finding 1. At a fixed MCU budget the architecture makes a small but
+> reliable difference, and whether it fits the budget makes a large
+> one.** Six of ten configurations sit within **0.010** equal-source
+> macro-AUPRC of the best at each budget; a 2016 ResNet and a 2024
+> RepViT are separated by **0.0035** (compact) and **0.0012**
+> (standard). The full spread is **0.090** compact and **0.096**
+> standard, almost entirely one family: excluding MobileNetV3 it
+> collapses to **0.038** and **0.025**.
 >
-> The full spread is nevertheless large -- **0.090** compact, **0.096**
-> standard -- and that is almost entirely one family. Excluding
-> MobileNetV3 the spread collapses to **0.038** and **0.025**. The
-> honest statement is therefore two-part: among families that scale into
-> the budget the choice hardly matters, and whether a family scales into
-> the budget matters enormously. **Figure 2, Figure 3, Table 3.**
+> An earlier version of this report read those overlapping marginal
+> intervals as evidence that the architecture barely matters. That was
+> a mistake of inference, not of arithmetic. Two models evaluated on the
+> *same* records share most of their variance -- which patients were
+> drawn, which are hard -- and a marginal interval carries all of it.
+> The paired contrast removes it. Against FCN-1D as a prespecified
+> baseline, **17 of 18 differences have a 95% interval clear of zero**
+> (Finding 1c). So the differences are small, not absent, and
+> "overlapping intervals" was never the right test. **Figure 2,
+> Figure 3, Table 3.**
+
+> **Finding 1c. Paired against a common baseline, almost every
+> architecture separates from it -- by a little.** Each family is
+> compared with **FCN-1D**, the plain-convolution baseline the other
+> nine are implicitly arguing against, fixed as the reference before the
+> differences were examined. Within every replicate one set of patients
+> is drawn per held-out source and all ten models are scored on exactly
+> those records, so the shared difficulty cancels; the four sources are
+> then weighted equally.
+>
+> | | compact | standard |
+> |---|---|---|
+> | TCN | +0.0259 [+0.0227, +0.0286] | **+0.0134** [+0.0107, +0.0158] |
+> | ResNet-1D | **+0.0270** [+0.0240, +0.0294] | +0.0105 [+0.0080, +0.0128] |
+> | RepViT | +0.0236 [+0.0204, +0.0265] | +0.0093 [+0.0068, +0.0119] |
+> | ShuffleNetV2 | +0.0209 [+0.0181, +0.0238] | +0.0103 [+0.0079, +0.0126] |
+> | MobileNetV2 | +0.0259 [+0.0226, +0.0285] | +0.0051 [+0.0023, +0.0077] |
+> | GhostNet | +0.0159 [+0.0126, +0.0187] | +0.0086 [+0.0057, +0.0115] |
+> | MobileNetV4-Conv | +0.0180 [+0.0146, +0.0206] | -0.0020 [-0.0049, **+0.0007**] |
+> | FasterNet | -0.0114 [-0.0143, -0.0086] | -0.0115 [-0.0136, -0.0087] |
+> | MobileNetV3 | -0.0630 [-0.0672, -0.0594] | -0.0824 [-0.0862, -0.0788] |
+>
+> Seventeen of eighteen intervals exclude zero. The single exception is
+> MobileNetV4-Conv at the standard budget, where the 2024 design is
+> indistinguishable from a plain 2017 convolution stack.
+>
+> Three cautions attach to this table. The intervals cover resampling of
+> *patients within these four sources* -- PTB-XL contributes 20,487
+> records from 17,928 patients, so records are drawn in patient blocks
+> and not independently -- and say nothing about a fifth source. Nine
+> contrasts per budget are made with no multiplicity adjustment, so they
+> are exploratory. And a reliable difference from the baseline does not
+> order the nine against each other: ResNet-1D leading TCN by 0.0011 at
+> the compact budget is not a result, because that contrast was never
+> computed. **Figure 3.**
 
 > **Finding 1b. The source ordering is not an artefact of class
 > prevalence.** Macro-AUPRC averages 13 per-class average precisions,
@@ -399,9 +439,11 @@ measure on the part before committing.**
    MobileNetV3, which must shrink to w = 0.18 and starves its trunk to
    4-16 channels, widens them to 0.090 and 0.096.
 
-3. **Rankings move across held-out sources.** The source term dominates
-   the architecture term, and per-source orderings differ from the
-   equal-source mean (Figure 3).
+3. **The architecture term is reliable but small.** Paired against
+   FCN-1D on identical patients, 17 of 18 contrasts have intervals clear
+   of zero, yet the largest is +0.027 AUPRC and most are under +0.015 --
+   against a source term that moves the same metric by 0.15 (Figure 3,
+   Table 3).
 
 4. **MACC is useful but insufficient to predict measured latency.**
    Realised cost spans 40.2 to 111.5 ms per million MACC, a 2.8x range
@@ -516,7 +558,7 @@ the ST toolchain installed at the paths declared at the top of that file.
 |---|---|---|
 | 1 | `figures/figure1_design` | graphical overview in three columns: sources, benchmark, outputs. ECG traces are real records drawn from the cohort by index; the RQ1-RQ3 insets are the actual results in miniature; counts are read from the artefacts. Also exported as `.svg` |
 | 2 | `figures/figure2_cross_source` | **RQ1** external AUPRC for every family on every held-out source, both budgets |
-| 3 | `figures/figure3_distribution` | **RQ1** spread across sources per family, with bootstrap intervals -- the overlap is the point |
+| 3 | `figures/figure3_paired` | **RQ1** paired difference in external macro-AUPRC against FCN-1D, both budgets, with patient-cluster paired-bootstrap 95% intervals. Replaced the source-wise dot plot, which restated Figure 2 and answered no question Table 3 did not |
 | 4 | `figures/figure4_int8_cost` | **RQ1** what quantisation costs: paired bootstrap intervals on the equal-source mean INT8 - FP32 difference, all twenty entirely below zero |
 | 5 | `figures/figure5_hardware` | **RQ2** (A) Flash, (B) peak SRAM, (C) MACC, (D) measured latency, for every family at both budgets. Solid bars are the compact budget, hatched the standard. Replaces the deployment table outright, so the extremes a reader would have looked up are annotated and the part's capacities are stated in-panel; exact values for all twenty configurations are deposited as `results/deploy_*/deployment_measurements.csv` |
 | 6 | `figures/figure6_complexity_latency` | **RQ2** (a) latency against MACC on log-log with Spearman and per-budget Kendall, (b) ms per million MACC paired across budgets -- the reversal in Finding 7 |

@@ -1299,42 +1299,185 @@ def figure2(runs):
     save(fig, "figure2_cross_source")
 
 
-def figure3(runs, boot):
-    """Spread across sources, per family -- the ranking that is not one."""
-    fig, axes = plt.subplots(1, 2, figsize=(7.8, 3.4), facecolor=SURFACE,
+def _patient_blocks(src):
+    """Row positions within a held-out source, grouped by patient.
+
+    LOSO's test index is `flatnonzero(source == held_out)`, which is
+    ascending, so row i of a stored prediction matrix is the i-th record
+    of that source in cohort order. That lets the resampling draw
+    patients rather than records.
+
+    It matters for PTB-XL, where 20,487 records come from 17,928
+    patients; the other three sources are one record per patient, so
+    there the two schemes coincide exactly. Resampling records inside a
+    source that repeats patients treats correlated records as
+    independent and gives an interval that is too narrow.
+    """
+    c = cohort()
+    sub = c["index"][(c["index"]["source"] == src).values]
+    pid = sub["patient"].to_numpy()
+    order = np.argsort(pid, kind="mergesort")
+    cuts = np.flatnonzero(np.r_[True, pid[order][1:] != pid[order][:-1]])
+    return np.split(order, cuts[1:])
+
+
+_PBLOCK = {}
+
+
+def patient_blocks(src):
+    if src not in _PBLOCK:
+        _PBLOCK[src] = _patient_blocks(src)
+    return _PBLOCK[src]
+
+
+def paired_vs_reference(runs, ref="fcn", reps=REPS, seed=0, cache=True):
+    """Paired difference in equal-source macro-AUPRC against `ref`.
+
+    For every replicate and every held-out source, one set of patients
+    is drawn and *all* architectures are scored on exactly those
+    records. Differences are then taken within the replicate, so the
+    large shared component -- how hard the drawn patients happen to be
+    -- cancels instead of being counted twice. Scoring the models on
+    independent draws would inflate the interval enormously and would
+    not answer the question asked, which is whether one architecture
+    beats another on the same data.
+
+    The equal-source mean weights the four rotations equally rather than
+    by size, so Ningbo's 28,956 records do not outvote Georgia's 8,302.
+
+    The interval covers sampling of patients within these four sources.
+    It is *not* a between-hospital interval: it says nothing about how
+    the difference would move on a fifth source.
+    """
+    key = sorted((f.name, f.stat().st_size, int(f.stat().st_mtime))
+                 for f in TRAIN.glob("*.npz"))
+    stamp = hashlib.sha1(
+        (repr(key) + f"|{ref}|{reps}|{seed}").encode()).hexdigest()[:16]
+    cf = TRAIN.parent / f"paired_{FS_OUT}hz.json"
+    if cache and cf.exists():
+        try:
+            blob = json.loads(cf.read_text())
+            if blob.get("stamp") == stamp:
+                print("    (paired-difference cache hit)")
+                return {(r[0], r[1]): tuple(r[2:]) for r in blob["rows"]}
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+
+    rng = np.random.default_rng(seed)
+    out = {}
+    for b in BUDGETS:
+        ms = models_present(runs, b)
+        if ref not in ms:
+            continue
+        srcs = [s for s in SOURCES if all((m, b, s) in runs for m in ms)]
+        point = {m: float(np.mean(
+            [macro_ap(runs[(m, b, s)]["y"], runs[(m, b, s)]["p"])
+             - macro_ap(runs[(ref, b, s)]["y"], runs[(ref, b, s)]["p"])
+             for s in srcs])) for m in ms}
+        acc = {m: np.zeros(reps) for m in ms}
+        for i in range(reps):
+            per_src = {m: [] for m in ms}
+            for s in srcs:
+                blocks = patient_blocks(s)
+                pick = rng.integers(0, len(blocks), len(blocks))
+                idx = np.concatenate([blocks[q] for q in pick])
+                for m in ms:
+                    r = runs[(m, b, s)]
+                    per_src[m].append(macro_ap(r["y"][idx], r["p"][idx]))
+            base = np.mean(per_src[ref])
+            for m in ms:
+                acc[m][i] = np.mean(per_src[m]) - base
+            if (i + 1) % 100 == 0:
+                print(f"    paired {b}: {i + 1}/{reps}", flush=True)
+        for m in ms:
+            if m == ref:
+                continue
+            out[(m, b)] = (point[m],
+                           float(np.percentile(acc[m], 2.5)),
+                           float(np.percentile(acc[m], 97.5)))
+    if cache:
+        cf.write_text(json.dumps(
+            {"stamp": stamp, "ref": ref, "reps": reps,
+             "rows": [[m, b, *v] for (m, b), v in out.items()]}, indent=1))
+    return out
+
+
+def figure3(runs, boot, ref="fcn"):
+    """RQ1: does the architecture change external discrimination?
+
+    The previous version plotted each family's four source-specific
+    AUPRCs beside its equal-source mean. Figure 2 already shows every
+    one of those numbers as a heatmap, so the panel largely restated it
+    and answered no question that Table 3 did not.
+
+    What was missing was a comparison. Absolute intervals that overlap
+    are not evidence of no difference -- two models can have heavily
+    overlapping marginal intervals and still differ reliably on paired
+    data, because the pairing removes the shared variance. So this is
+    the paired contrast: every family against one prespecified
+    reference, on identical resampled patients.
+
+    FCN-1D is the reference because it is the plain-convolution
+    baseline the other nine are implicitly arguing against, and it was
+    fixed before the differences were looked at rather than chosen for
+    being lowest. It is not drawn against itself; that difference is
+    zero by construction.
+
+    Nine contrasts per budget are made here with no multiplicity
+    adjustment, so they are exploratory. An interval clear of zero is
+    evidence about *that* contrast; it is not licence to rank the nine
+    against each other, which would need its own paired comparison.
+    """
+    paired = paired_vs_reference(runs, ref=ref)
+    if not paired:
+        print("  (no paired differences -- figure3 skipped)")
+        return
+    fig, axes = plt.subplots(1, 2, figsize=(7.8, 3.3), facecolor=SURFACE,
                              sharex=True)
-    cmap = plt.get_cmap("Dark2")
+    lo_all = min(v[1] for v in paired.values())
+    hi_all = max(v[2] for v in paired.values())
+    pad = 0.12 * (hi_all - lo_all)
+    # One ordering for both panels. Sorting each panel on its own
+    # effect would put a different family on each row while only the
+    # left panel carries labels, so every row in (b) would be misread.
+    allm = [m for m in ZOO if any((m, b) in paired for b in BUDGETS)]
+    order = sorted(allm, key=lambda m: np.mean(
+        [paired[(m, b)][0] for b in BUDGETS if (m, b) in paired]))
     for ax, b in zip(axes, BUDGETS):
-        ms = sorted(models_present(runs, b), key=lambda m: boot[(m, b)][0])
+        ms = [m for m in order if (m, b) in paired]
         yy = np.arange(len(ms))
         for y_, m in zip(yy, ms):
-            for k, s in enumerate(SOURCES):
-                if (m, b, s) in runs:
-                    ax.scatter(macro_ap(runs[(m, b, s)]["y"],
-                                        runs[(m, b, s)]["p"]), y_,
-                               s=16, color=cmap(k), edgecolor=SURFACE,
-                               lw=0.4, zorder=3,
-                               label=sname(s) if m == ms[0] else None)
-            pt, lo, hi = boot[(m, b)]
-            ax.plot([lo, hi], [y_, y_], lw=1.2, color=INK2, zorder=2)
-            ax.scatter(pt, y_, s=36, color=INK, zorder=4, marker="|")
+            pt, lo, hi = paired[(m, b)]
+            ax.plot([lo, hi], [y_, y_], lw=1.6, color=MODEL_COLOR[m],
+                    solid_capstyle="round", zorder=3)
+            ax.scatter(pt, y_, s=20, color=MODEL_COLOR[m],
+                       edgecolor=SURFACE, lw=0.5, zorder=4)
+        ax.axvline(0, color=INK, lw=0.9, ls=(0, (3, 2)), zorder=2)
         ax.set_yticks(yy)
-        ax.set_yticklabels([NICE[m] for m in ms] if b == BUDGETS[0] else [],
-                           fontsize=6.8)
-        ax.set_xlabel("external macro-AUPRC", fontsize=7.0, color=INK)
+        ax.set_yticklabels(
+            [f"{MID[m]}  {NICE[m]}" for m in ms] if b == BUDGETS[0] else [],
+            fontsize=6.6, color=INK)
+        ax.set_xlim(lo_all - pad, hi_all + pad)
+        ax.set_xlabel(f"paired difference in external macro-AUPRC "
+                      f"vs {NICE[ref]}", fontsize=6.8, color=INK)
         ax.set_title(f"({'ab'[BUDGETS.index(b)]}) {b} budget",
                      fontsize=7.6, color=INK, pad=4)
+        ax.tick_params(axis="x", labelsize=6.0, colors=INK2)
+        ax.tick_params(axis="y", length=0)
         _frame(ax)
         ax.grid(axis="x", color=GRID, lw=0.5)
-    h, l = axes[0].get_legend_handles_labels()
-    fig.legend(h, l, fontsize=6.2, frameon=False, labelcolor=INK2, ncol=4,
-               loc="lower center", bbox_to_anchor=(0.5, -0.02),
-               title="held-out source;  black bar = equal-source mean with "
-                     "record-level bootstrap 95% CI",
-               title_fontsize=6.2)
-    fig.subplots_adjust(left=0.17, right=0.98, top=0.9, bottom=0.26,
-                        wspace=0.08)
-    save(fig, "figure3_distribution")
+        ax.set_axisbelow(True)
+        ax.text(0.015, 0.02, "favours " + NICE[ref], transform=ax.transAxes,
+                fontsize=5.4, color=INK2, ha="left", style="italic")
+        ax.text(0.985, 0.02, "favours this model", transform=ax.transAxes,
+                fontsize=5.4, color=INK2, ha="right", style="italic")
+    fig.text(0.5, 0.045, f"point = equal-source mean paired difference;  "
+             f"bar = patient-cluster paired bootstrap 95% CI "
+             f"({REPS} replicates, percentile method)",
+             fontsize=6.0, color=INK2, ha="center")
+    fig.subplots_adjust(left=0.205, right=0.985, top=0.90, bottom=0.215,
+                        wspace=0.07)
+    save(fig, "figure3_paired", svg=True)
 
 
 def figure4():
