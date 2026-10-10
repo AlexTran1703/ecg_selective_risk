@@ -1,0 +1,13 @@
+{
+ "model": "mobilenetv4",
+ "budget": "compact",
+ "source": "Georgia",
+ "width": 0.7864,
+ "onnx_f32_kb": 129.05078125,
+ "onnx_int8_kb": 71.3564453125,
+ "auprc_f32": 0.5079085955584985,
+ "auprc_int8": 0.5047647125139264,
+ "auroc_f32": 0.8347508237496387,
+ "auroc_int8": 0.834201671325792,
+ "d_auprc": -0.0031438830445721377
+}

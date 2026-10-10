@@ -1,0 +1,13 @@
+{
+ "model": "ghostnet",
+ "budget": "compact",
+ "source": "Chapman",
+ "width": 1.5898,
+ "onnx_f32_kb": 133.033203125,
+ "onnx_int8_kb": 82.71875,
+ "auprc_f32": 0.5589700810600037,
+ "auprc_int8": 0.5554756010304571,
+ "auroc_f32": 0.9062215908181095,
+ "auroc_int8": 0.9064973260739071,
+ "d_auprc": -0.003494480029546554
+}

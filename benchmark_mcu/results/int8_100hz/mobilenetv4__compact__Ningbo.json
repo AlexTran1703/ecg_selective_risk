@@ -1,0 +1,13 @@
+{
+ "model": "mobilenetv4",
+ "budget": "compact",
+ "source": "Ningbo",
+ "width": 0.7864,
+ "onnx_f32_kb": 129.05078125,
+ "onnx_int8_kb": 71.3212890625,
+ "auprc_f32": 0.5746587404445666,
+ "auprc_int8": 0.5708429943060097,
+ "auroc_f32": 0.9194705726336806,
+ "auroc_int8": 0.919296580989555,
+ "d_auprc": -0.0038157461385568414
+}

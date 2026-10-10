@@ -1,0 +1,8 @@
+Table 1. Leave-one-source-out protocol. Each row is one rotation: the model trains on the other three sources and is scored on every record of this one. Inputs are 10 s, 12-lead, decimated to 100 Hz (12 x 1000 samples), with 13 harmonised labels. The cohort and partitions are imported unchanged from the cross-source study so the two cannot drift.
+------------------------------------------------------------------------------
+                 test records  label density
+held-out source                             
+PTB-XL                  20487           1.53
+Georgia                  8302           1.44
+Chapman                  8634           1.34
+Ningbo                  28956           1.36

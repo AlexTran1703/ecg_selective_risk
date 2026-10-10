@@ -1,0 +1,13 @@
+{
+ "model": "shufflenetv2",
+ "budget": "compact",
+ "source": "Georgia",
+ "width": 1.5898,
+ "onnx_f32_kb": 146.5927734375,
+ "onnx_int8_kb": 115.4169921875,
+ "auprc_f32": 0.5144134636068929,
+ "auprc_int8": 0.5127003896873331,
+ "auroc_f32": 0.8373526301086816,
+ "auroc_int8": 0.8371490451101204,
+ "d_auprc": -0.001713073919559771
+}

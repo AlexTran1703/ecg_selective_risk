@@ -1,0 +1,13 @@
+{
+ "model": "fasternet_d2",
+ "budget": "compact",
+ "source": "Georgia",
+ "width": 0.7864,
+ "onnx_f32_kb": 130.3681640625,
+ "onnx_int8_kb": 68.703125,
+ "auprc_f32": 0.4628349107041955,
+ "auprc_int8": 0.46038630841953593,
+ "auroc_f32": 0.8170284282138236,
+ "auroc_int8": 0.8168500516002186,
+ "d_auprc": -0.0024486022846595956
+}

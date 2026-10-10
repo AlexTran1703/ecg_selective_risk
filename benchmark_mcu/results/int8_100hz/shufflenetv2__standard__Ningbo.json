@@ -1,0 +1,13 @@
+{
+ "model": "shufflenetv2",
+ "budget": "standard",
+ "source": "Ningbo",
+ "width": 3.4644,
+ "onnx_f32_kb": 517.8759765625,
+ "onnx_int8_kb": 222.6875,
+ "auprc_f32": 0.5904939729903671,
+ "auprc_int8": 0.5866880835712441,
+ "auroc_f32": 0.9266933067847236,
+ "auroc_int8": 0.9264085937759433,
+ "d_auprc": -0.0038058894191229653
+}

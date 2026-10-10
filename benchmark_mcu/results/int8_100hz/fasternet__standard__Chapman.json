@@ -1,0 +1,13 @@
+{
+ "model": "fasternet",
+ "budget": "standard",
+ "source": "Chapman",
+ "width": 1.7907,
+ "onnx_f32_kb": 515.2216796875,
+ "onnx_int8_kb": 171.630859375,
+ "auprc_f32": 0.5436150992989115,
+ "auprc_int8": 0.5377160455712716,
+ "auroc_f32": 0.9101664567729166,
+ "auroc_int8": 0.9095723174486902,
+ "d_auprc": -0.00589905372763988
+}

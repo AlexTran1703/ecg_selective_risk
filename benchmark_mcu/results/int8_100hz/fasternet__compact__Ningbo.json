@@ -1,0 +1,13 @@
+{
+ "model": "fasternet",
+ "budget": "compact",
+ "source": "Ningbo",
+ "width": 0.8534,
+ "onnx_f32_kb": 132.4697265625,
+ "onnx_int8_kb": 69.541015625,
+ "auprc_f32": 0.5588643281978296,
+ "auprc_int8": 0.5543612018071362,
+ "auroc_f32": 0.912101798749425,
+ "auroc_int8": 0.91151704724033,
+ "d_auprc": -0.0045031263906933905
+}

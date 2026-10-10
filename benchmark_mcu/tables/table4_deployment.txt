@@ -1,0 +1,26 @@
+Table 4. Measured on a physical STM32F411 at 100 MHz. Flash and peak SRAM are the totals the ST Edge AI toolchain reports for the linked image, including the generated runtime, not weights alone. Latency is the median of 32 timed inferences after a warm-up, read from the DWT cycle counter; p95 is from the same series. RTF is latency over the 10 s acquisition window, so RTF < 1 means inference finishes inside the recording. A model is marked deployed only if it linked, flashed and returned the expected output on the part. ms per MMACC is the column that matters for the proxy question: if MACs predicted latency it would be constant.
+------------------------------------------------------------------------------
+                              Flash KB  peak SRAM KB  SRAM free KB  MACC (M)  latency ms  p95 ms     cycles  ms per MMACC     RTF deployed
+budget   model                                                                                                                            
+compact  FCN-1D                   49.5          27.3         100.7      2.80       149.1   149.1   14911634          53.3  0.0149      yes
+         ResNet-1D                56.0          30.7          97.3      3.24       132.4   132.4   13236497          40.8  0.0132      yes
+         TCN                     105.6          31.3          96.7      4.26       474.9   474.9   47485337         111.5  0.0475      yes
+         MobileNetV2              66.2          30.9          97.1      2.67       165.2   165.2   16523477          61.8  0.0165      yes
+         ShuffleNetV2             71.4          36.9          91.1      3.57       277.7   277.7   27766915          77.8  0.0278      yes
+         GhostNet                 70.2          49.5          78.5      4.04       259.3   259.3   25932303          64.2  0.0259      yes
+         MCUNet-style             64.8          30.9          97.1      1.35        73.4    73.4    7336509          54.2  0.0073      yes
+         FasterNet                72.1          33.1          94.9      3.20       162.2   162.2   16224361          50.8  0.0162      yes
+         RepViT                   65.3          31.7          96.3      3.13       160.0   160.0   16001369          51.1  0.0160      yes
+         MobileNetV4-Conv         67.2          35.3          92.7      2.98       178.0   178.0   17799440          59.7  0.0178      yes
+         FasterNet (n_div=2)      65.4          33.3          94.7      3.21       148.8   148.8   14876197          46.4  0.0149      yes
+standard FCN-1D                  138.6          32.9          95.1     10.31       699.7   699.7   69969146          67.9  0.0700      yes
+         ResNet-1D               156.3          30.8          97.2     13.43      1269.0  1269.0  126903050          94.5  0.1269      yes
+         TCN                     358.2          46.5          81.5     17.51      1726.0  1726.0  172598181          98.6  0.1726      yes
+         MobileNetV2             171.0          54.5          73.5     11.56       584.6   584.6   58457985          50.6  0.0585      yes
+         ShuffleNetV2            171.4          60.8          67.2     13.73       659.0   659.0   65897117          48.0  0.0659      yes
+         GhostNet                172.4          94.9          33.1     15.50       576.6   576.6   57661582          37.2  0.0577      yes
+         MCUNet-style            158.1          30.9          97.1      5.36       309.1   309.1   30910832          57.7  0.0309      yes
+         FasterNet               165.8          48.5          79.5     12.54       653.5   653.5   65346627          52.1  0.0653      yes
+         RepViT                  161.7          46.9          81.1     12.08       627.9   627.9   62787499          52.0  0.0628      yes
+         MobileNetV4-Conv        167.6          54.6          73.4     11.52       704.3   704.3   70428655          61.1  0.0704      yes
+         FasterNet (n_div=2)     150.9          45.4          82.6     11.38       595.7   595.7   59572130          52.3  0.0596      yes

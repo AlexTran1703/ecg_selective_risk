@@ -1,0 +1,13 @@
+{
+ "model": "mobilenetv2",
+ "budget": "standard",
+ "source": "PTBXL",
+ "width": 1.5898,
+ "onnx_f32_kb": 507.8837890625,
+ "onnx_int8_kb": 183.9453125,
+ "auprc_f32": 0.4344851212776508,
+ "auprc_int8": 0.4327606186255695,
+ "auroc_f32": 0.864118029636066,
+ "auroc_int8": 0.8635812427327133,
+ "d_auprc": -0.0017245026520812945
+}

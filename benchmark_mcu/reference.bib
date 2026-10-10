@@ -1,0 +1,126 @@
+% Architecture references for the MCU deployment benchmark.
+%
+% VERIFICATION STATUS. The 2023-2025 entries were checked against arXiv
+% and Crossref on 2026-10-10: FasterNet (arXiv 2303.03667), MobileNetV4
+% (arXiv 2404.10518), RepViT (arXiv 2307.09283) and MicroNAS (Crossref
+% 10.1038/s41598-025-90764-z, full author list and article number
+% confirmed). The pre-2021 entries are long-established proceedings
+% papers reproduced from memory of their canonical form -- check page
+% ranges and DOIs against the publisher record before submission.
+
+% ---------------------------------------------------------- classical
+@inproceedings{Wang2017TSCScratch,
+  author    = {Wang, Zhiguang and Yan, Weizhong and Oates, Tim},
+  title     = {Time Series Classification from Scratch with Deep Neural Networks: A Strong Baseline},
+  booktitle = {2017 International Joint Conference on Neural Networks (IJCNN)},
+  year      = {2017},
+  pages     = {1578--1585},
+  doi       = {10.1109/IJCNN.2017.7966039}
+}
+
+@inproceedings{He2016ResNet,
+  author    = {He, Kaiming and Zhang, Xiangyu and Ren, Shaoqing and Sun, Jian},
+  title     = {Deep Residual Learning for Image Recognition},
+  booktitle = {2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2016},
+  pages     = {770--778},
+  doi       = {10.1109/CVPR.2016.90}
+}
+
+@article{Bai2018TCN,
+  author  = {Bai, Shaojie and Kolter, J. Zico and Koltun, Vladlen},
+  title   = {An Empirical Evaluation of Generic Convolutional and Recurrent Networks for Sequence Modeling},
+  journal = {arXiv preprint arXiv:1803.01271},
+  year    = {2018}
+}
+
+% ------------------------------------------------- efficient 2018-2020
+@inproceedings{Sandler2018MobileNetV2,
+  author    = {Sandler, Mark and Howard, Andrew and Zhu, Menglong and Zhmoginov, Andrey and Chen, Liang-Chieh},
+  title     = {{MobileNetV2}: Inverted Residuals and Linear Bottlenecks},
+  booktitle = {2018 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2018},
+  pages     = {4510--4520},
+  doi       = {10.1109/CVPR.2018.00474}
+}
+
+@inproceedings{Ma2018ShuffleNetV2,
+  author    = {Ma, Ningning and Zhang, Xiangyu and Zheng, Hai-Tao and Sun, Jian},
+  title     = {{ShuffleNet V2}: Practical Guidelines for Efficient {CNN} Architecture Design},
+  booktitle = {Computer Vision -- ECCV 2018},
+  year      = {2018},
+  pages     = {122--138},
+  doi       = {10.1007/978-3-030-01264-9_8}
+}
+
+@inproceedings{Han2020GhostNet,
+  author    = {Han, Kai and Wang, Yunhe and Tian, Qi and Guo, Jianyuan and Xu, Chunjing and Xu, Chang},
+  title     = {{GhostNet}: More Features From Cheap Operations},
+  booktitle = {2020 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2020},
+  pages     = {1577--1586},
+  doi       = {10.1109/CVPR42600.2020.00165}
+}
+
+@inproceedings{Lin2020MCUNet,
+  author    = {Lin, Ji and Chen, Wei-Ming and Lin, Yujun and Cohn, John and Gan, Chuang and Han, Song},
+  title     = {{MCUNet}: Tiny Deep Learning on {IoT} Devices},
+  booktitle = {Advances in Neural Information Processing Systems 33 (NeurIPS 2020)},
+  year      = {2020},
+  pages     = {11711--11722}
+}
+
+% ------------------------------------------------------ recent 2023-2025
+% Verified: arXiv 2303.03667, comments field states "Accepted to CVPR 2023".
+@inproceedings{Chen2023FasterNet,
+  author    = {Chen, Jierun and Kao, Shiu-hong and He, Hao and Zhuo, Weipeng and Wen, Song and Lee, Chul-Ho and Chan, S.-H. Gary},
+  title     = {Run, Don't Walk: Chasing Higher {FLOPS} for Faster Neural Networks},
+  booktitle = {2023 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2023},
+  note      = {arXiv:2303.03667}
+}
+
+% Verified: arXiv 2307.09283, comments field states "CVPR 2024
+% Camera-ready Version". No formal proceedings citation was shown, so
+% confirm page numbers before submission.
+@inproceedings{Wang2024RepViT,
+  author    = {Wang, Ao and Chen, Hui and Lin, Zijia and Han, Jungong and Ding, Guiguang},
+  title     = {{RepViT}: Revisiting Mobile {CNN} From {ViT} Perspective},
+  booktitle = {2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2024},
+  note      = {arXiv:2307.09283}
+}
+
+% Verified: arXiv 2404.10518, 14 authors, last revised 29 Sep 2024. The
+% arXiv page lists no proceedings reference; ECCV 2024 is the venue
+% reported elsewhere and should be confirmed.
+@inproceedings{Qin2024MobileNetV4,
+  author    = {Qin, Danfeng and Leichner, Chas and Delakis, Manolis and Fornoni, Marco and Luo, Shixin and Yang, Fan and Wang, Weijun and Banbury, Colby and Ye, Chengxi and Akin, Berkin and Aggarwal, Vaibhav and Zhu, Tenghui and Moro, Daniele and Howard, Andrew},
+  title     = {{MobileNetV4}: Universal Models for the Mobile Ecosystem},
+  booktitle = {Computer Vision -- ECCV 2024},
+  year      = {2024},
+  note      = {arXiv:2404.10518}
+}
+
+% Verified in full: Crossref 10.1038/s41598-025-90764-z. Scientific
+% Reports 15(1):7575, issued 2025-03-04. Author list complete.
+@article{King2025MicroNAS,
+  author  = {King, Tobias and Zhou, Yexu and R{\"o}ddiger, Tobias and Beigl, Michael},
+  title   = {{MicroNAS} for memory and latency constrained hardware aware neural architecture search in time series classification on microcontrollers},
+  journal = {Scientific Reports},
+  year    = {2025},
+  volume  = {15},
+  number  = {1},
+  pages   = {7575},
+  doi     = {10.1038/s41598-025-90764-z}
+}
+
+% ------------------------------------------------- quantisation / tooling
+@inproceedings{Jacob2018Quantization,
+  author    = {Jacob, Benoit and Kligys, Skirmantas and Chen, Bo and Zhu, Menglong and Tang, Matthew and Howard, Andrew and Adam, Hartwig and Kalenichenko, Dmitry},
+  title     = {Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference},
+  booktitle = {2018 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2018},
+  pages     = {2704--2713},
+  doi       = {10.1109/CVPR.2018.00286}
+}

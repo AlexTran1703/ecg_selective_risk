@@ -1,0 +1,13 @@
+{
+ "model": "fasternet_d2",
+ "budget": "standard",
+ "source": "Ningbo",
+ "width": 1.5898,
+ "onnx_f32_kb": 457.6689453125,
+ "onnx_int8_kb": 156.01953125,
+ "auprc_f32": 0.579205311062184,
+ "auprc_int8": 0.5732213472199169,
+ "auroc_f32": 0.9245539787911791,
+ "auroc_int8": 0.9240620942453488,
+ "d_auprc": -0.0059839638422670705
+}
