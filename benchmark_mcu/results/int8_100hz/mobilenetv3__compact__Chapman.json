@@ -1,0 +1,13 @@
+{
+ "model": "mobilenetv3",
+ "budget": "compact",
+ "source": "Chapman",
+ "width": 0.1769,
+ "onnx_f32_kb": 175.77734375,
+ "onnx_int8_kb": 289.9375,
+ "auprc_f32": 0.4686177271664658,
+ "auprc_int8": 0.46511264986070255,
+ "auroc_f32": 0.8702872734604958,
+ "auroc_int8": 0.8697809865952737,
+ "d_auprc": -0.003505077305763271
+}

@@ -1,7 +1,7 @@
 {
  "model": "fcn",
  "budget": "compact",
- "width": 1.0542,
+ "width": 1.0624,
  "fold": "PTBXL",
  "analyze_ok": true,
  "weights_b": 30180,

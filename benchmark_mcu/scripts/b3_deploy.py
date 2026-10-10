@@ -47,7 +47,8 @@ sys.path.insert(0, str(HERE / "src"))
 sys.path.insert(0, str(ROOT / "12_leads" / "src"))
 
 from ecgmcu.data import Cohort, SOURCES, FS_OUT                  # noqa: E402
-from mcubench.models import ZOO, NICE, fit_to_budget             # noqa: E402
+from mcubench.models import (ZOO, NICE, n_params,                # noqa: E402
+                             build as build_model)
 
 PACK = Path("C:/Users/Alith/STM32Cube/Repository/Packs/STMicroelectronics"
             "/X-CUBE-AI/10.2.0")
@@ -209,11 +210,19 @@ def export_int8_batch1(name, budget, src, coh, seed, path_f32, path_i8):
     from onnxruntime.quantization import (quantize_static, QuantFormat,
                                           QuantType, CalibrationMethod)
     import warnings
-    pb, ab = BUDGETS[budget]
-    width, model, _ = fit_to_budget(name, pb, ab, LENGTH)
+    # The deployed graph must be the trained graph, so the width comes
+    # from the run record rather than from a fresh budget fit.
+    run = np.load(TRAIN / f"{name}__{budget}__{src}.npz")
+    width = float(run["width"])
+    # Aliased: this module defines its own build() for the firmware,
+    # and the two silently collided.
+    model = build_model(name, width)
     # Folded before the load: the checkpoint was written folded.
     if hasattr(model, "reparameterise"):
         model.reparameterise()
+    assert n_params(model) == int(run["params"]), (
+        f"{name}/{budget}: rebuilt model has {n_params(model)} "
+        f"parameters, checkpoint has {int(run['params'])}")
     model.load_state_dict(torch.load(
         TRAIN / f"{name}__{budget}__{src}.pt", map_location="cpu"))
     model.eval()
@@ -318,7 +327,17 @@ def main() -> None:
                      f"   <- {rec.get('reason', err or 'see log')}"),
                   flush=True)
 
-    (OUT / "deploy.json").write_text(json.dumps(rows, indent=1))
+    # Rebuild the aggregate from every per-model record on disk, not
+    # from this run's `rows`. A scoped run (--models ...) would otherwise
+    # rewrite deploy.json with only the subset it touched and silently
+    # discard the rest, which is a data-loss bug rather than a filter.
+    allrec = []
+    for f in sorted(OUT.glob("*__*.json")):
+        try:
+            allrec.append(json.loads(f.read_text()))
+        except json.JSONDecodeError:
+            continue
+    (OUT / "deploy.json").write_text(json.dumps(allrec, indent=1))
     n_ok = sum(r.get("deployed", False) for r in rows)
     print(f"\n{n_ok}/{len(rows)} ran on the board\n-> {OUT}")
 

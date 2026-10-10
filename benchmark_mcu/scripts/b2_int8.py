@@ -36,7 +36,7 @@ sys.path.insert(0, str(HERE / "src"))
 sys.path.insert(0, str(ROOT / "12_leads" / "src"))
 
 from ecgmcu.data import Cohort, SOURCES, FS_OUT                  # noqa: E402
-from mcubench.models import ZOO, NICE, build, fit_to_budget      # noqa: E402
+from mcubench.models import ZOO, NICE, build, n_params           # noqa: E402
 
 BUDGETS = {"compact": (32 * 1024, 96 * 1024),
            "standard": (128 * 1024, 96 * 1024)}
@@ -170,11 +170,22 @@ def main() -> None:
                         (OUT / f"{tag}.json").read_text()))
                     continue
 
-                width, model, _ = fit_to_budget(name, pb, ab, LENGTH)
+                # Rebuild from the width recorded by the training run,
+                # never by recomputing the budget fit. The checkpoint
+                # defines the model; recomputing means any later change
+                # to the search silently desynchronises the two, which
+                # presents as a state_dict shape mismatch halfway
+                # through a long job.
+                width = float(d["width"])
+                model = build(name, width)
                 # Checkpoints are saved folded, so the module has to be
                 # folded before the load or the keys will not line up.
                 if hasattr(model, "reparameterise"):
                     model.reparameterise()
+                assert n_params(model) == int(d["params"]), (
+                    f"{name}/{budget}/{src}: rebuilt model has "
+                    f"{n_params(model)} parameters, checkpoint has "
+                    f"{int(d['params'])}")
                 model.load_state_dict(torch.load(ck, map_location="cpu"))
                 export_onnx(model, f32p)
 
@@ -205,7 +216,17 @@ def main() -> None:
                       f"{rec['auprc_int8']:.4f} ({rec['d_auprc']:+.4f})  "
                       f"{rec['onnx_int8_kb']:.1f} KB", flush=True)
 
-    (OUT / "int8.json").write_text(json.dumps(rows_out, indent=1))
+    # Rebuild from every per-model record on disk, not from this run's
+    # rows. A scoped run (--models ...) would otherwise overwrite the
+    # aggregate with only the subset it touched -- the same truncation
+    # bug that silently cut the deployment table to a third.
+    allrec = []
+    for f in sorted(OUT.glob("*__*__*.json")):
+        try:
+            allrec.append(json.loads(f.read_text()))
+        except json.JSONDecodeError:
+            continue
+    (OUT / "int8.json").write_text(json.dumps(allrec, indent=1))
     print(f"\n-> {OUT}  ({len(rows_out)} entries)")
 
 

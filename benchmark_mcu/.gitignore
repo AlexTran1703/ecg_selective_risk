@@ -76,3 +76,7 @@ st_ai_output/
 !scripts/
 !*.md
 !*.bib
+
+# Snapshots taken before overwriting a measurement, kept locally as an
+# undo. The rule above would otherwise re-admit the JSON inside them.
+results/_backup_*/**

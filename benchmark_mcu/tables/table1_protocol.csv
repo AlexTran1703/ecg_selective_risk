@@ -1,5 +1,5 @@
-held-out source,test records,label density
-PTB-XL,20487,1.53
-Georgia,8302,1.44
-Chapman,8634,1.34
-Ningbo,28956,1.36
+held-out source,test records,label density,positive rate,evaluated classes,mean AUPRC over models,note
+PTB-XL,20487,1.53,0.1175,13,0.4178,lowest mean AUPRC across models
+Georgia,8302,1.44,0.111,13,0.5094,
+Chapman,8634,1.34,0.1032,13,0.5477,
+Ningbo,28956,1.36,0.1046,13,0.5711,highest mean AUPRC across models
