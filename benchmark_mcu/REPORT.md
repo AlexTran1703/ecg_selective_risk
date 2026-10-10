@@ -25,8 +25,8 @@ from zero. The proxy's cheapest model is the device's most expensive.
 | | question | evidence |
 |---|---|---|
 | **RQ1** | At a fixed MCU budget, how much does the architecture decide external diagnostic performance? | Figure 2, Figure 3, Figure 4, Table 3 |
-| **RQ2** | Do the efficiency innovations of 2016-2024 translate into measured Flash, SRAM and latency on a Cortex-M4? | Figure 6, Table 4 |
-| **RQ3** | What performance-resource trade-offs are observed, and can MCU feasibility be predicted from the graph rather than measured? | Figure 5, Figure 6, Table 4 |
+| **RQ2** | Do the efficiency innovations of 2016-2024 translate into measured Flash, SRAM and latency on a Cortex-M4? | Figure 5, Figure 6 |
+| **RQ3** | What performance-resource trade-offs are observed, and can MCU feasibility be predicted from the graph rather than measured? | Figure 7 |
 
 ```
 External discrimination  ->  Hardware characterisation  ->  Performance-resource relationships
@@ -86,8 +86,8 @@ width multiplier satisfying both budgets is found by bisection:
 | standard | <= 128 KB | <= 96 KB |
 
 96 KB leaves room on a 128 KB part for stack, I/O buffers and firmware.
-It is a *design target* evaluated against a graph-derived proxy; Table 4
-reports what the device actually required, and the two differ
+It is a *design target* evaluated against a graph-derived proxy;
+Figure 5 reports what the device actually required, and the two differ
 substantially (Finding 9).
 
 **Quantisation.** ONNX Runtime static PTQ, QDQ form, per-channel,
@@ -251,7 +251,7 @@ fold's weights are deployed per combination.
 >
 > TCN is the least arithmetic-efficient design at both budgets: dilated
 > convolutions break access locality, and no MAC count sees that.
-> **Figure 6.**
+> **Figure 5, Figure 6.**
 
 > **Finding 7. Arithmetic efficiency is not a property of the block --
 > it reverses with scale.** Read the two columns of Finding 6 side by
@@ -277,7 +277,7 @@ fold's weights are deployed per combination.
 > the binding constraint.** RTF spans **0.007 to 0.173** across both
 > budgets; even the slowest standard-budget encoder (TCN, 1726 ms)
 > finishes a 10 s recording in under two seconds. On this part, memory
-> is what binds. **Table 4.**
+> is what binds. **Figure 5.**
 
 ---
 
@@ -361,7 +361,7 @@ optimality beyond the configurations tested.
 > pays 2.1x -- which is Finding 7 seen from the other side, and another
 > number that cannot be predicted from the budget alone. For a
 > battery-powered device the compact budget is the defensible operating
-> point. **Figure 5.**
+> point. **Figure 5, Figure 7.**
 
 > **Finding 12. Flash inflates too, and two families inflate
 > differently.** The linked image is 1.2x to 1.5x the int8 weight size
@@ -518,8 +518,9 @@ the ST toolchain installed at the paths declared at the top of that file.
 | 2 | `figures/figure2_cross_source` | **RQ1** external AUPRC for every family on every held-out source, both budgets |
 | 3 | `figures/figure3_distribution` | **RQ1** spread across sources per family, with bootstrap intervals -- the overlap is the point |
 | 4 | `figures/figure4_int8_cost` | **RQ1** what quantisation costs: paired bootstrap intervals on the equal-source mean INT8 - FP32 difference, all twenty entirely below zero |
-| 5 | `figures/figure5_tradeoffs` | **RQ3** equal-source AUPRC against measured latency, bubble area = measured peak SRAM, all ten families labelled M1-M10, empirical Pareto frontier as a secondary line |
-| 6 | `figures/figure6_complexity_latency` | **RQ2/RQ3** (a) latency against MACC on log-log with Spearman and per-budget Kendall, (b) ms per million MACC paired across budgets -- the reversal in Finding 7 |
+| 5 | `figures/figure5_hardware` | **RQ2** (A) Flash, (B) peak SRAM, (C) MACC, (D) measured latency, for every family at both budgets. Solid bars are the compact budget, hatched the standard. Replaces the deployment table outright, so the extremes a reader would have looked up are annotated and the part's capacities are stated in-panel; exact values for all twenty configurations are deposited as `results/deploy_*/deployment_measurements.csv` |
+| 6 | `figures/figure6_complexity_latency` | **RQ2** (a) latency against MACC on log-log with Spearman and per-budget Kendall, (b) ms per million MACC paired across budgets -- the reversal in Finding 7 |
+| 7 | `figures/figure7_tradeoffs` | **RQ3** equal-source external macro-AUPRC against measured latency, both budgets on one log axis. Marker shape is the budget, colour the family, area the measured peak SRAM. Outlined markers are non-dominated in the accuracy-latency plane within their budget; every tested configuration is drawn and **no connecting frontier is implied** -- these are twenty discrete measurements, not a continuum |
 | S2 | `figures/figureS2_residual_latency` | OLS residual latency, retained for completeness; specification-dependent, which is why it is not in the main set |
 
 ## Main tables
@@ -529,5 +530,11 @@ the ST toolchain installed at the paths declared at the top of that file.
 | 1 | `tables/table1_protocol` | cohort composition: records, patients, age, sex, labels per ECG, the macro-AUPRC prevalence floor, and four diagnoses spanning the prevalence range |
 | 2 | `tables/table2_architectures` | the ten families: identifier, year, defining block, width, size, MACs |
 | 3 | `tables/table3_external` | external macro-AUPRC and AUROC per source, with bootstrap CIs |
-| 4 | `tables/table4_deployment` | **measured** Flash, peak SRAM, MACC, median latency, cycles, ms/MMACC, RTF, deployed yes/no |
+
+There is no Table 4. The deployment measurements are Figure 5, and the
+exact numbers are deposited as a machine-readable CSV
+(`results/deploy_*/deployment_measurements.csv`) rather than as a
+supplementary table: a reader comparing architectures wants the figure,
+and a reader reproducing the work wants the file, and neither wants a
+typeset grid of twenty rows.
 | S1 | `tables/tableS1_prevalence` | prevalence of all 13 harmonised classes in each source, ordered by pooled prevalence |

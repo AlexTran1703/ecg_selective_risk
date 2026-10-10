@@ -370,50 +370,41 @@ def table3(runs, boot):
          "are not between-hospital transportability intervals.")
 
 
-def table4(runs, dep):
+def deposit_deployment(runs, dep):
+    """Every deployment measurement, as a machine-readable deposit.
+
+    This was Table 4. The table is gone from the manuscript -- Figure 5
+    now carries the hardware comparison, and a bar cannot be read to
+    three significant figures, so the exact values go here rather than
+    into a supplementary table nobody cites. It lands in results/ beside
+    the per-model JSON rather than in tables/, because it is data for
+    reuse, not a typeset artefact.
+    """
     rows = []
     for b in BUDGETS:
         for m in models_present(runs, b):
             d = dep.get((m, b))
             if not d:
                 continue
-            fkb = (d.get("total_flash_b") or 0) / 1024
-            rkb = (d.get("total_ram_b") or 0) / 1024
             ms = d.get("ms_median")
             rows.append({
-                "model": NICE[m], "budget": b,
-                "Flash KB": round(fkb, 1),
-                "peak SRAM KB": round(rkb, 1),
-                "MACC (M)": round((d.get("macc") or 0) / 1e6, 2),
-                "median latency ms": round(ms, 1) if ms else np.nan,
-                "cycles": d.get("cycles_median"),
-                "ms per MMACC": round(ms / ((d.get("macc") or 1) / 1e6), 1)
+                "id": MID[m], "model": NICE[m], "budget": b,
+                "flash_kb": round((d.get("total_flash_b") or 0) / 1024, 1),
+                "peak_sram_kb": round((d.get("total_ram_b") or 0) / 1024, 1),
+                "macc_millions": round((d.get("macc") or 0) / 1e6, 3),
+                "latency_ms_median": round(ms, 2) if ms else np.nan,
+                "cycles_median": d.get("cycles_median"),
+                "ms_per_mmacc": round(ms / ((d.get("macc") or 1) / 1e6), 2)
                 if ms else np.nan,
-                "RTF": round(d["rtf"], 4) if d.get("rtf") else np.nan,
-                "deployed": "yes" if d.get("deployed") else "NO"})
+                "realtime_factor": round(d["rtf"], 5) if d.get("rtf")
+                else np.nan,
+                "deployed": bool(d.get("deployed"))})
     if not rows:
-        # Allows assets to be built from training alone, before the
-        # board stage has run, instead of failing the whole build.
-        print("  (no deployments yet -- table4 skipped)")
+        print("  (no deployments yet -- deposit skipped)")
         return
-    emit(pd.DataFrame(rows).set_index(["budget", "model"]),
-         "table4_deployment",
-         "Table 4. Measured on a physical STM32F411 at 100 MHz. Flash and "
-         "peak SRAM are the totals the ST Edge AI toolchain reports for "
-         "the linked image, including the generated runtime, not weights "
-         "alone. Latency is the median of 32 timed inferences after a "
-         "warm-up, read from the DWT cycle counter. No p95 column is "
-         "reported: across 32 runs the series is near-constant -- for a "
-         "representative model, 7 distinct values spanning 4,188 cycles, "
-         "0.007% of the median -- so p95 and the median coincide to the "
-         "reported precision. Timing excludes preprocessing and input "
-         "transfer. RTF is latency over the 10 s acquisition window, so "
-         "RTF "
-         "< 1 means inference finishes inside the recording. A model is "
-         "marked deployed only if it linked, flashed and returned the "
-         "expected output on the part. ms per MMACC is the column that "
-         "matters for the proxy question: if MACs predicted latency it "
-         "would be constant.")
+    pd.DataFrame(rows).to_csv(
+        DEPLOY / "deployment_measurements.csv", index=False)
+    print(f"  results/deploy_{FS_OUT}hz/deployment_measurements.csv")
 
 
 def bootstrap(runs, cache=True):
@@ -1495,77 +1486,208 @@ def _pareto(points):
     return sorted(keep, key=lambda k: points[k][0])
 
 
-def figure5(runs, boot, dep):
+def figure7(runs, boot, dep):
     """RQ3: observed accuracy, latency and memory relationships.
 
-    Every benchmarked architecture is drawn and labelled. An earlier
-    version outlined and named only the non-dominated points, which left
-    the rest anonymous and made a benchmark read as a selection of
-    winners. The frontier stays, as a thin secondary line.
+    One panel, both budgets. Splitting them across two panels gave each
+    its own latency axis, which quietly hid the thing worth seeing: the
+    budgets occupy different decades, and the slowest compact model is
+    faster than the quickest standard one. On a shared log axis that is
+    immediate. Marker shape carries the budget, colour the family, area
+    the measured peak SRAM.
 
-    Dominance is computed on accuracy and latency only. SRAM is an extra
-    encoding, not a third dominance axis: a three-dimensional frontier is
-    a different object and is not what is drawn here.
+    Non-dominated configurations carry a dark outline and there is
+    deliberately no line joining them. A frontier drawn as a curve says
+    a continuum of designs exists between the points, and nothing here
+    supports that -- twenty discrete configurations were measured, some
+    of which happen not to be beaten on both axes by another. Outlines
+    make that claim; a curve makes a larger one. Dominance is computed
+    within a budget, since the budgets are different design problems.
+
+    Identifiers are not written on the markers: the legend maps colour
+    to family, and twenty leader-lined labels would cost more than the
+    second naming buys. Dominance uses accuracy and latency only; SRAM
+    is an extra encoding, not a third axis.
     """
     if not any(d.get("ms_median") for d in dep.values()):
-        print("  (no deployments yet -- figure5 skipped)")
+        print("  (no deployments yet -- figure7 skipped)")
         return
-    fig, axes = plt.subplots(1, 2, figsize=(7.8, 3.8), facecolor=SURFACE)
-    for ax, b in zip(axes, BUDGETS):
+    fig = plt.figure(figsize=(7.8, 3.2), facecolor=SURFACE)
+    ax = fig.add_axes([0.088, 0.325, 0.700, 0.635])
+    for b, mk in zip(BUDGETS, ("o", "s")):
         ms = [m for m in models_present(runs, b) if (m, b) in dep
               and dep[(m, b)].get("ms_median")]
         pts = [(dep[(m, b)]["ms_median"], boot[(m, b)][0]) for m in ms]
         front = set(_pareto(pts))
-        areas = []
         for k, m in enumerate(ms):
             rkb = (dep[(m, b)].get("total_ram_b") or 0) / 1024
-            areas.append(16 + 8 * rkb)
-            ax.scatter(pts[k][0], pts[k][1], s=areas[k],
+            ax.scatter(pts[k][0], pts[k][1], s=16 + 8 * rkb, marker=mk,
                        color=MODEL_COLOR[m], alpha=0.80,
                        edgecolor=INK if k in front else SURFACE,
                        lw=1.2 if k in front else 0.7, zorder=3)
-        fr = sorted(front, key=lambda k: pts[k][0])
-        if len(fr) > 1:
-            ax.plot([pts[k][0] for k in fr], [pts[k][1] for k in fr],
-                    lw=0.8, ls="--", color="#b5b5ad", zorder=1)
-        ax.set_xscale("log")
-        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
-        ax.xaxis.set_major_formatter(
-            matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
-        ax.set_xlabel("measured STM32F411 latency (ms, log)",
-                      fontsize=7.0, color=INK)
-        if b == BUDGETS[0]:
-            ax.set_ylabel("equal-source external macro-AUPRC",
-                          fontsize=7.0, color=INK)
-        ax.set_title(f"({'ab'[BUDGETS.index(b)]}) {b} budget",
-                     fontsize=7.6, color=INK, pad=4)
-        ax.margins(0.18)
-        _frame(ax)
-        ax.grid(color=GRID, lw=0.5)
-        # No per-marker identifiers: the legend already maps colour to
-        # family, and ten leader-lined labels over two panels cost more
-        # legibility than the second naming buys.
+    ax.set_xscale("log")
+    ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    ax.xaxis.set_major_formatter(
+        matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+    ax.set_xlabel("measured STM32F411 latency (ms, log)", fontsize=7.0,
+                  color=INK)
+    ax.set_ylabel("equal-source external macro-AUPRC", fontsize=7.0,
+                  color=INK)
+    ax.tick_params(labelsize=6.2, colors=INK2)
+    ax.margins(0.13)
+    _frame(ax)
+    ax.grid(color=GRID, lw=0.5)
+    ax.set_axisbelow(True)
 
+    shape_h = [plt.Line2D([], [], marker=mk, ls="", ms=7.5, color=c,
+                          markeredgecolor=SURFACE, markeredgewidth=0.7,
+                          label=b)
+               for b, mk, c in zip(BUDGETS, ("o", "s"),
+                                   ("#c6c6be", "#5f5f58"))]
+    ax.add_artist(ax.legend(handles=shape_h, fontsize=7.0, frameon=False,
+                            labelcolor=INK2, loc="lower right",
+                            handletextpad=0.8, borderpad=0.7,
+                            labelspacing=0.9))
+    # The size key is drawn by hand rather than with fig.legend, which
+    # spaces entries uniformly: with bubbles from 7 to 27 pt across, a
+    # gap that clears the largest pair leaves the smallest pair adrift,
+    # and a gap that suits the smallest makes the largest two touch.
+    # Here each gap is the sum of the two neighbouring radii plus a
+    # fixed margin, so every pair is separated by the same visible space.
+    KEYS = (20, 50, 90)
+    kax = fig.add_axes([0.800, 0.400, 0.150, 0.420], zorder=5)
+    kax.set_xlim(0, 1)
+    kax.set_ylim(0, 1)
+    kax.set_axis_off()
+    kax.patch.set_alpha(0)
+    pt = 1.0 / (0.420 * fig.get_figheight() * 72.0)   # points -> axes units
+    rad = [np.sqrt(16 + 8 * kb) / 2.0 * pt for kb in KEYS]
+    margin = 7.0 * pt
+    ys, cur = [], 1.0 - rad[0]
+    for i, r in enumerate(rad):
+        if i:
+            cur -= rad[i - 1] + r + margin
+        ys.append(cur)
+    for kb, r, yy in zip(KEYS, rad, ys):
+        kax.scatter([0.24], [yy], s=16 + 8 * kb, color="#c3c3bb",
+                    edgecolor=SURFACE, lw=0.6, zorder=3)
+        kax.text(0.56, yy, f"{kb} KB", fontsize=6.4, color=INK2,
+                 va="center", ha="left")
+    fig.text(0.875, 0.845, "peak SRAM", fontsize=6.4, color=INK2,
+             ha="center")
     handles = [plt.Line2D([], [], marker="o", ls="", ms=5,
                           color=MODEL_COLOR[m],
                           label=f"{MID[m]}  {NICE[m]}") for m in ZOO]
     fig.legend(handles=handles, fontsize=6.0, frameon=False,
                labelcolor=INK2, ncol=5, loc="lower center",
-               bbox_to_anchor=(0.5, 0.005), columnspacing=1.6)
-    # The size key moves out of panel (b), where three bubbles up to
-    # 27 pt across were stacked on top of each other and sat over the
-    # data. Laid out in a row at the foot of the figure it keeps the
-    # exact areas used in the plot, which a rescaled key would not.
-    for kb in (20, 50, 90):
-        axes[1].scatter([], [], s=16 + 8 * kb, color="#c3c3bb",
-                        edgecolor=SURFACE, lw=0.6, label=f"{kb} KB")
-    axes[1].legend(fontsize=5.8, frameon=False, labelcolor=INK2,
-                   loc="lower right", bbox_to_anchor=(0.995, 0.08),
-                   ncol=1, labelspacing=2.1, handletextpad=1.3,
-                   borderpad=0.6, title="peak SRAM", title_fontsize=5.8)
-    fig.subplots_adjust(left=0.09, right=0.985, top=0.92, bottom=0.205,
-                        wspace=0.20)
-    save(fig, "figure5_tradeoffs", svg=True)
+               bbox_to_anchor=(0.5, 0.012), columnspacing=1.6)
+    save(fig, "figure7_tradeoffs", svg=True)
+
+
+def figure5(runs, dep):
+    """RQ2: the four measured hardware costs, every family, both budgets.
+
+    This figure replaces the deployment table outright, so it has to be
+    readable without one. That drives three choices. Budgets are told
+    apart by hatching rather than by transparency alone, because a
+    lighter fill of an already pale family colour is not a reliable
+    distinction at column width. The extremes a reader would otherwise
+    look up -- largest Flash, largest SRAM, largest MACC, fastest and
+    slowest inference in each budget -- are annotated on the bars. And
+    the part's capacities are stated in the panels that have one rather
+    than drawn as a limit line, which would squash every bar to make
+    room for headroom nothing uses.
+
+    Each panel keeps its own axis. Flash, SRAM, arithmetic and time are
+    different quantities and a shared scale would only be legible for
+    whichever happened to be largest.
+
+    Exact values for all twenty configurations are deposited as
+    results/deploy_*/deployment_measurements.csv.
+    """
+    if not any(d.get("ms_median") for d in dep.values()):
+        print("  (no deployments yet -- figure5 skipped)")
+        return
+    fams = [m for m in ZOO if any((m, b) in dep for b in BUDGETS)]
+    metrics = [
+        ("A", "Flash occupancy", "KB", lambda d: d["total_flash_b"] / 1024,
+         "device: 512 KB", "{:.0f} KB"),
+        ("B", "Peak SRAM", "KB", lambda d: d["total_ram_b"] / 1024,
+         "device: 128 KB", "{:.0f} KB"),
+        ("C", "Arithmetic cost", "MACC (millions)",
+         lambda d: d["macc"] / 1e6, None, "{:.1f} M"),
+        ("D", "Measured latency", "ms", lambda d: d["ms_median"],
+         "100 MHz, median of 32", "{:.0f} ms")]
+
+    fig, axes = plt.subplots(1, 4, figsize=(7.8, 3.15), facecolor=SURFACE)
+    w, hatch = 0.38, (None, "///")
+    for ax, (tag, lab, unit, fn, note, fmt) in zip(axes, metrics):
+        vals = {}
+        for j, b in enumerate(BUDGETS):
+            xs = np.arange(len(fams)) + (j - 0.5) * w
+            v = [fn(dep[(m, b)]) if (m, b) in dep else np.nan
+                 for m in fams]
+            vals[b] = v
+            ax.bar(xs, v, width=w, color=[MODEL_COLOR[m] for m in fams],
+                   alpha=1.0 if j == 0 else 0.55, hatch=hatch[j],
+                   edgecolor=INK, lw=0.45, zorder=3)
+        # Annotate only the extremes a removed table would have been
+        # consulted for; labelling twenty bars would be unreadable.
+        marks = []
+        if tag == "D":
+            for j, b in enumerate(BUDGETS):
+                arr = np.asarray(vals[b], dtype=float)
+                marks += [(int(np.nanargmin(arr)), j, "fastest"),
+                          (int(np.nanargmax(arr)), j, "slowest")]
+        else:
+            flat = [(v, i, j) for j, b in enumerate(BUDGETS)
+                    for i, v in enumerate(vals[b]) if np.isfinite(v)]
+            v, i, j = max(flat)
+            marks = [(i, j, "max")]
+        top = np.nanmax([v for b in BUDGETS for v in vals[b]])
+        for i, j, _ in marks:
+            v = vals[BUDGETS[j]][i]
+            # The fastest and slowest of a budget are often the two bars
+            # of one family, side by side; centring both labels puts them
+            # on top of each other. Lean each away from its neighbour.
+            ax.annotate(fmt.format(v),
+                        (i + (j - 0.5) * w, v), textcoords="offset points",
+                        xytext=(-1.5 if j == 0 else 1.5, 2.5),
+                        ha="right" if j == 0 else "left", va="bottom",
+                        fontsize=4.6, color=INK, zorder=6)
+        ax.set_ylim(0, top * 1.22)
+        ax.set_xticks(range(len(fams)))
+        ax.set_xticklabels([MID[m] for m in fams], fontsize=5.0,
+                           color=INK2, rotation=90)
+        ax.set_title(f"({tag}) {lab}", fontsize=7.4, color=INK, pad=3)
+        ax.set_ylabel(unit, fontsize=6.2, color=INK2, labelpad=2)
+        ax.tick_params(axis="y", labelsize=5.6, colors=INK2, length=2)
+        ax.tick_params(axis="x", length=0, pad=1.5)
+        if note:
+            ax.text(0.5, 0.965, note, transform=ax.transAxes, fontsize=5.0,
+                    color=INK2, ha="center", va="top", style="italic")
+        _frame(ax)
+        ax.grid(axis="y", color=GRID, lw=0.45)
+        ax.set_axisbelow(True)
+
+    bud = [matplotlib.patches.Patch(
+        facecolor="#b8b8b0", alpha=1.0 if j == 0 else 0.55,
+        hatch=hatch[j], edgecolor=INK, lw=0.45,
+        label=f"{b} ({'<= 32' if j == 0 else '<= 128'} KB INT8 weights)")
+        for j, b in enumerate(BUDGETS)]
+    fig.legend(handles=bud, fontsize=6.0, frameon=False, labelcolor=INK2,
+               ncol=2, loc="lower center", bbox_to_anchor=(0.5, 0.135),
+               columnspacing=2.4, handletextpad=0.7)
+    fam_h = [plt.Line2D([], [], marker="s", ls="", ms=4.2,
+                        color=MODEL_COLOR[m], label=f"{MID[m]} {NICE[m]}")
+             for m in fams]
+    fig.legend(handles=fam_h, fontsize=5.4, frameon=False,
+               labelcolor=INK2, ncol=5, loc="lower center",
+               bbox_to_anchor=(0.5, 0.005), columnspacing=1.1,
+               handletextpad=0.4)
+    fig.subplots_adjust(left=0.068, right=0.99, top=0.90, bottom=0.345,
+                        wspace=0.40)
+    save(fig, "figure5_hardware", svg=True)
 
 
 def figure6(runs, dep):
@@ -1718,13 +1840,14 @@ def main():
             ("tableS1", table_s1_prevalence),
             ("table2", lambda: table2(runs, dep)),
             ("table3", lambda: table3(runs, boot)),
-            ("table4", lambda: table4(runs, dep)),
+            ("deposit", lambda: deposit_deployment(runs, dep)),
             ("figure1", lambda: figure1(runs, dep)),
             ("figure2", lambda: figure2(runs)),
             ("figure3", lambda: figure3(runs, boot)),
             ("figure4", figure4),
-            ("figure5", lambda: figure5(runs, boot, dep)),
+            ("figure5", lambda: figure5(runs, dep)),
             ("figure6", lambda: figure6(runs, dep)),
+            ("figure7", lambda: figure7(runs, boot, dep)),
             ("figureS2", lambda: figure_s2_residual(runs, dep))]
     wanted = set(args.only) if args.only else None
     unknown = (wanted or set()) - {n for n, _ in jobs}
@@ -1732,7 +1855,7 @@ def main():
         sys.exit(f"unknown target(s): {sorted(unknown)}")
 
     # Only the four artefacts that carry an interval pay for computing it.
-    NEEDS_BOOT = {"table1", "table3", "figure3", "figure5"}
+    NEEDS_BOOT = {"table1", "table3", "figure3", "figure7"}
     boot = {}
     if wanted is None or wanted & NEEDS_BOOT:
         print("bootstrapping:")
