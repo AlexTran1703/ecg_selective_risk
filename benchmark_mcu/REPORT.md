@@ -124,6 +124,34 @@ fold's weights are deployed per combination.
 > the budget the choice hardly matters, and whether a family scales into
 > the budget matters enormously. **Figure 2, Figure 3, Table 3.**
 
+> **Finding 1b. The source ordering is not an artefact of class
+> prevalence.** Macro-AUPRC averages 13 per-class average precisions,
+> and each has a floor equal to that class's positive rate, so a source
+> whose classes are commoner scores higher before any model is any
+> good. That floor is worth computing rather than assuming, because the
+> four sources differ sharply in composition: NSR is **88.3%** of
+> PTB-XL and about **21%** of each of the other three, and PTB-XL's
+> remaining twelve classes average 5.4% prevalence against 9.4-10.3%
+> elsewhere (Table 1, Table S1).
+>
+> The macro-average of per-class prevalence -- what a random scorer
+> attains -- is nevertheless almost flat across the four:
+>
+> | source | floor | achieved | lift | ratio |
+> |---|---|---|---|---|
+> | PTB-XL | **0.117** | 0.418 | 0.300 | 3.6x |
+> | Georgia | 0.111 | 0.509 | 0.398 | 4.6x |
+> | Chapman | 0.103 | 0.548 | 0.445 | 5.3x |
+> | Ningbo | 0.105 | 0.571 | 0.467 | 5.5x |
+>
+> Macro-averaging washes the NSR difference out, because NSR is one
+> class of thirteen. PTB-XL has the **highest** floor and the lowest
+> achieved score, so prevalence works against the observed ordering
+> rather than producing it, and the ordering is unchanged whether
+> sources are ranked by the raw value, by lift over floor, or by ratio
+> to it. Whatever makes PTB-XL hard, it is not that its classes are
+> rare. **Table 1, Table S1.**
+
 > **Finding 2. The newer the design, the less it helps.** The compact
 > budget is led outright by **ResNet-1D (2016)**; the standard budget by
 > **TCN (2018)**, with ResNet-1D and ShuffleNetV2 (2018) within 0.0003
@@ -486,7 +514,7 @@ the ST toolchain installed at the paths declared at the top of that file.
 
 | | file | answers |
 |---|---|---|
-| 1 | `figures/figure1_design` | the control structure in three stages, with the claim each RQ may support ruled off beneath it. Counts are read from the artefacts. Also exported as `.svg` |
+| 1 | `figures/figure1_design` | graphical overview in three columns: sources, benchmark, outputs. ECG traces are real records drawn from the cohort by index; the RQ1-RQ3 insets are the actual results in miniature; counts are read from the artefacts. Also exported as `.svg` |
 | 2 | `figures/figure2_cross_source` | **RQ1** external AUPRC for every family on every held-out source, both budgets |
 | 3 | `figures/figure3_distribution` | **RQ1** spread across sources per family, with bootstrap intervals -- the overlap is the point |
 | 4 | `figures/figure4_int8_cost` | **RQ1** what quantisation costs: paired bootstrap intervals on the equal-source mean INT8 - FP32 difference, all twenty entirely below zero |
@@ -498,7 +526,8 @@ the ST toolchain installed at the paths declared at the top of that file.
 
 | | file | answers |
 |---|---|---|
-| 1 | `tables/table1_protocol` | the cohort and the LOSO rotations |
+| 1 | `tables/table1_protocol` | cohort composition: records, patients, age, sex, labels per ECG, the macro-AUPRC prevalence floor, and four diagnoses spanning the prevalence range |
 | 2 | `tables/table2_architectures` | the ten families: identifier, year, defining block, width, size, MACs |
 | 3 | `tables/table3_external` | external macro-AUPRC and AUROC per source, with bootstrap CIs |
 | 4 | `tables/table4_deployment` | **measured** Flash, peak SRAM, MACC, median latency, cycles, ms/MMACC, RTF, deployed yes/no |
+| S1 | `tables/tableS1_prevalence` | prevalence of all 13 harmonised classes in each source, ordered by pooled prevalence |

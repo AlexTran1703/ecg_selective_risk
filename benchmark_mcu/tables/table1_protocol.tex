@@ -1,11 +1,12 @@
-\begin{tabular}{lrrrrrl}
+\begin{tabular}{lllllllllll}
 \toprule
- & test records & label density & positive rate & evaluated classes & mean AUPRC over models & note \\
-held-out source &  &  &  &  &  &  \\
+ & records & patients & age, median (IQR) & female (\%) & labels per ECG & macro-AUPRC floor & NSR (\%) & SB (\%) & CRBBB (\%) & CLBBB (\%) \\
+source &  &  &  &  &  &  &  &  &  &  \\
 \midrule
-PTB-XL & 20487 & 1.530000 & 0.117500 & 13 & 0.417800 & lowest mean AUPRC across models \\
-Georgia & 8302 & 1.440000 & 0.111000 & 13 & 0.509400 &  \\
-Chapman & 8634 & 1.340000 & 0.103200 & 13 & 0.547700 &  \\
-Ningbo & 28956 & 1.360000 & 0.104600 & 13 & 0.571100 & highest mean AUPRC across models \\
+PTB-XL & 20,487 & 17,928 & 61 (49-72) & 48.2 & 1.53 & 0.117 & 88.3 & 3.1 & 2.6 & 2.6 \\
+Georgia & 8,302 & 8,302 & 63 (51-72) & 45.8 & 1.44 & 0.111 & 21.1 & 20.2 & 6.7 & 2.8 \\
+Chapman & 8,634 & 8,634 & 61 (49-71) & 43.7 & 1.34 & 0.103 & 21.1 & 45.0 & 5.3 & 2.4 \\
+Ningbo & 28,956 & 28,956 & 60 (47-71) & 43.9 & 1.36 & 0.105 & 21.8 & 43.8 & 4.5 & 0.9 \\
+Total & 66,379 & 63,820 &  & 45.4 & 1.42 & 0.109 & 42.1 & 28.4 & 4.3 & 1.8 \\
 \bottomrule
 \end{tabular}

@@ -20,7 +20,10 @@ reported. Nothing here is estimated from a parameter count.
 
 from __future__ import annotations
 
+import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -86,7 +89,12 @@ def save(fig, name, dest=FIG, svg=False):
 def emit(df, name, caption, dest=TAB):
     dest.mkdir(parents=True, exist_ok=True)
     df.to_csv(dest / f"{name}.csv")
-    (dest / f"{name}.tex").write_text(df.to_latex(escape=False), "utf-8")
+    # A bare % opens a LaTeX comment and swallows the rest of the line,
+    # so "female (%)" would silently delete every column after it.
+    # escape=True is not the fix: it would also escape the en dashes and
+    # underscores the captions and identifiers rely on.
+    tex = df.to_latex(escape=False).replace("%", "\\%")
+    (dest / f"{name}.tex").write_text(tex, "utf-8")
     (dest / f"{name}.txt").write_text(
         caption + "\n" + "-" * 78 + "\n" + df.to_string(), "utf-8")
     print(f"  tables/{name}")
@@ -143,45 +151,155 @@ def models_present(runs, budget):
     return [m for m in ZOO if any(k[0] == m and k[1] == budget for k in runs)]
 
 
+# ------------------------------------------------------------- cohort
+# Table 1 and Figure 1 describe the data, not the models, so they read
+# the cohort directly rather than inferring it from a run's label
+# matrix. Everything below is measured from the finalised arrays:
+# nothing here is typed in by hand.
+_COHORT = {}
+
+
+def cohort():
+    """Merged record index, label matrix and class names, cached."""
+    if _COHORT:
+        return _COHORT
+    d12 = ROOT / "12_leads"
+    ix = pd.read_csv(d12 / "data" / "index.csv")
+    y = np.load(d12 / "data" / "labels.npy")
+    meta = pd.read_csv(ROOT / "data" / "meta" / "records.csv")
+    m = ix.merge(meta, on=["source", "record"], how="left")
+
+    # PTB-XL stores sex as 0/1, the other three as strings. Normalising
+    # here keeps the inconsistency out of the table.
+    sex = m["sex"].replace({0: "Male", 1: "Female",
+                            "0": "Male", "1": "Female"})
+    m = m.assign(sex=sex)
+    _COHORT.update(index=m, y=y,
+                   classes=json.loads(
+                       (ROOT / "data" / "meta" / "classes.json").read_text()
+                   )["abbreviations"],
+                   signals=d12 / "data" / f"signals_{FS_OUT}.npy")
+    return _COHORT
+
+
+def prevalence():
+    """Per-source positive rate for each harmonised class, as percent."""
+    c = cohort()
+    m, y, cls = c["index"], c["y"], c["classes"]
+    out = {}
+    for src in SOURCES:
+        k = (m["source"] == src).values
+        out[sname(src)] = {cl: 100.0 * float(y[k, j].mean())
+                           for j, cl in enumerate(cls)}
+    return pd.DataFrame(out)
+
+
 # ----------------------------------------------------------------- tables
 def table1(runs, boot):
-    mean_by_src = {}
-    for src in SOURCES:
-        v = [macro_ap(runs[k]["y"], runs[k]["p"]) for k in runs if k[2] == src]
-        if v:
-            mean_by_src[src] = float(np.mean(v))
-    best = max(mean_by_src, key=mean_by_src.get) if mean_by_src else None
-    worst = min(mean_by_src, key=mean_by_src.get) if mean_by_src else None
+    """Cohort characterisation: what the data are, not how models did.
+
+    The previous version reported mean AUPRC per source and annotated
+    the best and worst, which put a result into the cohort table and
+    invited the reading that one source is intrinsically easier.
+    Average precision has a prevalence floor, so a source with more
+    positives scores higher before any model is any good. The
+    composition belongs here; the performance belongs in Table 3, and a
+    reader can then compare the two.
+    """
+    c = cohort()
+    m, y = c["index"], c["y"]
+    prev = prevalence()
+    # Four classes spanning the prevalence range, named from the actual
+    # 13-label space. There is no AF label in this harmonisation, so the
+    # usual AF/RBBB/LBBB trio cannot be reported.
+    show = ["NSR", "SB", "CRBBB", "CLBBB"]
     rows = []
     for src in SOURCES:
-        k = next((k for k in runs if k[2] == src), None)
-        if not k:
-            continue
-        y = runs[k]["y"]
-        n_cls = int(sum(1 for c in range(y.shape[1])
-                        if 0 < y[:, c].sum() < y.shape[0]))
-        rows.append({
-            "held-out source": sname(src),
-            "test records": int(y.shape[0]),
-            "label density": round(float(y.sum(1).mean()), 2),
-            "positive rate": round(float(y.mean()), 4),
-            "evaluated classes": n_cls,
-            "mean AUPRC over models": round(mean_by_src.get(src, np.nan), 4),
-            "note": ("lowest mean AUPRC across models" if src == worst else
-                     "highest mean AUPRC across models" if src == best
-                     else "")})
-    emit(pd.DataFrame(rows).set_index("held-out source"), "table1_protocol",
-         "Table 1. Held-out source characteristics under leave-one-source-"
-         "out external evaluation. Each row is one rotation: models train "
-         "on the other three sources and are scored on every record of "
-         "this one. Label density is the mean number of positive labels "
-         "per record, positive rate the overall fraction of positive "
-         "label slots, both after harmonisation to the 13-label space. "
-         "Evaluated classes counts those with at least one positive and "
-         "one negative in that source, which is the set the macro average "
-         f"is taken over. Inputs are 10 s, 12-lead, decimated to {FS_OUT} "
-         "Hz. Patient counts are omitted: only one source repeats "
-         "patients and the definitions are not comparable across the four.")
+        k = (m["source"] == src).values
+        sub, lab = m[k], y[k]
+        age = sub["age"].dropna()
+        nf = int((sub["sex"] == "Female").sum())
+        row = {
+            "source": sname(src),
+            "records": f"{int(k.sum()):,}",
+            "patients": f"{sub['patient'].nunique():,}",
+            "age, median (IQR)": (
+                f"{age.median():.0f} ({age.quantile(.25):.0f}-"
+                f"{age.quantile(.75):.0f})" if len(age) else "NR"),
+            "female (%)": f"{100 * nf / k.sum():.1f}",
+            "labels per ECG": f"{lab.sum(1).mean():.2f}",
+            # The macro-average of per-class prevalence is exactly the
+            # macro-AUPRC a random scorer attains on this source, so it
+            # is the floor Table 3 should be read against. It is a
+            # property of the data, which is why it sits here.
+            "macro-AUPRC floor": f"{lab.mean():.3f}",
+        }
+        for cl in show:
+            row[f"{cl} (%)"] = f"{prev.loc[cl, sname(src)]:.1f}"
+        rows.append(row)
+    tot = {
+        "source": "Total",
+        "records": f"{len(m):,}",
+        "patients": f"{m['patient'].nunique():,}",
+        "age, median (IQR)": "",
+        "female (%)": f"{100 * (m['sex'] == 'Female').sum() / len(m):.1f}",
+        "labels per ECG": f"{y.sum(1).mean():.2f}",
+        "macro-AUPRC floor": f"{y.mean():.3f}",
+    }
+    for cl in show:
+        tot[f"{cl} (%)"] = f"{100 * y[:, c['classes'].index(cl)].mean():.1f}"
+    rows.append(tot)
+    emit(pd.DataFrame(rows).set_index("source"), "table1_protocol",
+         "Table 1. Composition of the four harmonised ECG sources. Counts "
+         "are the records retained after harmonisation to the 13-label "
+         "space; records carrying no label inside that space were dropped "
+         "before any splitting. Patients are unique identifiers within a "
+         "source, so the ratio to records shows that only PTB-XL repeats "
+         "patients (17,928 patients over 20,487 records); identifiers are "
+         "not comparable between sources and the Total row therefore sums "
+         "within-source counts. Sex is normalised across sources, which "
+         "record it differently; age is missing for 221 records in total "
+         "and the median is over those present. Labels per ECG is the mean "
+         "number of positive labels. The four diagnoses shown span the "
+         "prevalence range of the label space and are named from it: there "
+         "is no atrial fibrillation label in this harmonisation. Full "
+         "13-class prevalences are in Supplementary Table S1. Inputs are "
+         f"10 s, 12 leads, decimated to {FS_OUT} Hz. Prevalence differences "
+         "The macro-AUPRC floor is the macro-average of per-class "
+         "prevalence, which is what a random scorer attains, and is given "
+         "so Table 3 can be read against it rather than against zero.")
+
+
+def table_s1_prevalence(runs=None, boot=None):
+    """Supplement: every harmonised class, every source.
+
+    Figure 2 shows external AUPRC varying far more by source than by
+    architecture. A reader cannot tell from that alone how much of the
+    variation is prevalence and how much is population or labelling, so
+    the full composition is given here rather than summarised away.
+    """
+    prev = prevalence()
+    c = cohort()
+    n = {sname(src): int((c["index"]["source"] == src).sum())
+         for src in SOURCES}
+    df = prev.copy()
+    df["all sources"] = [100.0 * float(c["y"][:, j].mean())
+                         for j in range(len(c["classes"]))]
+    df = df.sort_values("all sources", ascending=False)
+    df = df.map(lambda v: f"{v:.2f}")
+    df.index.name = "class"
+    emit(df, "tableS1_prevalence",
+         "Table S1. Prevalence (%) of each harmonised diagnostic class by "
+         "source, ordered by pooled prevalence. Denominators are the "
+         "retained records per source: "
+         + ", ".join(f"{k} {v:,}" for k, v in n.items())
+         + f", total {sum(n.values()):,}. A class is a positive label on a "
+         "record, and records may carry several, so columns do not sum to "
+         "100. These are label frequencies in the harmonised space, not "
+         "clinical incidence: a diagnosis absent from a source's original "
+         "coding appears here as 0.00 and cannot be distinguished from a "
+         "diagnosis that was coded and never observed, so a zero is not "
+         "evidence of absence in that population.")
 
 
 def table2(runs, dep):
@@ -298,8 +416,28 @@ def table4(runs, dep):
          "would be constant.")
 
 
-def bootstrap(runs):
-    """Equal-source mean AUPRC with a record-level interval."""
+def bootstrap(runs, cache=True):
+    """Equal-source mean AUPRC with a record-level interval.
+
+    Cached to disk. This is 20 configurations x 400 resamples over the
+    whole prediction matrix, and it dominates the cost of rebuilding the
+    assets -- but it is a pure function of the cached predictions, so
+    re-running it to restyle a figure burns minutes for an identical
+    answer. The key is the prediction files' names, sizes and mtimes, so
+    it invalidates itself the moment b1 or b2 writes anything new.
+    """
+    key = sorted((f.name, f.stat().st_size, int(f.stat().st_mtime))
+                 for f in TRAIN.glob("*.npz"))
+    stamp = hashlib.sha1(repr(key).encode()).hexdigest()[:16]
+    cf = TRAIN.parent / f"boot_{FS_OUT}hz.json"
+    if cache and cf.exists():
+        try:
+            blob = json.loads(cf.read_text())
+            if blob.get("stamp") == stamp:
+                print("    (bootstrap cache hit)")
+                return {(r[0], r[1]): tuple(r[2:]) for r in blob["rows"]}
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
     rng = np.random.default_rng(0)
     out = {}
     for b in BUDGETS:
@@ -319,116 +457,818 @@ def bootstrap(runs):
             out[(m, b)] = (pt, float(np.percentile(reps, 2.5)),
                            float(np.percentile(reps, 97.5)))
             print(f"    bootstrapped {m}/{b}", flush=True)
+    if cache:
+        cf.write_text(json.dumps(
+            {"stamp": stamp,
+             "rows": [[m, b, *v] for (m, b), v in out.items()]}, indent=1))
     return out
 
 
 # ---------------------------------------------------------------- figures
-def figure1(runs, dep):
-    """Benchmark design, as three labelled stages.
+# --------------------------------------------------------------- icons
+# Each family is named after a block, so the figure draws that block
+# rather than a generic box. The glyphs are schematic on purpose: the
+# point is that a reader can see at a glance that MobileNetV2 expands
+# and contracts while FasterNet convolves a quarter of its channels and
+# passes the rest through. Drawn as vectors so they stay sharp in print
+# and carry no third-party licence.
+def _icon_axes(fig, x, y, w, h, z=6):
+    ax = fig.add_axes([x, y, w, h], zorder=z)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_axis_off()
+    ax.patch.set_alpha(0)
+    return ax
 
-    Laid out to be read rather than narrated: a banded stage per logical
-    step, one block per stage, and the three questions side by side with
-    the claim each one is allowed to support ruled off beneath it. Every
-    count is read from the artefacts, so the figure cannot drift from
-    the data it describes.
+
+def _bar(ax, x, w, h, c, alpha=1.0, ls="solid", lw=1.0):
+    ax.add_patch(matplotlib.patches.FancyBboxPatch(
+        (x, 0.5 - h / 2), w, h,
+        boxstyle="round,pad=0,rounding_size=0.04",
+        facecolor=c, edgecolor=c, alpha=alpha, linewidth=lw,
+        linestyle=ls))
+
+
+def _arrow(ax, x0, y0, x1, y1, c, lw=1.0, style="-|>"):
+    ax.annotate("", xy=(x1, y1), xytext=(x0, y0),
+                arrowprops=dict(arrowstyle=style, color=c, lw=lw,
+                                shrinkA=0, shrinkB=0))
+
+
+def family_icon(fig, fam, x, y, w, h, c):
+    """Draw `fam`'s defining block mechanism."""
+    ax = _icon_axes(fig, x, y, w, h)
+    pale = matplotlib.colors.to_rgba(c, 0.30)
+
+    if fam == "fcn":                                   # plain convolution
+        for i, hh in enumerate((0.45, 0.65, 0.85)):
+            _bar(ax, 0.14 + i * 0.26, 0.17, hh, pale, lw=1.1)
+            _bar(ax, 0.14 + i * 0.26, 0.17, hh, "none", lw=1.1)
+            ax.add_patch(matplotlib.patches.FancyBboxPatch(
+                (0.14 + i * 0.26, 0.5 - hh / 2), 0.17, hh,
+                boxstyle="round,pad=0,rounding_size=0.04",
+                facecolor=pale, edgecolor=c, linewidth=1.1))
+
+    elif fam == "resnet":                              # residual + skip
+        ax.add_patch(matplotlib.patches.FancyBboxPatch(
+            (0.18, 0.22), 0.46, 0.42,
+            boxstyle="round,pad=0,rounding_size=0.06",
+            facecolor=pale, edgecolor=c, linewidth=1.1))
+        ax.add_patch(matplotlib.patches.Arc(
+            (0.41, 0.63), 0.52, 0.52, theta1=12, theta2=168,
+            edgecolor=c, linewidth=1.1))
+        ax.add_patch(matplotlib.patches.Circle((0.78, 0.43), 0.085,
+                                               facecolor="white",
+                                               edgecolor=c, linewidth=1.1))
+        ax.plot([0.715, 0.845], [0.43, 0.43], color=c, lw=0.9)
+        ax.plot([0.78, 0.78], [0.365, 0.495], color=c, lw=0.9)
+        _arrow(ax, 0.64, 0.43, 0.69, 0.43, c, 1.0)
+
+    elif fam == "tcn":                                 # dilated convolution
+        for i in range(5):
+            ax.add_patch(matplotlib.patches.Circle(
+                (0.12 + i * 0.19, 0.20), 0.052, facecolor=pale,
+                edgecolor=c, linewidth=0.9))
+        for i in range(3):
+            ax.add_patch(matplotlib.patches.Circle(
+                (0.12 + i * 0.38, 0.78), 0.052, facecolor=pale,
+                edgecolor=c, linewidth=0.9))
+        for src_, dst in ((0, 0), (2, 0), (2, 1), (4, 1), (4, 2)):
+            ax.plot([0.12 + src_ * 0.19, 0.12 + dst * 0.38],
+                    [0.25, 0.73], color=c, lw=0.75, alpha=0.85)
+
+    elif fam in ("mobilenetv2", "mobilenetv3"):        # inverted residual
+        ax.add_patch(matplotlib.patches.Polygon(
+            [(0.14, 0.40), (0.14, 0.60), (0.40, 0.80), (0.40, 0.20)],
+            closed=True, facecolor=pale, edgecolor=c, linewidth=1.0))
+        ax.add_patch(matplotlib.patches.Rectangle(
+            (0.42, 0.20), 0.14, 0.60, facecolor=pale, edgecolor=c,
+            linewidth=1.0))
+        ax.add_patch(matplotlib.patches.Polygon(
+            [(0.84, 0.40), (0.84, 0.60), (0.58, 0.80), (0.58, 0.20)],
+            closed=True, facecolor=pale, edgecolor=c, linewidth=1.0))
+        if fam == "mobilenetv3":                       # + squeeze-excite
+            ax.add_patch(matplotlib.patches.Circle(
+                (0.49, 0.90), 0.105, facecolor="white", edgecolor=c,
+                linewidth=1.0))
+            ax.plot([0.43, 0.465, 0.515, 0.55],
+                    [0.875, 0.875, 0.935, 0.935], color=c, lw=0.9)
+
+    elif fam == "shufflenetv2":                        # split + shuffle
+        for i, yy in enumerate((0.70, 0.30)):
+            ax.add_patch(matplotlib.patches.FancyBboxPatch(
+                (0.10, yy - 0.10), 0.22, 0.20,
+                boxstyle="round,pad=0,rounding_size=0.04",
+                facecolor=pale, edgecolor=c, linewidth=1.0))
+            ax.add_patch(matplotlib.patches.FancyBboxPatch(
+                (0.68, yy - 0.10), 0.22, 0.20,
+                boxstyle="round,pad=0,rounding_size=0.04",
+                facecolor=pale, edgecolor=c, linewidth=1.0))
+        _arrow(ax, 0.34, 0.70, 0.66, 0.30, c, 0.9)
+        _arrow(ax, 0.34, 0.30, 0.66, 0.70, c, 0.9)
+
+    elif fam == "ghostnet":                            # ghost module
+        ax.add_patch(matplotlib.patches.Rectangle(
+            (0.12, 0.26), 0.20, 0.48, facecolor=pale, edgecolor=c,
+            linewidth=1.1))
+        for i in range(2):
+            ax.add_patch(matplotlib.patches.Rectangle(
+                (0.56 + i * 0.17, 0.26), 0.14, 0.48,
+                facecolor="none", edgecolor=c, linewidth=0.9,
+                linestyle=(0, (2, 1.6))))
+        _arrow(ax, 0.34, 0.50, 0.53, 0.50, c, 0.9)
+
+    elif fam == "fasternet":                           # partial convolution
+        for i in range(4):
+            yy = 0.16 + i * 0.19
+            solid = i == 3
+            ax.add_patch(matplotlib.patches.Rectangle(
+                (0.14, yy), 0.40 if solid else 0.40, 0.14,
+                facecolor=pale if solid else "none", edgecolor=c,
+                linewidth=1.0 if solid else 0.75,
+                linestyle="solid" if solid else (0, (2, 1.6))))
+            if not solid:
+                _arrow(ax, 0.56, yy + 0.07, 0.88, yy + 0.07, c, 0.7)
+        _arrow(ax, 0.56, 0.73, 0.88, 0.73, c, 1.0)
+
+    elif fam == "repvit":                              # reparameterisation
+        for i, yy in enumerate((0.80, 0.50, 0.20)):
+            ax.add_patch(matplotlib.patches.Rectangle(
+                (0.10, yy - 0.065), 0.24, 0.13, facecolor=pale,
+                edgecolor=c, linewidth=0.9))
+            _arrow(ax, 0.36, yy, 0.56, 0.50, c, 0.8)
+        ax.add_patch(matplotlib.patches.FancyBboxPatch(
+            (0.60, 0.34), 0.28, 0.32,
+            boxstyle="round,pad=0,rounding_size=0.05",
+            facecolor=pale, edgecolor=c, linewidth=1.2))
+
+    elif fam == "mobilenetv4":                         # universal IB
+        ax.add_patch(matplotlib.patches.FancyBboxPatch(
+            (0.08, 0.18), 0.84, 0.64,
+            boxstyle="round,pad=0,rounding_size=0.06",
+            facecolor="none", edgecolor=c, linewidth=1.0,
+            linestyle=(0, (2.5, 1.6))))
+        ax.add_patch(matplotlib.patches.FancyBboxPatch(
+            (0.18, 0.30), 0.28, 0.40,
+            boxstyle="round,pad=0,rounding_size=0.05",
+            facecolor=pale, edgecolor=c, linewidth=1.0))
+        ax.add_patch(matplotlib.patches.FancyBboxPatch(
+            (0.56, 0.36), 0.26, 0.28,
+            boxstyle="round,pad=0,rounding_size=0.05",
+            facecolor=pale, edgecolor=c, linewidth=1.0))
+        _arrow(ax, 0.47, 0.50, 0.55, 0.50, c, 0.9)
+    return ax
+
+
+def _glyph(fig, kind, x, y, sz, c):
+    """Small metadata marks beside the source-card statistics."""
+    ax = _icon_axes(fig, x, y, sz, sz * fig.get_figwidth()
+                    / fig.get_figheight())
+    if kind == "records":                     # stacked database discs
+        for i in range(3):
+            ax.add_patch(matplotlib.patches.Ellipse(
+                (0.5, 0.26 + i * 0.24), 0.78, 0.22, facecolor="none",
+                edgecolor=c, linewidth=0.9))
+    elif kind == "leads":                     # a tiny trace
+        xx = np.linspace(0, 1, 60)
+        yy = 0.5 + 0.30 * np.exp(-((xx - 0.42) / 0.045) ** 2) \
+            - 0.12 * np.exp(-((xx - 0.52) / 0.05) ** 2)
+        ax.plot(xx, yy, color=c, lw=0.9)
+    elif kind == "site":                      # institution
+        ax.add_patch(matplotlib.patches.Rectangle(
+            (0.16, 0.10), 0.68, 0.62, facecolor="none", edgecolor=c,
+            linewidth=0.9))
+        for i in range(3):
+            for j in range(2):
+                ax.add_patch(matplotlib.patches.Rectangle(
+                    (0.28 + i * 0.16, 0.24 + j * 0.22), 0.09, 0.13,
+                    facecolor=c, edgecolor="none", alpha=0.55))
+        ax.plot([0.5, 0.5], [0.72, 0.92], color=c, lw=0.9)
+    return ax
+
+
+# A photograph of the board, if one has been supplied. Drop a file at
+# benchmark_mcu/assets/board.(png|jpg|jpeg|webp) and Figure 1 uses it in
+# place of the drawing below.
+#
+# Nothing is downloaded to fill this in. A manufacturer's product shot is
+# copyrighted, and a Creative Commons photo would oblige the manuscript
+# to carry attribution and, under a ShareAlike licence, raise questions
+# about the figure as a whole -- a poor trade for one inset. The two
+# clean options are a photograph taken of the board itself, which is the
+# photographer's own work and needs no permission, or the vector drawing
+# below, which is original to this repository. Both are safe; the
+# drawing is the default because it always exists.
+BOARD_IMG = HERE / "assets"
+
+
+def _board_photo():
+    for ext in ("png", "jpg", "jpeg", "webp"):
+        f = BOARD_IMG / f"board.{ext}"
+        if f.exists():
+            return f
+    return None
+
+
+def board_icon(fig, x, y, w, h):
+    """The STM32F411E-DISCO carrying the STM32F411VET6.
+
+    Uses a photograph when one has been supplied at
+    benchmark_mcu/assets/board.*, which is the preferred case -- a photo
+    of the actual board is both the honest illustration and free of any
+    licensing question, because it is the photographer's own work.
+
+    No usable photograph of *this* board exists under a permissive
+    licence. The only STM32F4 Discovery photo on Wikimedia Commons is
+    CC BY-SA 2.0 and shows the F407 kit, a different board; captioning
+    it as the F411E-DISCO would misstate the hardware the measurements
+    came from. So the fallback below is drawn: solder mask with a
+    shaded edge and a cast shadow, the ST-LINK section fenced off at the
+    top, both USB connectors, the LQFP100 part with leads on four sides
+    and its pin-1 mark, the four user LEDs, the dual-row headers, and
+    the MEMS and audio parts at the corners.
     """
-    from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+    photo = _board_photo()
+    if photo is not None:
+        ax = fig.add_axes([x, y, w, h], zorder=6)
+        ax.imshow(plt.imread(str(photo)), interpolation="antialiased")
+        ax.set_axis_off()
+        ax.patch.set_alpha(0)
+        return ax
 
-    n_runs = len(runs)
-    n_dep_ok = sum(1 for d in dep.values() if d.get("deployed"))
-    n_fam = len({k[0] for k in runs})
-    n_rec = sum(runs[k]["y"].shape[0] for k in runs
-                if k[0] == next(iter(runs))[0] and k[1] == BUDGETS[0])
+    ax = _icon_axes(fig, x, y, w, h)
+    mask, deep, silk, chip = "#0f567d", "#09405e", "#e8eef3", "#1e242a"
 
-    FIG_W, FIG_H = 7.6, 5.4
-    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H), facecolor=SURFACE)
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0, 100)
-    ax.axis("off")
+    ax.add_patch(matplotlib.patches.FancyBboxPatch(      # cast shadow
+        (0.11, 0.005), 0.86, 0.93,
+        boxstyle="round,pad=0,rounding_size=0.035",
+        facecolor="#9a9a93", edgecolor="none", alpha=0.35, zorder=0))
+    ax.add_patch(matplotlib.patches.FancyBboxPatch(      # solder mask
+        (0.06, 0.035), 0.88, 0.93,
+        boxstyle="round,pad=0,rounding_size=0.035",
+        facecolor=mask, edgecolor=deep, linewidth=0.9, zorder=1))
+    ax.add_patch(matplotlib.patches.FancyBboxPatch(      # top highlight
+        (0.08, 0.60), 0.84, 0.355,
+        boxstyle="round,pad=0,rounding_size=0.03",
+        facecolor="#ffffff", edgecolor="none", alpha=0.055, zorder=2))
 
-    BAND = "#f1efe8"
-    FILL = {"data": "#e8f0fa", "model": "#eaf3ec", "rq": "#f7f6f2"}
-    EDGE = {"data": "#3f7cbf", "model": "#4e8f69", "rq": "#9b9b93"}
-    ARR = "#6b6b63"
+    ax.plot([0.06, 0.94], [0.760, 0.760], color=silk, lw=0.5,
+            linestyle=(0, (2.0, 1.7)), alpha=0.7, zorder=3)
+    ax.add_patch(matplotlib.patches.Rectangle(           # ST-LINK MCU
+        (0.41, 0.805), 0.18, 0.085, facecolor=chip, edgecolor="#4e5a64",
+        linewidth=0.4, zorder=3))
+    ax.add_patch(matplotlib.patches.Rectangle(           # mini-USB
+        (0.40, 0.925), 0.20, 0.052, facecolor="#b6bec5",
+        edgecolor="#8e979e", linewidth=0.3, zorder=4))
+    ax.add_patch(matplotlib.patches.Rectangle(           # micro-USB
+        (0.44, 0.030), 0.12, 0.036, facecolor="#b6bec5",
+        edgecolor="#8e979e", linewidth=0.3, zorder=4))
 
-    def band(y0, y1, label):
-        ax.add_patch(plt.Rectangle((1, y0), 98, y1 - y0, facecolor=BAND,
-                                   edgecolor="none", zorder=0))
-        ax.text(3, y1 - 2.4, label, fontsize=6.4, color=INK2,
-                fontweight="bold", va="center", zorder=3)
+    ax.add_patch(matplotlib.patches.Rectangle(           # STM32F411VET6
+        (0.365, 0.350), 0.27, 0.205, facecolor=chip, edgecolor="#5b6670",
+        linewidth=0.5, zorder=4))
+    for i in range(8):
+        q = 0.381 + i * 0.0335
+        ax.plot([q, q], [0.555, 0.577], color="#99a2a9", lw=0.32, zorder=3)
+        ax.plot([q, q], [0.328, 0.350], color="#99a2a9", lw=0.32, zorder=3)
+    for i in range(5):
+        q = 0.370 + i * 0.043
+        ax.plot([0.343, 0.365], [q, q], color="#99a2a9", lw=0.32, zorder=3)
+        ax.plot([0.635, 0.657], [q, q], color="#99a2a9", lw=0.32, zorder=3)
+    ax.add_patch(matplotlib.patches.Circle(              # pin-1 mark
+        (0.389, 0.533), 0.011, facecolor="#8d969d", edgecolor="none",
+        zorder=5))
 
-    def box(x, y, w, h, kind, title, body, rule=None,
-            fs_t=8.2, fs_b=6.9):
-        ax.add_patch(FancyBboxPatch(
-            (x, y), w, h, boxstyle="round,pad=0.6", linewidth=1.2,
-            facecolor=FILL[kind], edgecolor=EDGE[kind], zorder=2))
-        t_lines = title.count(NL) + 1
-        ty = y + h - 2.2 - (t_lines - 1) * 1.6
-        ax.text(x + w / 2, ty, title, ha="center", va="top",
-                fontsize=fs_t, color=INK, fontweight="bold", zorder=4,
-                linespacing=1.4)
-        top = ty - t_lines * fs_t * 0.26 - 1.0
-        ry = y + 5.2 if rule else y
-        ax.text(x + w / 2, (top + ry) / 2, body, ha="center",
-                va="center", fontsize=fs_b, color=INK, zorder=4,
-                linespacing=1.55)
-        if rule:
-            ax.plot([x + 2.2, x + w - 2.2], [ry, ry], lw=0.8,
-                    color=EDGE[kind], zorder=4)
-            ax.text(x + w / 2, y + 2.6, rule, ha="center", va="center",
-                    fontsize=6.1, color=INK2, style="italic", zorder=4,
-                    linespacing=1.4)
+    for dx, dy, cc in ((0.0, 0.112, "#f2a52c"), (0.0, -0.112, "#3fa7e8"),
+                       (-0.150, 0.0, "#4cbd72"), (0.150, 0.0, "#e2543c")):
+        ax.add_patch(matplotlib.patches.Circle(
+            (0.50 + dx, 0.452 + dy), 0.023, facecolor=cc,
+            edgecolor="#ffffff", linewidth=0.25, zorder=5))
 
-    def arrow(x, y1, y2, side=None):
-        ax.add_patch(FancyArrowPatch(
-            (x, y1), (x, y2), arrowstyle="-|>", mutation_scale=10,
-            color=ARR, lw=1.1, zorder=1, shrinkA=0, shrinkB=0))
-        if side:
-            ax.text(x + 2, (y1 + y2) / 2, side, fontsize=6.2, color=INK2,
-                    ha="left", va="center", style="italic", zorder=4)
+    for sx in (0.082, 0.846):                            # dual-row headers
+        ax.add_patch(matplotlib.patches.Rectangle(
+            (sx - 0.006, 0.078), 0.084, 0.620, facecolor=deep,
+            edgecolor="none", zorder=2))
+        for i in range(12):
+            for k in range(2):
+                ax.add_patch(matplotlib.patches.Rectangle(
+                    (sx + k * 0.036, 0.086 + i * 0.0505), 0.027, 0.031,
+                    facecolor="#d8c074", edgecolor="#a8904a",
+                    linewidth=0.2, zorder=3))
 
-    # ---- stage 1 -------------------------------------------------------
-    band(74, 99, "STAGE 1  ·  DATA AND PROTOCOL")
-    box(8, 78, 84, 15, "data", "Four clinical ECG sources",
-        "PTB-XL  |  Georgia  |  Chapman  |  Ningbo" + NL
-        + f"{n_rec:,} retained records, 13 harmonised labels, 10 s at "
-          "100 Hz")
-    arrow(50, 78, 71.5,
-          "leave-one-source-out: train on three, test on the fourth, "
-          "four rotations")
+    for cx_, cy_, ww, hh in ((0.245, 0.690, 0.075, 0.055),
+                             (0.735, 0.690, 0.075, 0.055),
+                             (0.285, 0.165, 0.065, 0.050),
+                             (0.715, 0.165, 0.065, 0.050)):
+        ax.add_patch(matplotlib.patches.Rectangle(
+            (cx_ - ww / 2, cy_ - hh / 2), ww, hh, facecolor="#272f36",
+            edgecolor="#3d474f", linewidth=0.25, zorder=3))
+    for bx_, cc in ((0.20, "#3f6fa8"), (0.80, "#2b2f33")):   # buttons
+        ax.add_patch(matplotlib.patches.Circle(
+            (bx_, 0.395), 0.030, facecolor=cc, edgecolor="#8e979e",
+            linewidth=0.3, zorder=4))
 
-    # ---- stage 2 -------------------------------------------------------
-    band(46, 72, "STAGE 2  ·  MODELS AND CONTROLLED BUDGETS")
-    box(8, 50, 84, 17, "model",
-        f"{n_fam} encoder families  ×  2 size budgets",
-        "compact ≤ 32 KB INT8 weights   |   standard ≤ 128 KB"
-        + NL + "each family scaled to the largest width that fits" + NL
-        + "everything else pinned: loss, optimiser, epochs, seed")
-    arrow(50, 50, 43.5, f"{n_runs} trained models")
+    # The board is laid out portrait above, which is how the real one is
+    # oriented, but the deployment card is wide and short. A quarter turn
+    # fills it far better. Rotating the finished artists keeps one set of
+    # coordinates to maintain instead of two.
+    turn = (matplotlib.transforms.Affine2D().rotate_deg(90).translate(1, 0)
+            + ax.transData)
+    for art in list(ax.patches) + list(ax.lines):
+        art.set_transform(turn)
+    return ax
 
-    # ---- stage 3 -------------------------------------------------------
-    band(1, 44, "STAGE 3  ·  RESEARCH QUESTIONS")
-    rq = [
-        ("RQ1" + NL + "External discrimination",
-         "external macro-AUPRC and" + NL + "AUROC per held-out source," + NL
-         + "FP32 and INT8, record-level" + NL + "bootstrap intervals",
-         "Record-level intervals ≠" + NL
-         + "between-source uncertainty"),
-        ("RQ2" + NL + "Hardware characterisation",
-         "ST Edge AI → arm-none-eabi" + NL + "→ flash over SWD;"
-         + NL + "measured Flash, peak SRAM" + NL
-         + f"and DWT latency; {n_dep_ok} of {len(dep)} ran",
-         "MACC ≠" + NL + "measured latency"),
-        ("RQ3" + NL + "Performance–resource trade-offs",
-         "observed trade-offs across" + NL + "families and budgets;" + NL
-         + "non-dominated configurations" + NL + "among those tested",
-         "Pareto frontier is descriptive," + NL + "not architecture search"),
-    ]
-    w, gap = 28.5, 3.2
-    x0 = (100 - (3 * w + 2 * gap)) / 2
-    for k, (title, body, rule) in enumerate(rq):
-        box(x0 + k * (w + gap), 5, w, 33, "rq", title, body, rule,
-            fs_t=7.0, fs_b=6.4)
+
+def _flow(fig, x, y, direction="right", size=15, shaft=0.010,
+          color="#555550", lw=2.4, z=8):
+    """A flow arrow between panels, in figure coordinates.
+
+    Drawn as a shaft plus a marker rather than as a text character or a
+    FancyArrow. A ">" glyph is set in whatever the font offers and
+    reads as punctuation, and a FancyArrow drawn in figure coordinates
+    has its head stretched by the canvas aspect -- this figure is two
+    and a half times wider than it is tall, so a vertical head would
+    come out squat and a horizontal one spindly. Marker sizes are in
+    points, so the head keeps its shape whatever the canvas does.
+    """
+    if shaft:
+        xs = [x - shaft, x] if direction == "right" else [x, x]
+        ys = [y, y] if direction == "right" else [y + shaft, y]
+        fig.add_artist(matplotlib.lines.Line2D(
+            xs, ys, transform=fig.transFigure, color=color, lw=lw,
+            solid_capstyle="butt", zorder=z))
+    fig.add_artist(matplotlib.lines.Line2D(
+        [x], [y], transform=fig.transFigure, linewidth=0,
+        marker=(">" if direction == "right" else "v"), markersize=size,
+        markerfacecolor=color, markeredgecolor=color, zorder=z))
+
+
+def _rrect(fig, x, y, w, h, fc, ec="none", lw=0.8, r=0.012, z=0):
+    """Rounded panel in figure coordinates."""
+    fig.add_artist(matplotlib.patches.FancyBboxPatch(
+        (x, y), w, h, boxstyle=f"round,pad=0,rounding_size={r}",
+        transform=fig.transFigure, facecolor=fc, edgecolor=ec,
+        linewidth=lw, zorder=z, mutation_aspect=fig.get_figwidth()
+        / fig.get_figheight()))
+
+
+def _strip(fig, x, y, w, h, sig, color, lw=0.55, z=4):
+    """A real ECG trace, scaled to its own range, no axes."""
+    ax = fig.add_axes([x, y, w, h], zorder=z)
+    ax.plot(sig, lw=lw, color=color, solid_joinstyle="round")
+    ax.set_xlim(0, len(sig) - 1)
+    pad = 0.12 * (np.ptp(sig) or 1.0)
+    ax.set_ylim(sig.min() - pad, sig.max() + pad)
+    ax.set_axis_off()
+    ax.patch.set_alpha(0)
+    return ax
+
+
+def _clean_record(sig, candidates, lead=1, probe=400):
+    """Pick a legible example trace from a pool of real records.
+
+    Taking the first or middle candidate gives whatever that index
+    happens to hold, and in a clinical corpus that is often a record
+    with heavy baseline wander or lead noise -- true to the data, but it
+    illustrates nothing. So a fixed-size evenly spaced probe of the pool
+    is scored on sample-to-sample roughness relative to its own
+    amplitude, and the quietest is used. Deterministic, and no record is
+    excluded from the study by it: this only chooses what to draw.
+    """
+    if not len(candidates):
+        return None
+    idx = candidates[np.linspace(0, len(candidates) - 1,
+                                 min(probe, len(candidates))).astype(int)]
+    best, best_score = int(idx[0]), np.inf
+    for r in idx:
+        x = np.asarray(sig[int(r), lead], dtype=np.float32)
+        sd = float(x.std())
+        if sd < 1e-6:
+            continue
+        score = float(np.abs(np.diff(x)).mean()) / sd
+        if score < best_score:
+            best, best_score = int(r), score
+    return best
+
+
+def figure1(runs, dep):
+    """Graphical overview: sources, benchmark, outputs.
+
+    An overview, not a protocol. Everything drawn comes from the
+    artefacts: the ECG traces are real records pulled from the cohort by
+    index, each card showing all twelve leads the model receives; the
+    family glyphs are each architecture's defining block; the RQ1-RQ3
+    insets are the actual results in miniature. If the study changes the
+    figure changes with it rather than going quietly stale.
+    """
+    c = cohort()
+    m, y, cls = c["index"], c["y"], c["classes"]
+    sig = np.load(c["signals"], mmap_mode="r")
+
+    TXT = "#000000"
+    SHORT = {"mobilenetv4": "MobileNetV4" + NL + "(Conv)"}
+    # panel fill, panel border, heading colour
+    PAN = {"A": ("#eef3fa", "#9bb8db", "#1f4e79"),
+           "B": ("#edf5ef", "#8dbd9e", "#1e6b35"),
+           "C": ("#fdf4e8", "#e0b483", "#9a6318")}
+    SRC = {"PTBXL": ("#dbe8f7", "#2f6fb0"),
+           "Georgia": ("#fbe4d3", "#c4692a"),
+           "Chapman": ("#dcefe2", "#2f8a4c"),
+           "Ningbo": ("#e7e1f6", "#6a4fb0")}
+    fig = plt.figure(figsize=(16.4, 6.6), facecolor=SURFACE)
+
+    for key, x0, w, title in [("A", 0.006, 0.298, "A. Clinical ECG sources"),
+                              ("B", 0.320, 0.324,
+                               "B. Lightweight architecture benchmark"),
+                              ("C", 0.660, 0.336, "C. Evaluation outputs")]:
+        fc, ec, hc = PAN[key]
+        _rrect(fig, x0, 0.012, w, 0.946, fc, ec, 1.0)
+        fig.text(x0 + 0.012, 0.930, title, fontsize=13.5, weight="bold",
+                 color=hc, va="center")
+
+    # ---------------------------------------------------------- column A
+    x0 = 0.006
+    nsr = cls.index("NSR")
+    cw, chh = 0.139, 0.212
+    for i, src in enumerate(SOURCES):
+        cx = x0 + 0.010 + (i % 2) * 0.1465
+        cy = 0.688 - (i // 2) * 0.224
+        tint, accent = SRC[src]
+        _rrect(fig, cx, cy, cw, chh, tint, accent, 1.0, 0.010, z=2)
+        fig.text(cx + cw / 2, cy + chh - 0.026, sname(src), fontsize=11.5,
+                 weight="bold", color=accent, ha="center", va="center",
+                 zorder=6)
+        # the trace sits on white so twelve leads stay legible on a tint
+        _rrect(fig, cx + 0.007, cy + 0.010, cw - 0.014, chh - 0.056,
+               "#ffffff", accent, 0.5, 0.007, z=3)
+        k = np.flatnonzero((m["source"] == src).values
+                           & (y[:, nsr] == 1) & (y.sum(1) == 1))
+        rec = _clean_record(sig, k)
+        if rec is None:
+            rec = int(np.flatnonzero((m["source"] == src).values)[0])
+        r12 = np.asarray(sig[rec], dtype=np.float32)
+        axl = fig.add_axes([cx + 0.012, cy + 0.016, cw - 0.024,
+                            chh - 0.068], zorder=5)
+        for li in range(12):
+            v = r12[li]
+            sd = v.std() or 1.0
+            axl.plot(np.arange(len(v)), (v - v.mean()) / sd * 0.32 - li,
+                     lw=0.26, color="#333333", solid_joinstyle="round")
+        axl.set_xlim(0, r12.shape[1] - 1)
+        axl.set_ylim(-11.8, 1.0)
+        axl.set_axis_off()
+        axl.patch.set_alpha(0)
+
+    _rrect(fig, x0 + 0.010, 0.358, 0.286, 0.086, "#dbe8f7", "#9bb8db",
+           1.0, 0.010, z=2)
+    axw = fig.add_axes([x0 + 0.020, 0.376, 0.032, 0.048], zorder=5)
+    v = np.asarray(sig[int(np.flatnonzero((m["source"] == "PTBXL").values)[0]),
+                       1], dtype=np.float32)[:260]
+    axw.plot(v, lw=1.0, color="#2f6fb0")
+    axw.set_axis_off()
+    axw.patch.set_alpha(0)
+    fig.text(x0 + 0.062, 0.420, "Harmonised label space", fontsize=10.5,
+             weight="bold", color=TXT, zorder=6)
+    fig.text(x0 + 0.062, 0.398, f"{len(cls)} diagnostic labels retained",
+             fontsize=8.6, color=TXT, zorder=6)
+    fig.text(x0 + 0.062, 0.378, f"across all sources  |  {len(m):,} "
+             "recordings", fontsize=8.6, color=TXT, zorder=6)
+
+    fig.text(x0 + 0.010, 0.314, "Leave-one-source-out evaluation",
+             fontsize=11.0, weight="bold", color=TXT, zorder=6)
+    fw_, fg = 0.0665, 0.0065
+    for j, src in enumerate(SOURCES):
+        tint, accent = SRC[src]
+        bx = x0 + 0.010 + j * (fw_ + fg)
+        _rrect(fig, bx, 0.148, fw_, 0.136, tint, accent, 1.0, 0.009, z=2)
+        fig.text(bx + fw_ / 2, 0.258, f"Fold {j + 1}", fontsize=9.5,
+                 weight="bold", color=TXT, ha="center", va="center",
+                 zorder=6)
+        fig.text(bx + fw_ / 2, 0.219, "Test:", fontsize=8.2, color=TXT,
+                 ha="center", va="center", zorder=6)
+        fig.text(bx + fw_ / 2, 0.184, sname(src), fontsize=9.2,
+                 weight="bold", color=accent, ha="center", va="center",
+                 zorder=6)
+    fig.add_artist(matplotlib.lines.Line2D(
+        [x0 + 0.014, x0 + 0.014, x0 + 0.288, x0 + 0.288],
+        [0.132, 0.118, 0.118, 0.132], transform=fig.transFigure,
+        color="#6f6f69", lw=1.0))
+    for j in range(len(SOURCES)):
+        tx = x0 + 0.010 + j * (fw_ + fg) + fw_ / 2
+        fig.add_artist(matplotlib.lines.Line2D(
+            [tx, tx], [0.118, 0.142], transform=fig.transFigure,
+            color="#6f6f69", lw=0.8))
+    fig.text(x0 + 0.151, 0.086, "train on three sources, test on the "
+             "fourth" + NL + "(four rotations)", fontsize=8.4, color=TXT,
+             ha="center", va="center", linespacing=1.7, zorder=6)
+
+    # ---------------------------------------------------------- column B
+    x0 = 0.320
+    _rrect(fig, x0 + 0.010, 0.736, 0.310, 0.172, "#ffffff", PAN["B"][1],
+           1.0, 0.010, z=2)
+    fig.text(x0 + 0.024, 0.868, "12-lead ECG input", fontsize=12.6,
+             weight="bold", color=TXT, zorder=6)
+    fig.text(x0 + 0.024, 0.826, f"10 s at {FS_OUT} Hz", fontsize=9.6,
+             color=TXT, zorder=6)
+    fig.text(x0 + 0.024, 0.796, f"(12 x {FS_OUT * 10:,} samples)",
+             fontsize=9.6, color=TXT, zorder=6)
+    rec0 = _clean_record(sig, np.flatnonzero(
+        (m["source"] == "PTBXL").values & (y[:, nsr] == 1)
+        & (y.sum(1) == 1)))
+    axin = fig.add_axes([x0 + 0.144, 0.762, 0.164, 0.134], zorder=5)
+    r12 = np.asarray(sig[rec0], dtype=np.float32)
+    for li in range(12):
+        v = r12[li]
+        sd = v.std() or 1.0
+        axin.plot(np.arange(len(v)), (v - v.mean()) / sd * 0.40 - li,
+                  lw=0.32, color="#333333")
+    axin.set_xlim(0, r12.shape[1] - 1)
+    axin.set_ylim(-11.8, 1.2)
+    axin.set_axis_off()
+    axin.patch.set_alpha(0)
+    # name the leads the way a 12-lead printout does, with an ellipsis
+    # standing in for the eight that are not labelled
+    for li, lab in ((0, "I"), (1, "II"), (2, "III"), (11, "V6")):
+        axin.text(-16, -li, lab, fontsize=6.6, color=TXT, ha="right",
+                  va="center")
+    for d in range(3):
+        axin.plot([-30], [-5.6 - d * 0.75], marker=".", ms=1.6,
+                  color=TXT, clip_on=False)
+    fig.add_artist(matplotlib.lines.Line2D(
+        [x0 + 0.144, x0 + 0.308], [0.756, 0.756], transform=fig.transFigure,
+        color=TXT, lw=0.9))
+    for q in (x0 + 0.144, x0 + 0.308):
+        fig.add_artist(matplotlib.lines.Line2D(
+            [q, q], [0.752, 0.760], transform=fig.transFigure, color=TXT,
+            lw=0.9))
+    fig.text(x0 + 0.226, 0.744, "10 seconds", fontsize=8.0, color=TXT,
+             ha="center", zorder=6)
+    _flow(fig, x0 + 0.165, 0.705, "down", size=7, shaft=0.020)
+
+    _rrect(fig, x0 + 0.010, 0.266, 0.310, 0.408, "#e4efe8", PAN["B"][1],
+           1.0, 0.010, z=2)
+    _rrect(fig, x0 + 0.010, 0.630, 0.310, 0.044, "#d4e7da", PAN["B"][1],
+           1.0, 0.010, z=3)
+    fig.text(x0 + 0.165, 0.652, f"{len(ZOO)} encoder families  ×  "
+             f"{len(BUDGETS)} size budgets", fontsize=11.5, weight="bold",
+             color=TXT, ha="center", va="center", zorder=6)
+    iw, ih = 0.0575, 0.118
+    for i, fam in enumerate(ZOO):
+        bx = x0 + 0.019 + (i % 5) * 0.0605
+        by = 0.502 - (i // 5) * 0.144
+        col = MODEL_COLOR[fam]
+        pale = matplotlib.colors.to_hex(
+            np.array(matplotlib.colors.to_rgb(col)) * 0.14
+            + np.ones(3) * 0.86)
+        _rrect(fig, bx, by, iw, ih, pale, col, 1.0, 0.008, z=3)
+        fig.text(bx + iw / 2, by + ih - 0.018,
+                 SHORT.get(fam, NICE[fam]), fontsize=6.6, weight="bold",
+                 color=col, ha="center", va="center", zorder=6,
+                 linespacing=1.25)
+        family_icon(fig, fam, bx + 0.007, by + 0.011, iw - 0.014, 0.076,
+                    col)
+    BUD = {"compact": ("#e7e3f6", "#6a4fb0"),
+           "standard": ("#fdf0d7", "#b8862a")}
+    for i, (b, lab) in enumerate(zip(BUDGETS,
+                                     ["≤ 32 KB INT8 weights",
+                                      "≤ 128 KB INT8 weights"])):
+        bx = x0 + 0.010 + i * 0.162
+        tint, accent = BUD[b]
+        _rrect(fig, bx, 0.278, 0.148, 0.060, tint, accent, 1.0, 0.009, z=4)
+        fig.text(bx + 0.074, 0.320, b.capitalize(), fontsize=10.0,
+                 weight="bold", color=TXT, ha="center", va="center",
+                 zorder=6)
+        fig.text(bx + 0.074, 0.296, lab, fontsize=8.0, color=TXT,
+                 ha="center", va="center", zorder=6)
+    _flow(fig, x0 + 0.165, 0.251, "down", size=7, shaft=0.014)
+
+    chain = [("Train (FP32)", "same protocol for" + NL
+              + "all models and sources", "#e6eef7", "#4a7ab0"),
+             ("Quantise (INT8)", "post-training" + NL
+              + "quantisation", "#fdf2de", "#c08f31"),
+             ("Deploy (STM32F411)", "measured on device:" + NL
+              + "Flash, SRAM, latency", "#e4f0e9", "#3f8a5c")]
+    for i, (head, sub, tint, accent) in enumerate(chain):
+        bx = x0 + 0.010 + i * 0.1067
+        _rrect(fig, bx, 0.030, 0.0967, 0.210, tint, accent, 1.0, 0.010, z=2)
+        fig.text(bx + 0.0484, 0.218, head, fontsize=9.0, weight="bold",
+                 color=TXT, ha="center", va="center", zorder=6)
+        fig.text(bx + 0.0484, 0.062, sub, fontsize=7.6, color=TXT,
+                 ha="center", va="center", linespacing=1.6, zorder=6)
+        if i == 0:
+            axn = _icon_axes(fig, bx + 0.0084, 0.092, 0.080, 0.112)
+            # real leads on the left, feeding the network on the right
+            for q, li in enumerate((0, 1, 6, 11)):
+                vv = r12[li][::8].astype(np.float64)
+                vv = vv - vv.mean()
+                vv = vv / (np.abs(vv).max() or 1.0)
+                axn.plot(np.linspace(0.02, 0.34, vv.size),
+                         0.80 - q * 0.20 + 0.052 * vv,
+                         lw=0.4, color="#8794a0")
+            NODE, EDGE = "#2f6fb0", "#b9cfe4"
+            layers = ((0.56, 3), (0.76, 4), (0.95, 1))
+            for (xa, na), (xb, nb) in zip(layers, layers[1:]):
+                for ia in range(na):
+                    for ib in range(nb):
+                        axn.plot([xa, xb],
+                                 [0.5 + (ia - (na - 1) / 2) * 0.22,
+                                  0.5 + (ib - (nb - 1) / 2) * 0.22],
+                                 color=EDGE, lw=0.3, zorder=0)
+            for xx, nn in layers:
+                for nq in range(nn):
+                    axn.add_patch(matplotlib.patches.Circle(
+                        (xx, 0.5 + (nq - (nn - 1) / 2) * 0.22), 0.050,
+                        facecolor=NODE if xx < 0.9 else "#9aa3ab",
+                        edgecolor="none", zorder=2))
+            _arrow(axn, 0.38, 0.50, 0.48, 0.50, "#8794a0", 0.7)
+        elif i == 1:
+            axq = _icon_axes(fig, bx + 0.0084, 0.092, 0.080, 0.112)
+            NODE, EDGE = "#9fc3e0", "#cfe0ee"
+            layers = ((0.07, 3), (0.24, 4), (0.41, 2))
+            for (xa, na), (xb, nb) in zip(layers, layers[1:]):
+                for ia in range(na):
+                    for ib in range(nb):
+                        axq.plot([xa, xb],
+                                 [0.5 + (ia - (na - 1) / 2) * 0.22,
+                                  0.5 + (ib - (nb - 1) / 2) * 0.22],
+                                 color=EDGE, lw=0.3, zorder=0)
+            for xx, nn in layers:
+                for nq in range(nn):
+                    axq.add_patch(matplotlib.patches.Circle(
+                        (xx, 0.5 + (nq - (nn - 1) / 2) * 0.22), 0.045,
+                        facecolor=NODE, edgecolor="#5f93bf", lw=0.4,
+                        zorder=2))
+            _arrow(axq, 0.49, 0.50, 0.59, 0.50, "#c08f31", 0.8)
+            axq.add_patch(matplotlib.patches.FancyBboxPatch(
+                (0.63, 0.33), 0.34, 0.34,
+                boxstyle="round,pad=0,rounding_size=0.09",
+                facecolor="#ffffff", edgecolor="#c08f31", lw=1.0))
+            axq.text(0.80, 0.50, "INT8", fontsize=6.6, weight="bold",
+                     color="#9a6520", ha="center", va="center")
+        else:
+            board_icon(fig, bx + 0.0194, 0.098, 0.058, 0.090)
+        if i < 2:
+            _flow(fig, bx + 0.1042, 0.140, "right", size=8,
+                  shaft=0.007, lw=1.6)
+
+    # ---------------------------------------------------------- column C
+    x0 = 0.660
+    budget = BUDGETS[0]
+    fams = [f for f in ZOO if (f, budget) in dep] or list(ZOO)
+    RQ = {1: ("#fdecea", "#b5362a"), 2: ("#e9f1f9", "#2f6fb0"),
+          3: ("#e6f2ea", "#2f8a4c")}
+
+    def bullets(xx, yy, lines, step=0.021):
+        for q, t in enumerate(lines):
+            fig.text(xx, yy - q * step, "•  " + t, fontsize=7.6,
+                     color=TXT, zorder=6)
+
+    tint, accent = RQ[1]
+    _rrect(fig, x0 + 0.010, 0.650, 0.322, 0.256, tint, accent, 1.0,
+           0.010, z=2)
+    fig.text(x0 + 0.022, 0.880, "RQ1. External discrimination",
+             fontsize=11.0, weight="bold", color=accent, zorder=6)
+    fig.text(x0 + 0.114, 0.856, "macro-AUPRC (FP32)", fontsize=7.8,
+             color=TXT, ha="center", zorder=6)
+    fig.text(x0 + 0.266, 0.856, "INT8 - FP32 (equal-source)",
+             fontsize=7.8, color=TXT, ha="center", zorder=6)
+    grid = np.array([[macro_ap(runs[(f, budget, s)]["y"],
+                               runs[(f, budget, s)]["p"])
+                      if (f, budget, s) in runs else np.nan
+                      for f in fams] for s in SOURCES])
+    axh = fig.add_axes([x0 + 0.040, 0.712, 0.148, 0.128], zorder=5)
+    im = axh.imshow(grid, aspect="auto", cmap="RdYlBu_r", vmin=0.33,
+                    vmax=0.62)
+    axh.set_xticks(range(len(fams)))
+    axh.set_xticklabels([MID[f] for f in fams], fontsize=5.6, color=TXT)
+    axh.set_yticks(range(len(SOURCES)))
+    axh.set_yticklabels([sname(s) for s in SOURCES], fontsize=6.4,
+                        color=TXT)
+    axh.tick_params(length=0, pad=1.5)
+    for sp in axh.spines.values():
+        sp.set_visible(False)
+    cax = fig.add_axes([x0 + 0.046, 0.672, 0.136, 0.011], zorder=5)
+    cb = fig.colorbar(im, cax=cax, orientation="horizontal")
+    cb.set_ticks(np.linspace(0.35, 0.60, 6))
+    cb.ax.tick_params(labelsize=5.4, length=1.5, pad=1.2, color=TXT,
+                      labelcolor=TXT)
+    cb.outline.set_visible(False)
+
+    ci_f = INT8 / "int8_ci.json"
+    if ci_f.exists():
+        ci = {(r["model"], r["budget"]): r
+              for r in json.loads(ci_f.read_text())}
+        axd = fig.add_axes([x0 + 0.212, 0.712, 0.108, 0.128], zorder=5)
+        shown = [f for f in fams if (f, budget) in ci]
+        for i, f in enumerate(shown):
+            r = ci[(f, budget)]
+            yy = len(shown) - 1 - i
+            axd.plot([r["lo"], r["hi"]], [yy, yy], lw=0.9,
+                     color=MODEL_COLOR[f], solid_capstyle="round")
+            axd.plot([r["d_auprc"]], [yy], "o", ms=2.1,
+                     color=MODEL_COLOR[f])
+        axd.axvline(0, color=TXT, lw=0.7, ls=(0, (2.5, 1.8)))
+        axd.set_yticks([])
+        axd.tick_params(length=0, pad=1.2, colors=TXT)
+        axd.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(3))
+        axd.tick_params(axis="x", labelsize=5.2, length=1.4, pad=1)
+        for sp in ("top", "right", "left"):
+            axd.spines[sp].set_visible(False)
+        axd.spines["bottom"].set_color("#b9b9b2")
+        axd.grid(axis="x", color="#d8d8d2", lw=0.4)
+        axd.patch.set_alpha(0)
+        axd.margins(y=0.10)
+
+    tint, accent = RQ[2]
+    _rrect(fig, x0 + 0.010, 0.344, 0.322, 0.288, tint, accent, 1.0,
+           0.010, z=2)
+    fig.text(x0 + 0.022, 0.606, "RQ2. Hardware characterisation",
+             fontsize=11.0, weight="bold", color=accent, zorder=6)
+    metrics = [("Flash", "KB", lambda d: d["total_flash_b"] / 1024),
+               ("Peak SRAM", "KB", lambda d: d["total_ram_b"] / 1024),
+               ("MACCs", "millions", lambda d: d["macc"] / 1e6),
+               ("Latency", "ms", lambda d: d["ms_median"])]
+    for i, (lab, unit, fn) in enumerate(metrics):
+        axb = fig.add_axes([x0 + 0.034 + i * 0.0785, 0.438, 0.056, 0.126],
+                           zorder=5)
+        vals = [fn(dep[(f, budget)]) if (f, budget) in dep else 0.0
+                for f in fams]
+        axb.bar(range(len(fams)), vals,
+                color=[MODEL_COLOR[f] for f in fams], width=0.78)
+        axb.set_title(lab, fontsize=7.4, color=TXT, pad=2.5,
+                      weight="bold")
+        axb.set_ylabel(unit, fontsize=5.6, color=TXT, labelpad=1)
+        axb.set_xticks([])
+        axb.tick_params(axis="y", labelsize=5.2, length=1.5, pad=1,
+                        colors=TXT)
+        for sp in ("top", "right", "bottom"):
+            axb.spines[sp].set_visible(False)
+        axb.spines["left"].set_color("#b9b9b2")
+        axb.patch.set_alpha(0)
+    bullets(x0 + 0.024, 0.408,
+            ["measured Flash, peak SRAM, MACCs and latency on STM32F411",
+             "both size budgets for each architecture family"])
+
+    tint, accent = RQ[3]
+    _rrect(fig, x0 + 0.010, 0.036, 0.322, 0.296, tint, accent, 1.0,
+           0.010, z=2)
+    fig.text(x0 + 0.022, 0.306, "RQ3. Performance-resource trade-offs",
+             fontsize=11.0, weight="bold", color=accent, zorder=6)
+    axs_ = fig.add_axes([x0 + 0.056, 0.142, 0.188, 0.140], zorder=5)
+    for b_, mk in zip(BUDGETS, ("o", "s")):
+        xs, ys, ss, csr = [], [], [], []
+        for f in ZOO:
+            if (f, b_) not in dep or not dep[(f, b_)].get("ms_median"):
+                continue
+            ks = [(f, b_, s_) for s_ in SOURCES if (f, b_, s_) in runs]
+            if not ks:
+                continue
+            xs.append(dep[(f, b_)]["ms_median"])
+            ys.append(float(np.mean([macro_ap(runs[k]["y"], runs[k]["p"])
+                                     for k in ks])))
+            ss.append(3.0 + 0.52 * dep[(f, b_)]["total_ram_b"] / 1024)
+            csr.append(MODEL_COLOR[f])
+        axs_.scatter(xs, ys, s=ss, c=csr, marker=mk, alpha=0.85,
+                     edgecolor="#ffffff", lw=0.45, label=b_)
+    axs_.set_xscale("log")
+    axs_.set_xlabel("measured STM32F411 latency (ms, log)", fontsize=6.6,
+                    color=TXT, labelpad=1.5)
+    axs_.set_ylabel("equal-source" + NL + "macro-AUPRC", fontsize=6.6,
+                    color=TXT, labelpad=1.5, linespacing=1.4)
+    axs_.tick_params(labelsize=5.6, length=1.5, pad=1, colors=TXT)
+    axs_.xaxis.set_major_formatter(
+        matplotlib.ticker.FuncFormatter(lambda v_, _: f"{v_:g}"))
+    axs_.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    for sp in ("top", "right"):
+        axs_.spines[sp].set_visible(False)
+    for sp in ("left", "bottom"):
+        axs_.spines[sp].set_color("#b9b9b2")
+    axs_.grid(color="#d8d8d2", lw=0.4)
+    axs_.patch.set_alpha(0)
+    axs_.margins(0.16)
+    axs_.legend(fontsize=5.6, frameon=False, labelcolor=TXT,
+                loc="lower right", handletextpad=0.3, borderpad=0.2,
+                labelspacing=0.3)
+    fig.text(x0 + 0.258, 0.272, "Bubble size:", fontsize=7.0, color=TXT,
+             zorder=6)
+    fig.text(x0 + 0.258, 0.253, "peak SRAM", fontsize=7.0, color=TXT,
+             zorder=6)
+    axkey = _icon_axes(fig, x0 + 0.256, 0.138, 0.062, 0.112)
+    for i, kb in enumerate((20, 50, 90)):
+        axkey.scatter([0.20], [0.80 - i * 0.30], s=3.0 + 0.52 * kb,
+                      color="#b9b9b2", edgecolor="#ffffff", lw=0.4)
+        axkey.text(0.46, 0.80 - i * 0.30, f"{kb} KB", fontsize=6.4,
+                   color=TXT, va="center")
+    axkey.set_xlim(0, 1)
+    axkey.set_ylim(0, 1)
+    bullets(x0 + 0.024, 0.085,
+            ["external macro-AUPRC against measured latency",
+             "SRAM shown as bubble size; both budgets drawn"])
+
+    # centred in the gutter, so neither arrow touches a panel edge
+    for tip in (0.3140, 0.6540):
+        _flow(fig, tip, 0.487, "right", size=8, shaft=0.007, lw=1.8,
+              color="#44443f")
 
     save(fig, "figure1_design", svg=True)
 
@@ -702,23 +1542,28 @@ def figure5(runs, boot, dep):
         ax.margins(0.18)
         _frame(ax)
         ax.grid(color=GRID, lw=0.5)
-        _label_points(ax, [p[0] for p in pts], [p[1] for p in pts],
-                      [MID[m] for m in ms], areas, fontsize=5.0,
-                      inside_color=INK)
+        # No per-marker identifiers: the legend already maps colour to
+        # family, and ten leader-lined labels over two panels cost more
+        # legibility than the second naming buys.
 
     handles = [plt.Line2D([], [], marker="o", ls="", ms=5,
                           color=MODEL_COLOR[m],
                           label=f"{MID[m]}  {NICE[m]}") for m in ZOO]
     fig.legend(handles=handles, fontsize=6.0, frameon=False,
                labelcolor=INK2, ncol=5, loc="lower center",
-               bbox_to_anchor=(0.5, -0.015))
+               bbox_to_anchor=(0.5, 0.005), columnspacing=1.6)
+    # The size key moves out of panel (b), where three bubbles up to
+    # 27 pt across were stacked on top of each other and sat over the
+    # data. Laid out in a row at the foot of the figure it keeps the
+    # exact areas used in the plot, which a rescaled key would not.
     for kb in (20, 50, 90):
         axes[1].scatter([], [], s=16 + 8 * kb, color="#c3c3bb",
                         edgecolor=SURFACE, lw=0.6, label=f"{kb} KB")
     axes[1].legend(fontsize=5.8, frameon=False, labelcolor=INK2,
-                   loc="lower right", labelspacing=1.0, handletextpad=0.9,
-                   borderpad=0.4, title="peak SRAM", title_fontsize=5.8)
-    fig.subplots_adjust(left=0.09, right=0.985, top=0.92, bottom=0.30,
+                   loc="lower right", bbox_to_anchor=(0.995, 0.08),
+                   ncol=1, labelspacing=2.1, handletextpad=1.3,
+                   borderpad=0.6, title="peak SRAM", title_fontsize=5.8)
+    fig.subplots_adjust(left=0.09, right=0.985, top=0.92, bottom=0.205,
                         wspace=0.20)
     save(fig, "figure5_tradeoffs", svg=True)
 
@@ -779,7 +1624,7 @@ def figure6(runs, dep):
         a_.set_minor_formatter(matplotlib.ticker.NullFormatter())
     ax.margins(0.12)
     _label_points(ax, list(x), list(y), [MID[q[2]] for q in pts],
-                  [46.0] * len(pts), fontsize=4.8, inside_color="#ffffff")
+                  [46.0] * len(pts), fontsize=4.8)
     taus = []
     for b in BUDGETS:
         sel = [k for k, q in enumerate(pts) if q[3] == b]
@@ -860,25 +1705,41 @@ def figure_s2_residual(runs, dep):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--only", nargs="+", default=None,
+                    help="targets to rebuild, e.g. --only figure1 table1")
+    args = ap.parse_args()
     FIG.mkdir(parents=True, exist_ok=True)
     TAB.mkdir(parents=True, exist_ok=True)
     runs, dep = load_runs(), load_deploy()
     print(f"{len(runs)} runs, {len(dep)} deployments")
-    print("bootstrapping:")
-    boot = bootstrap(runs)
-    print("tables:")
-    table1(runs, boot)
-    table2(runs, dep)
-    table3(runs, boot)
-    table4(runs, dep)
-    print("figures:")
-    figure1(runs, dep)
-    figure2(runs)
-    figure3(runs, boot)
-    figure4()
-    figure5(runs, boot, dep)
-    figure6(runs, dep)
-    figure_s2_residual(runs, dep)
+
+    jobs = [("table1", lambda: table1(runs, boot)),
+            ("tableS1", table_s1_prevalence),
+            ("table2", lambda: table2(runs, dep)),
+            ("table3", lambda: table3(runs, boot)),
+            ("table4", lambda: table4(runs, dep)),
+            ("figure1", lambda: figure1(runs, dep)),
+            ("figure2", lambda: figure2(runs)),
+            ("figure3", lambda: figure3(runs, boot)),
+            ("figure4", figure4),
+            ("figure5", lambda: figure5(runs, boot, dep)),
+            ("figure6", lambda: figure6(runs, dep)),
+            ("figureS2", lambda: figure_s2_residual(runs, dep))]
+    wanted = set(args.only) if args.only else None
+    unknown = (wanted or set()) - {n for n, _ in jobs}
+    if unknown:
+        sys.exit(f"unknown target(s): {sorted(unknown)}")
+
+    # Only the four artefacts that carry an interval pay for computing it.
+    NEEDS_BOOT = {"table1", "table3", "figure3", "figure5"}
+    boot = {}
+    if wanted is None or wanted & NEEDS_BOOT:
+        print("bootstrapping:")
+        boot = bootstrap(runs)
+    for name, fn in jobs:
+        if wanted is None or name in wanted:
+            fn()
     print(f"\nfigures: {FIG}\ntables:  {TAB}")
 
 
