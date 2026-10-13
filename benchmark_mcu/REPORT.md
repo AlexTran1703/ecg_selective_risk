@@ -109,6 +109,50 @@ fold's weights are deployed per combination.
 
 ## RQ1 - external discrimination
 
+> **Finding 0. NSR is not the same label in all four sources, and this
+> had to be checked before anything else was believed.** Table 1 shows
+> NSR at **88.3%** of PTB-XL against about **21%** of each of the other
+> three. That is too large to pass without an audit, and the audit finds
+> a coding difference rather than a population difference.
+>
+> The harmonised class is SNOMED **426783006, "sinus rhythm"** -- a
+> rhythm statement, not a verdict of "normal ECG". The four sources use
+> it in three incompatible ways:
+>
+> | | NSR records with >=1 other label | NSR and SB together |
+> |---|---|---|
+> | PTB-XL | **41.8%** | 353 records |
+> | Georgia | **0.0%** | 0 |
+> | Chapman | 17.7% | 0 |
+> | Ningbo | 16.4% | 6 |
+>
+> In PTB-XL sinus rhythm is a finding that coexists with pathology, and
+> it is even coded alongside sinus bradycardia 353 times. In Georgia it
+> is mutually exclusive with *everything*: every one of its 1,752 NSR
+> records carries that label and nothing else, so there it means
+> "normal ECG". Chapman and Ningbo sit between the two -- their rhythm
+> labels are mutually exclusive of one another (NSR and SB essentially
+> never co-occur) but coexist with morphology findings.
+>
+> So the NSR column is not comparable across sources and must not be
+> read as prevalence. The question is whether it distorts the results,
+> and the way to answer that is to drop it. Recomputing every
+> equal-source mean over the **other twelve classes only**:
+>
+> - the architecture ordering is unchanged -- Spearman **+0.988**
+>   (compact, one adjacent swap at the top) and **+1.000** (standard);
+> - the source ordering is unchanged, and the spread *widens*: PTB-XL
+>   0.418 -> **0.371**, Georgia 0.509 -> 0.491, Chapman 0.548 -> 0.520,
+>   Ningbo 0.571 -> 0.543. NSR was PTB-XL's commonest and easiest class,
+>   so removing it costs PTB-XL most.
+>
+> Every conclusion in this report therefore survives deleting the
+> offending label, which is the only reason they are stated at all. The
+> inconsistency is inherited from the source datasets' coding
+> conventions, not introduced by the harmonisation here, and it is a
+> limitation of the cohort rather than a repairable bug.
+
+
 > **Finding 1. At a fixed MCU budget the architecture makes a small but
 > reliable difference, and whether it fits the budget makes a large
 > one.** Six of ten configurations sit within **0.010** equal-source
@@ -140,20 +184,23 @@ fold's weights are deployed per combination.
 >
 > | | compact | standard |
 > |---|---|---|
-> | TCN | +0.0259 [+0.0227, +0.0286] | **+0.0134** [+0.0107, +0.0158] |
-> | ResNet-1D | **+0.0270** [+0.0240, +0.0294] | +0.0105 [+0.0080, +0.0128] |
-> | RepViT | +0.0236 [+0.0204, +0.0265] | +0.0093 [+0.0068, +0.0119] |
-> | ShuffleNetV2 | +0.0209 [+0.0181, +0.0238] | +0.0103 [+0.0079, +0.0126] |
-> | MobileNetV2 | +0.0259 [+0.0226, +0.0285] | +0.0051 [+0.0023, +0.0077] |
-> | GhostNet | +0.0159 [+0.0126, +0.0187] | +0.0086 [+0.0057, +0.0115] |
-> | MobileNetV4-Conv | +0.0180 [+0.0146, +0.0206] | -0.0020 [-0.0049, **+0.0007**] |
-> | FasterNet | -0.0114 [-0.0143, -0.0086] | -0.0115 [-0.0136, -0.0087] |
-> | MobileNetV3 | -0.0630 [-0.0672, -0.0594] | -0.0824 [-0.0862, -0.0788] |
+> | TCN | **+0.0259 [+0.0228, +0.0284]** | **+0.0134 [+0.0109, +0.0159]** |
+> | ResNet-1D | **+0.0270 [+0.0240, +0.0296]** | **+0.0105 [+0.0083, +0.0126]** |
+> | RepViT | **+0.0236 [+0.0204, +0.0263]** | **+0.0093 [+0.0065, +0.0120]** |
+> | ShuffleNetV2 | **+0.0209 [+0.0182, +0.0237]** | **+0.0103 [+0.0079, +0.0128]** |
+> | MobileNetV2 | **+0.0259 [+0.0226, +0.0288]** | **+0.0051 [+0.0021, +0.0076]** |
+> | GhostNet | **+0.0159 [+0.0127, +0.0188]** | **+0.0086 [+0.0058, +0.0117]** |
+> | MobileNetV4-Conv | **+0.0180 [+0.0148, +0.0208]** | -0.0020 [-0.0050, +0.0007] |
+> | FasterNet | **-0.0114 [-0.0142, -0.0086]** | **-0.0115 [-0.0140, -0.0089]** |
+> | MobileNetV3 | **-0.0630 [-0.0671, -0.0595]** | **-0.0824 [-0.0862, -0.0786]** |
 >
-> Seventeen of eighteen intervals exclude zero. The single exception is
-> MobileNetV4-Conv at the standard budget, where the 2024 design is
+> Bold marks an interval clear of zero.
+>
+> 17 of 18 intervals exclude zero. The single exception
+> is MobileNetV4-Conv at the standard budget, where the 2024 design is
 > indistinguishable from a plain 2017 convolution stack.
 >
+> Intervals are percentile, from 2,000 patient-cluster replicates.
 > Three cautions attach to this table. The intervals cover resampling of
 > *patients within these four sources* -- PTB-XL contributes 20,487
 > records from 17,928 patients, so records are drawn in patient blocks
@@ -191,6 +238,42 @@ fold's weights are deployed per combination.
 > sources are ranked by the raw value, by lift over floor, or by ratio
 > to it. Whatever makes PTB-XL hard, it is not that its classes are
 > rare. **Table 1, Table S1.**
+
+> **Finding 1d. An advantage on average is not an advantage
+> everywhere, and at the standard budget the exception is always the
+> same source.** Figure 3 draws each architecture's paired difference on
+> all four held-out sources as separate points, beside the equal-source
+> mean and its interval. An earlier version reduced those four points to
+> a count, "3 of 4", which threw away the part that matters: *which*
+> source disagrees, and by how much.
+>
+> At the **compact** budget seven of nine architectures win on all four
+> sources, so the equal-source mean summarises a consistent advantage.
+> At the **standard** budget every one of them drops to three of four,
+> and the dissenting source is **PTB-XL in all nine cases** -- FCN-1D
+> beats all nine other architectures there while losing to most of them
+> on Georgia, Chapman and Ningbo. ResNet-1D is the clearest instance:
+> **-0.011** against FCN-1D on PTB-XL, yet +0.010, +0.030 and +0.013 on
+> the other three, for a +0.0105 mean with an interval clear of zero.
+>
+> A positive mean difference and a consistent improvement are therefore
+> different claims, and only the first is supported for the
+> standard-budget contrasts. These per-source differences now carry
+> their own intervals rather than borrowing the aggregate one, which
+> could never have supported a claim about a single source: **8 of
+> 9** of the PTB-XL contrasts have an interval entirely below
+> zero.
+>
+> The obvious suspicion was that PTB-XL's mis-harmonised NSR label
+> (Finding 0) causes the reversal, since that is the source where NSR
+> behaves least like the others. The same contrasts recomputed
+> over the same contrasts over the twelve classes that remain
+> when NSR is dropped. It does not survive as an explanation:
+> **9/9 of the contrasts are below zero with NSR and
+> 9/9 without it**, with 8 of 9 intervals
+> still entirely below zero. The reversal is a property of PTB-XL, not
+> of the one label that is coded differently there. What *does* cause it
+> is not established here. **Figure 3.**
 
 > **Finding 2. The newer the design, the less it helps.** The compact
 > budget is led outright by **ResNet-1D (2016)**; the standard budget by
@@ -509,11 +592,17 @@ graph-derived activation sizes is no better than screening at random.
    0.003 between families are not resolvable and are not treated as
    rankings anywhere in the text.
 
-6. **Four source domains, and two of them share a labelling protocol.**
-   Chapman and Ningbo come from the same group; the cross-source study
-   documents the consequence. External performance here should be read
-   as generalisation to these four held-out sources, not to clinical
-   ECG at large.
+6. **Four source domains, two sharing a labelling protocol, and one
+   label that is not comparable across them.** Chapman and Ningbo come
+   from the same group. Separately, NSR is coded as a rhythm finding in
+   PTB-XL, as "normal ECG" in Georgia, and as a mutually exclusive
+   rhythm category in Chapman and Ningbo (Finding 0); conclusions were
+   verified to survive dropping it, but the macro average does include
+   one class whose meaning shifts between sources. External performance
+   here should be read as generalisation to these four held-out
+   sources, not to clinical ECG at large. With four sources, no
+   between-institution distribution is estimable: the intervals
+   throughout are conditional on these four.
 
 7. **No energy measurement.** Latency is measured; joules per inference
    are not, and for a battery-powered device that is the number that
@@ -557,8 +646,8 @@ the ST toolchain installed at the paths declared at the top of that file.
 | | file | answers |
 |---|---|---|
 | 1 | `figures/figure1_design` | graphical overview in three columns: sources, benchmark, outputs. ECG traces are real records drawn from the cohort by index; the RQ1-RQ3 insets are the actual results in miniature; counts are read from the artefacts. Also exported as `.svg` |
-| 2 | `figures/figure2_cross_source` | **RQ1** external AUPRC for every family on every held-out source, both budgets |
-| 3 | `figures/figure3_paired` | **RQ1** paired difference in external macro-AUPRC against FCN-1D, both budgets, with patient-cluster paired-bootstrap 95% intervals. Replaced the source-wise dot plot, which restated Figure 2 and answered no question Table 3 did not |
+| 2 | `figures/figure2_classwise` | **RQ1** (A, B) equal-source mean AP for each of the 13 diagnoses, every family, both budgets -- the layer underneath macro-AUPRC, which Table 3 already reports; (C) the spread across held-out sources that the equal-source mean averages away, with pooled prevalence under each class and NSR flagged as not comparably coded (Finding 0) |
+| 3 | `figures/figure3_paired` | **RQ1** paired difference in external macro-AUPRC against FCN-1D, both budgets, resolved to the four held-out sources, with patient-cluster paired-bootstrap 95% intervals on the equal-source mean. Replaced the source-wise dot plot, which restated Figure 2 and answered no question Table 3 did not |
 | 4 | `figures/figure4_int8_cost` | **RQ1** what quantisation costs: paired bootstrap intervals on the equal-source mean INT8 - FP32 difference, all twenty entirely below zero |
 | 5 | `figures/figure5_hardware` | **RQ2** (A) Flash, (B) peak SRAM, (C) MACC, (D) measured latency, for every family at both budgets. Solid bars are the compact budget, hatched the standard. Replaces the deployment table outright, so the extremes a reader would have looked up are annotated and the part's capacities are stated in-panel; exact values for all twenty configurations are deposited as `results/deploy_*/deployment_measurements.csv` |
 | 6 | `figures/figure6_complexity_latency` | **RQ2** (a) latency against MACC on log-log with Spearman and per-budget Kendall, (b) ms per million MACC paired across budgets -- the reversal in Finding 7 |
@@ -569,7 +658,7 @@ the ST toolchain installed at the paths declared at the top of that file.
 
 | | file | answers |
 |---|---|---|
-| 1 | `tables/table1_protocol` | cohort composition: records, patients, age, sex, labels per ECG, the macro-AUPRC prevalence floor, and four diagnoses spanning the prevalence range |
+| 1 | `tables/table1_protocol` | cohort composition: records, patients, age, sex, labels per ECG, and the random-ranking AP baseline. Per-class prevalence moved to Table S1 -- four of thirteen was an arbitrary window, and NSR is not comparable across sources (Finding 0) |
 | 2 | `tables/table2_architectures` | the ten families: identifier, year, defining block, width, size, MACs |
 | 3 | `tables/table3_external` | external macro-AUPRC and AUROC per source, with bootstrap CIs |
 
