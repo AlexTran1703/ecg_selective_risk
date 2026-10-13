@@ -222,16 +222,6 @@
   pages   = {589--593}
 }
 
-% A preprint, not peer reviewed. Cite as such or replace with the
-% published version if one has since appeared.
-@misc{Gitau2025ReproducePTBXL,
-  author       = {Gitau and others},
-  title        = {[Re] Deep Learning for {ECG} Analysis: Benchmarks and
-                  Insights from {PTB-XL}},
-  year         = {2025},
-  howpublished = {medRxiv preprint},
-  note         = {FIXME: complete the author list before submission}
-}
 
 % ----------------------------------------- ECG TinyML and edge devices
 @article{Kim2023TinyMLECG,
@@ -268,27 +258,6 @@
   note    = {FIXME: complete the author list before submission}
 }
 
-@article{Sensors2025ECGAnomaly,
-  title   = {Reliable {ECG} Anomaly Detection on Edge Devices for Internet
-             of Medical Things Applications},
-  journal = {Sensors},
-  year    = {2025},
-  volume  = {25},
-  number  = {8},
-  pages   = {2496},
-  note    = {FIXME: author list not supplied}
-}
-
-@article{TinyMLCardio2025Survey,
-  title   = {{TinyML} and Edge Intelligence Applications in Cardiovascular
-             Disease: A Survey},
-  journal = {Computers in Biology and Medicine},
-  year    = {2025},
-  volume  = {186},
-  pages   = {109653},
-  note    = {FIXME: author list not supplied. A review, not an original
-             deployment study}
-}
 
 % ======================================================================
 % SOURCE DATASETS. The four corpora the cohort is drawn from.
@@ -386,18 +355,6 @@
   doi     = {10.1371/journal.pone.0118432}
 }
 
-% Software, not a journal reference. It fixes the numerical convention:
-% AP = sum_k (R_k - R_{k-1}) P_k, the non-interpolated form, which is
-% not identical to a trapezoidal PR-AUC. This study's own AP routine
-% was verified against average_precision_score to 1.7e-16 including
-% tied scores. Cite the version in Methods rather than the URL.
-@misc{SklearnAP,
-  author       = {{scikit-learn developers}},
-  title        = {{\texttt{average\_precision\_score}}},
-  year         = {2025},
-  howpublished = {scikit-learn 1.9.1 documentation},
-  note         = {non-interpolated average precision}
-}
 
 % ------------------------------- averaging, validation and reporting
 @article{Sokolova2009Measures,
@@ -443,4 +400,104 @@
   year      = {1993},
   series    = {Monographs on Statistics and Applied Probability},
   volume    = {57}
+}
+
+% ======================================================================
+% RESAMPLING DESIGN AND MULTI-SOURCE AGGREGATION.
+%
+% These replace two bare assertions. Previously the replicate count and
+% the equal-source weighting rested on nothing; now the first is
+% grounded and the second is at least framed.
+%
+% VERIFICATION: volumes and page ranges are as commonly cited. A DOI is
+% recorded only where it is certain; the three marked CHECK-DOI need
+% confirming against the publisher record before submission.
+% ======================================================================
+
+% ------------------------------------- how many bootstrap replicates
+% The reference for choosing B. Percentile intervals need far more
+% replicates than a standard error does, which is why 2,000 rather
+% than the 50-200 sufficient for an SE.
+@article{Hall1986BootstrapN,
+  author  = {Hall, Peter},
+  title   = {On the Number of Bootstrap Simulations Required to Construct
+             a Confidence Interval},
+  journal = {The Annals of Statistics},
+  year    = {1986},
+  volume  = {14},
+  number  = {4},
+  pages   = {1453--1462},
+  note    = {CHECK-DOI}
+}
+
+% The applied recommendation, in a clinical-statistics venue: at least
+% 1,000-2,000 replicates for percentile intervals.
+@article{Carpenter2000BootstrapCI,
+  author  = {Carpenter, James and Bithell, John},
+  title   = {Bootstrap Confidence Intervals: When, Which, What? A
+             Practical Guide for Medical Statisticians},
+  journal = {Statistics in Medicine},
+  year    = {2000},
+  volume  = {19},
+  number  = {9},
+  pages   = {1141--1164},
+  note    = {CHECK-DOI}
+}
+
+% ------------------------------------------- resampling the cluster
+% Resampling patients rather than records is the cluster bootstrap.
+% This matters for PTB-XL, where 20,487 records come from 17,928
+% patients; treating correlated records as independent narrows the
+% interval.
+@article{Field2007ClusterBootstrap,
+  author  = {Field, Christopher A. and Welsh, A. H.},
+  title   = {Bootstrapping Clustered Data},
+  journal = {Journal of the Royal Statistical Society: Series B},
+  year    = {2007},
+  volume  = {69},
+  number  = {3},
+  pages   = {369--390},
+  note    = {CHECK-DOI}
+}
+
+% ------------------------------ combining several validation datasets
+@article{Debray2015Framework,
+  author  = {Debray, Thomas P. A. and Vergouwe, Yvonne and Koffijberg,
+             Hendrik and Nieboer, Daan and Steyerberg, Ewout W. and
+             Moons, Karel G. M.},
+  title   = {A New Framework to Enhance the Interpretation of External
+             Validation Studies of Clinical Prediction Models},
+  journal = {Journal of Clinical Epidemiology},
+  year    = {2015},
+  volume  = {68},
+  number  = {3},
+  pages   = {279--289},
+  doi     = {10.1016/j.jclinepi.2014.06.018}
+}
+
+@article{Riley2016ExternalValidation,
+  author  = {Riley, Richard D. and Ensor, Joie and Snell, Kym I. E. and
+             Debray, Thomas P. A. and Altman, Douglas G. and Moons,
+             Karel G. M. and Collins, Gary S.},
+  title   = {External Validation of Clinical Prediction Models Using Big
+             Datasets from e-Health Records or {IPD} Meta-Analysis:
+             Opportunities and Challenges},
+  journal = {BMJ},
+  year    = {2016},
+  volume  = {353},
+  pages   = {i3140},
+  doi     = {10.1136/bmj.i3140}
+}
+
+% Weighting across datasets: the question equal-source averaging
+% answers by choice rather than by derivation.
+@article{Riley2010IPDMeta,
+  author  = {Riley, Richard D. and Lambert, Paul C. and Abo-Zaid, Ghada},
+  title   = {Meta-Analysis of Individual Participant Data: Rationale,
+             Conduct, and Reporting},
+  journal = {BMJ},
+  year    = {2010},
+  volume  = {340},
+  pages   = {c221},
+  doi     = {10.1136/bmj.c221}
 }
