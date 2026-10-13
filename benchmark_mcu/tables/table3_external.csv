@@ -1,4 +1,4 @@
-budget,model,PTB-XL,Georgia,Chapman,Ningbo,equal-source mean AUPRC,95% CI,mean AUROC,rank in budget
+budget,model,PTB-XL,Georgia,Chapman,Ningbo,equal-source mean macro-AP,95% CI,equal-source mean macro-AUROC,rank in budget
 compact,FCN-1D,0.4115,0.4842,0.5192,0.5612,0.494,"(0.4910, 0.4993)",0.8748,8
 compact,ResNet-1D,0.4315,0.524,0.5575,0.5713,0.5211,"(0.5178, 0.5261)",0.8866,1
 compact,TCN,0.4134,0.5215,0.5678,0.577,0.5199,"(0.5168, 0.5250)",0.8896,3

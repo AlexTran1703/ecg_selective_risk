@@ -1,29 +1,18 @@
-\begin{tabular}{lllrlrrrrr}
+\begin{tabular}{llrlrrrrrr}
 \toprule
- &  & id & year & defining block & width & params & int8 weights KB & peak act KB (graph) & MACC (M, ST tool) \\
-budget & model &  &  &  &  &  &  &  &  \\
+ & \multicolumn{3}{r}{} & \multicolumn{3}{r}{compact} & \multicolumn{3}{r}{standard} \\
+ & architecture & year & defining operation & width & INT8 weights KB & graph act KB & width & INT8 weights KB & graph act KB \\
+ID &  &  &  &  &  &  &  &  &  \\
 \midrule
-\multirow[t]{10}{*}{compact} & FCN-1D & M1 & 2017 & plain convolution & 1.060000 & 29813 & 29.100000 & 7.800000 & 2.800000 \\
- & ResNet-1D & M2 & 2016 & residual block & 0.650000 & 32309 & 31.600000 & 3.900000 & 3.420000 \\
- & TCN & M3 & 2018 & dilated convolution & 0.940000 & 27313 & 26.700000 & 6.800000 & 4.260000 \\
- & MobileNetV2 & M4 & 2018 & inverted residual & 0.740000 & 31285 & 30.600000 & 15.600000 & 2.670000 \\
- & ShuffleNetV2 & M5 & 2018 & channel split + shuffle & 1.620000 & 32125 & 31.400000 & 9.800000 & 3.640000 \\
- & GhostNet & M6 & 2020 & ghost module & 1.250000 & 29441 & 28.800000 & 6.800000 & 2.490000 \\
- & MobileNetV3 & M7 & 2019 & inverted residual + SE + h-swish & 0.180000 & 31933 & 31.200000 & 1.600000 & 0.680000 \\
- & FasterNet & M8 & 2023 & partial convolution & 0.900000 & 32619 & 31.900000 & 9.800000 & 3.200000 \\
- & RepViT & M9 & 2024 & reparameterised depthwise + FFN & 0.850000 & 32657 & 31.900000 & 9.800000 & 2.950000 \\
- & MobileNetV4-Conv & M10 & 2024 & universal inverted bottleneck & 0.780000 & 32457 & 31.700000 & 19.500000 & 2.980000 \\
-\cline{1-10}
-\multirow[t]{10}{*}{standard} & FCN-1D & M1 & 2017 & plain convolution & 2.180000 & 122081 & 119.200000 & 16.600000 & 10.420000 \\
- & ResNet-1D & M2 & 2016 & residual block & 1.280000 & 130149 & 127.100000 & 7.800000 & 13.430000 \\
- & TCN & M3 & 2018 & dilated convolution & 1.930000 & 116113 & 113.400000 & 14.600000 & 17.510000 \\
- & MobileNetV2 & M4 & 2018 & inverted residual & 1.580000 & 130673 & 127.600000 & 39.100000 & 11.560000 \\
- & ShuffleNetV2 & M5 & 2018 & channel split + shuffle & 3.520000 & 129177 & 126.100000 & 20.500000 & 13.880000 \\
- & GhostNet & M6 & 2020 & ghost module & 2.740000 & 129969 & 126.900000 & 15.600000 & 9.810000 \\
- & MobileNetV3 & M7 & 2019 & inverted residual + SE + h-swish & 0.370000 & 128821 & 125.800000 & 3.400000 & 1.920000 \\
- & FasterNet & M8 & 2023 & partial convolution & 1.840000 & 130959 & 127.900000 & 21.500000 & 12.540000 \\
- & RepViT & M9 & 2024 & reparameterised depthwise + FFN & 1.740000 & 124529 & 121.600000 & 19.500000 & 10.870000 \\
- & MobileNetV4-Conv & M10 & 2024 & universal inverted bottleneck & 1.620000 & 129877 & 126.800000 & 39.100000 & 11.560000 \\
-\cline{1-10}
+M1 & FCN-1D & 2017 & plain convolution & 1.060000 & 29.100000 & 7.800000 & 2.180000 & 119.200000 & 16.600000 \\
+M2 & ResNet-1D & 2016 & residual block & 0.650000 & 31.600000 & 3.900000 & 1.280000 & 127.100000 & 7.800000 \\
+M3 & TCN & 2018 & dilated convolution & 0.940000 & 26.700000 & 6.800000 & 1.930000 & 113.400000 & 14.600000 \\
+M4 & MobileNetV2 & 2018 & inverted residual & 0.740000 & 30.600000 & 15.600000 & 1.580000 & 127.600000 & 39.100000 \\
+M5 & ShuffleNetV2 & 2018 & channel split + shuffle & 1.620000 & 31.400000 & 9.800000 & 3.520000 & 126.100000 & 20.500000 \\
+M6 & GhostNet & 2020 & ghost module & 1.250000 & 28.800000 & 6.800000 & 2.740000 & 126.900000 & 15.600000 \\
+M7 & MobileNetV3 & 2019 & inverted residual + SE + h-swish & 0.180000 & 31.200000 & 1.600000 & 0.370000 & 125.800000 & 3.400000 \\
+M8 & FasterNet & 2023 & partial convolution & 0.900000 & 31.900000 & 9.800000 & 1.840000 & 127.900000 & 21.500000 \\
+M9 & RepViT & 2024 & reparameterised depthwise + FFN & 0.850000 & 31.900000 & 9.800000 & 1.740000 & 121.600000 & 19.500000 \\
+M10 & MobileNetV4-Conv & 2024 & universal inverted bottleneck & 0.780000 & 31.700000 & 19.500000 & 1.620000 & 126.800000 & 39.100000 \\
 \bottomrule
 \end{tabular}

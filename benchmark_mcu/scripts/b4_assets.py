@@ -8,7 +8,7 @@ reported. Nothing here is estimated from a parameter count.
 
     Table 1   cohort and leave-one-source-out protocol
     Table 2   the ten families: year, defining block, size, MACs
-    Table 3   external macro-AUPRC and AUROC per held-out source, CIs
+    Table 3   external macro-AP and AUROC per held-out source, CIs
     Table 4   measured deployment: Flash, SRAM, latency, pass/fail
 
     Figure 2  cross-source performance heatmaps, both budgets
@@ -198,7 +198,7 @@ def prevalence():
 def table1(runs, boot):
     """Cohort characterisation: what the data are, not how models did.
 
-    The previous version reported mean AUPRC per source and annotated
+    The previous version reported mean macro-AP per source and annotated
     the best and worst, which put a result into the cohort table and
     invited the reading that one source is intrinsically easier.
     Average precision has a prevalence floor, so a source with more
@@ -231,7 +231,7 @@ def table1(runs, boot):
             # Calling it a "floor" was wrong: it is not a bound, and a
             # model can score below it. It is a property of the data,
             # which is why it sits in the cohort table.
-            "random-ranking AP baseline": f"{lab.mean():.3f}",
+            "random-ranking AP reference": f"{lab.mean():.3f}",
         }
         rows.append(row)
     tot = {
@@ -241,7 +241,7 @@ def table1(runs, boot):
         "age, median (IQR)": "",
         "female (%)": f"{100 * (m['sex'] == 'Female').sum() / len(m):.1f}",
         "labels per ECG": f"{y.sum(1).mean():.2f}",
-        "random-ranking AP baseline": f"{y.mean():.3f}",
+        "random-ranking AP reference": f"{y.mean():.3f}",
     }
     rows.append(tot)
     emit(pd.DataFrame(rows).set_index("source"), "table1_protocol",
@@ -256,12 +256,13 @@ def table1(runs, boot):
          "counts. Sex is normalised across sources, which record it "
          "differently; age is missing for 221 records in total and the "
          "median is over those present. Labels per ECG is the mean "
-         "number of positive labels. The random-ranking AP baseline is "
-         "the macro-average of per-class prevalence, which is the "
-         "average precision a random ranking attains on this source; it "
-         "is a baseline, not a bound, and a model can score below it. "
-         "It is given so Table 3 can be read against something other "
-         "than zero. Per-class prevalences for all 13 diagnoses are in "
+         "number of positive labels. The random-ranking AP reference is "
+         "the macro-average of per-class prevalence. Prevalence is the "
+         "usual reference for a precision-recall baseline, though on a "
+         "finite sample the expected AP of a uniformly random ranking "
+         "is not exactly equal to it; it is a reference, not a bound, "
+         "and a model can score below it. It is given so Table 3 can be "
+         "read against something other than zero. Per-class prevalences for all 13 diagnoses are in "
          "Supplementary Table S1 -- but NSR is not coded comparably "
          "across these four sources and its prevalence should not be "
          "read as a population difference (see the harmonisation audit "
@@ -272,7 +273,7 @@ def table1(runs, boot):
 def table_s1_prevalence(runs=None, boot=None):
     """Supplement: every harmonised class, every source.
 
-    Figure 2 shows external AUPRC varying far more by source than by
+    Figure 2 shows external macro-AP varying far more by source than by
     architecture. A reader cannot tell from that alone how much of the
     variation is prevalence and how much is population or labelling, so
     the full composition is given here rather than summarised away.
@@ -302,36 +303,50 @@ def table_s1_prevalence(runs=None, boot=None):
 
 
 def table2(runs, dep):
+    """Architecture specification, with the two budgets side by side.
+
+    One row per family rather than per family-and-budget: a reader
+    comparing the compact and standard configurations of one
+    architecture was previously looking ten rows apart. MACC has moved
+    out -- Figure 5 panel C reports it, measured by the same toolchain
+    that reports the latency beside it, and repeating it here only
+    invited the two to drift.
+    """
     rows = []
-    for b in BUDGETS:
-        for m in models_present(runs, b):
-            k = next(k for k in runs if k[0] == m and k[1] == b)
-            r = runs[k]
-            d = dep.get((m, b), {})
-            rows.append({
-                "id": MID[m],
-                "model": NICE[m], "budget": b, "year": YEAR[m],
-                "defining block": BLOCK[m],
-                "width": round(r["width"], 2),
-                "params": r["params"],
-                "int8 weights KB": round(r["params"] / 1024, 1),
-                "peak act KB (graph)": round(r["peak"] / 1024, 1),
-                "MACC (M, ST tool)": round((d.get("macc") or 0) / 1e6, 2)})
-    emit(pd.DataFrame(rows).set_index(["budget", "model"]),
-         "table2_architectures",
-         "Table 2. The ten families and the two size budgets. The "
-         "identifier column is the short label used in Figures 5 and 6. Each family "
-         "is scaled to the largest width that satisfies both budgets "
-         "rather than to a common width, so every design is given the "
-         "biggest version of itself the part will accept. Parameters are "
-         "the deployed count: RepViT is reparameterised first, so its "
-         "folded training branches are not charged to Flash. Peak "
-         "activation is derived from the graph as an SRAM proxy; the "
-         "measured figure is in Table 4, and the two differ "
-         "substantially. MACC is taken from the deployment toolchain "
-         "rather than counted analytically, so it is what the device "
-         "executes. FasterNet is reported at its published partial ratio "
-         "only.")
+    for m in ZOO:
+        ks = {b: next((k for k in runs if k[0] == m and k[1] == b), None)
+              for b in BUDGETS}
+        if any(v is None for v in ks.values()):
+            continue
+        row = {("", "architecture"): NICE[m], ("", "year"): YEAR[m],
+               ("", "defining operation"): BLOCK[m]}
+        for b in BUDGETS:
+            r = runs[ks[b]]
+            row[(b, "width")] = round(r["width"], 2)
+            row[(b, "INT8 weights KB")] = round(r["params"] / 1024, 1)
+            row[(b, "graph act KB")] = round(r["peak"] / 1024, 1)
+        rows.append((MID[m], row))
+    df = pd.DataFrame([r for _, r in rows], index=[i for i, _ in rows])
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
+    df.index.name = "ID"
+    emit(df, "table2_architectures",
+         "Table 2. The ten architecture families and their two size "
+         "budgets. Each family is scaled to the largest width that "
+         "satisfies both budgets rather than to a common width, so every "
+         "design is given the biggest version of itself the part will "
+         "accept; widths are family-specific scaling factors and are not "
+         "comparable between rows. INT8 weights are the deployed "
+         "parameter count, one byte each: RepViT is reparameterised "
+         "first, so its folded training branches are not charged. Graph "
+         "activation is the peak tensor size derived from the model "
+         "definition -- an SRAM proxy, not a measurement, and Finding 9 "
+         "shows it carries no usable rank information about what the "
+         "device allocates; the measured figure is Figure 5 panel B. "
+         "Arithmetic cost is Figure 5 panel C. These are one-dimensional "
+         "adaptations of the published families, sharing each family's "
+         "defining operation but not its depth or published topology "
+         "(Limitation 2). FasterNet is reported at its published partial "
+         "ratio only.")
 
 
 def table3(runs, boot):
@@ -345,18 +360,18 @@ def table3(runs, boot):
                     rec[sname(s)] = round(macro_ap(runs[k]["y"],
                                                    runs[k]["p"]), 4)
             pt, lo, hi = boot[(m, b)]
-            rec["equal-source mean AUPRC"] = round(pt, 4)
+            rec["equal-source mean macro-AP"] = round(pt, 4)
             rec["95% CI"] = f"({lo:.4f}, {hi:.4f})"
-            rec["mean AUROC"] = round(np.mean(
+            rec["equal-source mean macro-AUROC"] = round(np.mean(
                 [macro_auroc(runs[(m, b, s)]["y"], runs[(m, b, s)]["p"])
                  for s in SOURCES if (m, b, s) in runs]), 4)
             rows.append(rec)
     t = pd.DataFrame(rows)
-    t["rank in budget"] = (t.groupby("budget")["equal-source mean AUPRC"]
+    t["rank in budget"] = (t.groupby("budget")["equal-source mean macro-AP"]
                            .rank(ascending=False, method="min").astype(int))
     emit(t.set_index(["budget", "model"]),
          "table3_external",
-         "Table 3. External macro-AUPRC by held-out source, with the "
+         "Table 3. External macro-AP by held-out source, with the "
          "mean over the four rotations and a record-level bootstrap "
          f"interval ({REPS} replicates, seed 0, records resampled within "
          "each source and the equal-source mean formed inside every "
@@ -409,7 +424,7 @@ def deposit_deployment(runs, dep):
 def class_ap(runs):
     """Equal-source mean AP per (model, budget, class), and per source.
 
-    The macro-AUPRC everything else reports is the mean of these over
+    The macro-AP everything else reports is the mean of these over
     the 13 classes, so this is the layer underneath the headline number
     rather than a different metric. Averaging over sources with equal
     weight keeps Ningbo's 28,956 records from outvoting Georgia's 8,302.
@@ -435,23 +450,24 @@ def class_ap(runs):
 def figure2(runs):
     """RQ1: which diagnoses carry the external performance?
 
-    The previous version was a model x source heatmap of macro-AUPRC --
-    the same numbers Table 3 prints, in colour. It answered nothing the
-    table did not, while the 13 diagnoses the benchmark actually
-    evaluates never appeared anywhere in the figures.
+    The columns are the thirteen diagnoses rather than the four sources.
+    A cell is the equal-source mean AP for one architecture on one
+    class: the quantity macro-AP is the average of, not a reweighting of
+    it. Classes carry equal weight here exactly as they do in the macro
+    average; nothing is prevalence-weighted.
 
-    So the columns become the diagnoses. A cell is the equal-source mean
-    AP for one architecture on one class: the quantity macro-AUPRC is
-    the average of, not a reweighting of it. Classes carry equal weight
-    in the macro average and equal weight here; nothing is
-    prevalence-weighted.
+    Standard budget only. The compact heatmap said the same thing one
+    shade paler, and Table 3 keeps both budgets' numbers, so spending
+    half a figure on the repetition bought nothing.
 
-    Panel C is the context the heatmaps need. An equal-source mean hides
-    the spread it came from, and for NSR that spread is the point --
-    that class is coded three different ways across the four sources
-    (Finding 0), so it is marked. Prevalence is printed under each class
+    Panel B is the context Panel A needs. An equal-source mean hides the
+    spread it came from, and for NSR that spread is the point -- that
+    class is coded three different ways across the four sources
+    (Finding 0), so it is marked. Prevalence sits under each class
     because AP has a prevalence floor and a rare class scores low before
-    any model is involved.
+    any model is involved. The values are averaged over the ten
+    architectures, which is a descriptive summary of the class, not an
+    ensemble anyone deployed.
     """
     eq, per = class_ap(runs)
     cls = cohort()["classes"]
@@ -460,73 +476,75 @@ def figure2(runs):
               for c in cls}
     order = sorted(range(len(cls)), key=lambda i: -pooled[cls[i]])
     names = [cls[i] for i in order]
-
-    fig = plt.figure(figsize=(7.8, 5.6), facecolor=SURFACE)
-    gs = fig.add_gridspec(3, 1, height_ratios=[1.0, 1.0, 0.92],
-                          left=0.135, right=0.90, top=0.965, bottom=0.085,
-                          hspace=0.55)
-    vals = np.concatenate([eq[k][order] for k in eq])
-    vmin, vmax = np.nanpercentile(vals, 2), np.nanpercentile(vals, 98)
-
-    for row, b in enumerate(BUDGETS):
-        ax = fig.add_subplot(gs[row, 0])
-        ms = models_present(runs, b)
-        grid = np.array([eq[(m, b)][order] for m in ms])
-        im = ax.imshow(grid, aspect="auto", cmap="RdYlBu_r",
-                       vmin=vmin, vmax=vmax)
-        ax.set_xticks(range(len(names)))
-        ax.set_xticklabels(names if row else [], fontsize=6.0, color=INK,
-                           rotation=90)
-        ax.set_yticks(range(len(ms)))
-        ax.set_yticklabels([f"{MID[m]} {NICE[m]}" for m in ms],
-                           fontsize=5.8, color=INK)
-        ax.tick_params(length=0, pad=2)
-        for sp in ax.spines.values():
-            sp.set_visible(False)
-        ax.set_title(f"({'AB'[row]}) {b} budget - equal-source mean AP "
-                     "per diagnosis", fontsize=7.4, color=INK, pad=4)
-        cb = fig.colorbar(im, ax=ax, fraction=0.022, pad=0.012)
-        cb.ax.tick_params(labelsize=5.2, length=1.5, colors=INK2)
-        cb.outline.set_visible(False)
-        cb.set_label("AP", fontsize=5.6, color=INK2)
-
-    # ---- Panel C: the spread the equal-source mean averages away ------
-    ax = fig.add_subplot(gs[2, 0])
-    SRCCOL = dict(zip(SOURCES, ["#2f6fb0", "#c4692a", "#2f8a4c", "#6a4fb0"]))
     bud = BUDGETS[-1]
     ms = models_present(runs, bud)
-    for xi, i in enumerate(order):
-        vals_s = {s: np.nanmean([per[(m, bud, s)][i] for m in ms
-                                 if (m, bud, s) in per]) for s in SOURCES}
-        lo, hi = min(vals_s.values()), max(vals_s.values())
-        ax.plot([xi, xi], [lo, hi], lw=0.8, color="#bdbdb6", zorder=2)
-        for s in SOURCES:
-            ax.scatter(xi, vals_s[s], s=13, color=SRCCOL[s],
-                       edgecolor=SURFACE, lw=0.35, zorder=4,
-                       label=sname(s) if xi == 0 else None)
-    nsr_x = order.index(cls.index("NSR"))
-    ax.axvspan(nsr_x - 0.45, nsr_x + 0.45, color="#f0d9d6", zorder=0)
-    ax.annotate("NSR: coded three\ndifferent ways\n(Finding 0)",
-                xy=(nsr_x, ax.get_ylim()[1]), xytext=(nsr_x + 0.6, 0.93),
-                textcoords=("data", "axes fraction"), fontsize=5.6,
-                color="#8c3b2f", ha="left", va="top", linespacing=1.4)
+
+    fig = plt.figure(figsize=(7.8, 4.5), facecolor=SURFACE)
+    # Two columns: the plots, and a narrow strip the colourbar lives in.
+    # Without it the colourbar eats width from panel A only, and panel
+    # B's class labels no longer sit under panel A's columns -- which
+    # defeats the point of giving them a common class order.
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 0.82],
+                          width_ratios=[1.0, 0.028],
+                          left=0.145, right=0.965, top=0.945, bottom=0.145,
+                          hspace=0.40, wspace=0.015)
+
+    ax = fig.add_subplot(gs[0, 0])
+    grid = np.array([eq[(m, bud)][order] for m in ms])
+    im = ax.imshow(grid, aspect="auto", cmap="RdYlBu_r",
+                   vmin=float(np.nanpercentile(grid, 2)),
+                   vmax=float(np.nanpercentile(grid, 98)))
     ax.set_xticks(range(len(names)))
-    ax.set_xticklabels(
-        [f"{n}\n{pooled[n]:.1f}%" for n in names], fontsize=5.8, color=INK)
+    # Panel A carries its own class labels rather than borrowing panel
+    # B's: the two are a full panel apart, and a reader checking one
+    # cell should not have to count columns down to the other axis.
+    ax.set_xticklabels(names, fontsize=5.8, color=INK, rotation=45,
+                       ha="right", rotation_mode="anchor")
+    ax.set_yticks(range(len(ms)))
+    ax.set_yticklabels([f"{MID[m]} {NICE[m]}" for m in ms], fontsize=6.0,
+                       color=INK)
+    ax.tick_params(length=0, pad=2)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+    ax.set_title("(A) equal-source mean AP per diagnosis, "
+                 f"{bud} budget", fontsize=7.6, color=INK, pad=5)
+    cb = fig.colorbar(im, cax=fig.add_subplot(gs[0, 1]))
+    cb.ax.tick_params(labelsize=5.4, length=1.5, colors=INK2)
+    cb.outline.set_visible(False)
+    cb.set_label("AP", fontsize=5.8, color=INK2)
+
+    ax = fig.add_subplot(gs[1, 0])
+    SRCCOL = dict(zip(SOURCES, ["#2f6fb0", "#c4692a", "#2f8a4c", "#6a4fb0"]))
+    for xi, i in enumerate(order):
+        vals_s = {s_: np.nanmean([per[(m, bud, s_)][i] for m in ms
+                                  if (m, bud, s_) in per]) for s_ in SOURCES}
+        ax.plot([xi, xi], [min(vals_s.values()), max(vals_s.values())],
+                lw=0.8, color="#bdbdb6", zorder=2)
+        for s_ in SOURCES:
+            ax.scatter(xi, vals_s[s_], s=13, color=SRCCOL[s_],
+                       edgecolor=SURFACE, lw=0.35, zorder=4,
+                       label=sname(s_) if xi == 0 else None)
+    nsr_x = order.index(cls.index("NSR"))
+    ax.axvspan(nsr_x - 0.45, nsr_x + 0.45, color="#f2dcd8", zorder=0)
+    ax.annotate("NSR: coded three different ways across sources (Finding 0)",
+                xy=(0.985, 0.90), xycoords="axes fraction", fontsize=5.8,
+                color="#8c3b2f", ha="right", va="top")
+    ax.set_xticks(range(len(names)))
+    ax.set_xticklabels([f"{n}{NL}{pooled[n]:.1f}%" for n in names],
+                       fontsize=5.8, color=INK)
     ax.set_xlim(-0.6, len(names) - 0.4)
-    ax.set_ylabel("AP, averaged over the ten\narchitectures", fontsize=6.2,
-                  color=INK, linespacing=1.4)
-    ax.set_title(f"(C) spread across held-out sources ({bud} budget); "
-                 "pooled prevalence under each class", fontsize=7.4,
-                 color=INK, pad=4)
+    ax.set_ylabel(f"AP, averaged over{NL}the ten architectures",
+                  fontsize=6.2, color=INK, linespacing=1.4)
+    ax.set_title("(B) spread across held-out sources; pooled prevalence "
+                 "under each class", fontsize=7.6, color=INK, pad=5)
     ax.tick_params(axis="y", labelsize=5.8, colors=INK2)
     ax.tick_params(axis="x", length=0, pad=2)
     _frame(ax)
     ax.grid(axis="y", color=GRID, lw=0.45)
     ax.set_axisbelow(True)
     h, l = ax.get_legend_handles_labels()
-    fig.legend(h, l, fontsize=6.0, frameon=False, labelcolor=INK2, ncol=4,
-               loc="lower center", bbox_to_anchor=(0.5, 0.005))
+    fig.legend(h, l, fontsize=6.2, frameon=False, labelcolor=INK2, ncol=4,
+               loc="lower center", bbox_to_anchor=(0.5, 0.008))
     save(fig, "figure2_classwise", svg=True)
 
 
@@ -637,7 +655,7 @@ def inference(runs, ref="fcn", reps=REPS, seed=0, cache=True):
     twenty configurations on it, and everything else is arithmetic on
     the resulting matrix:
 
-      `marg`  equal-source mean macro-AUPRC per configuration;
+      `marg`  equal-source mean macro-AP per configuration;
       `agg`   paired difference against `ref`, equal-source mean;
       `src`   that difference on each held-out source separately;
       `src12` the same per source over the 12 classes left when NSR is
@@ -740,7 +758,7 @@ def inference(runs, ref="fcn", reps=REPS, seed=0, cache=True):
 
 
 def bootstrap(runs, cache=True):
-    """Equal-source mean macro-AUPRC with a patient-cluster interval."""
+    """Equal-source mean macro-AP with a patient-cluster interval."""
     return inference(runs, cache=cache)[0]
 
 
@@ -1509,7 +1527,7 @@ def figure1(runs, dep):
     axs_.set_xscale("log")
     axs_.set_xlabel("measured STM32F411 latency (ms, log)", fontsize=6.6,
                     color=TXT, labelpad=1.5)
-    axs_.set_ylabel("equal-source" + NL + "macro-AUPRC", fontsize=6.6,
+    axs_.set_ylabel("equal-source" + NL + "macro-AP", fontsize=6.6,
                     color=TXT, labelpad=1.5, linespacing=1.4)
     axs_.tick_params(labelsize=5.6, length=1.5, pad=1, colors=TXT)
     axs_.xaxis.set_major_formatter(
@@ -1538,7 +1556,7 @@ def figure1(runs, dep):
     axkey.set_xlim(0, 1)
     axkey.set_ylim(0, 1)
     bullets(x0 + 0.024, 0.085,
-            ["external macro-AUPRC against measured latency",
+            ["external macro-AP against measured latency",
              "SRAM shown as bubble size; both budgets drawn"])
 
     # centred in the gutter, so neither arrow touches a panel edge
@@ -1553,137 +1571,251 @@ def figure3(runs, boot, ref="fcn"):
     """RQ1: does the architecture change external discrimination, and
     does the answer hold on every source?
 
-    Panels A and B give each architecture one row carrying five things:
-    the paired difference against the reference on each of the four
-    held-out sources, and the equal-source mean with its interval. An
-    earlier version reduced the four sources to a count, "3 of 4", which
-    threw away the part that matters -- *which* source disagrees and by
-    how much. A model can clear zero on the mean while losing on one
-    source, and at the standard budget that is what happens.
-
-    The NSR sensitivity check that briefly lived here as a third panel
-    is reported in the text instead: recomputing the PTB-XL contrasts
-    over the twelve classes left when NSR is dropped leaves all nine
-    below zero, so the reversal does not depend on the one label that is
-    coded differently across sources.
+    One full-width panel for the standard budget. Each architecture gets
+    a row carrying five things: the paired difference against the
+    reference on each of the four held-out sources, and the equal-source
+    mean with its interval. An earlier version reduced the four sources
+    to a count, "3 of 4", which threw away the part that matters --
+    *which* source disagrees, and by how much. Another split the figure
+    across both budgets, which halved the space each row had and made
+    the four source points unreadable; the compact contrasts are in the
+    text and in Table 3.
 
     FCN-1D is the reference -- the plain-convolution baseline the other
     nine are implicitly arguing against -- fixed before the differences
-    were examined. Nine contrasts per budget are made with no
-    multiplicity adjustment, so they are exploratory.
+    were examined. Nine contrasts are made with no multiplicity
+    adjustment, so they are exploratory. The coloured points are
+    descriptive source estimates; only the black interval carries
+    uncertainty, and it is uncertainty in the mean across these four
+    sources, not across hospitals in general.
     """
-    agg, src, src12 = paired_vs_reference(runs, ref=ref)
+    agg, src, _ = paired_vs_reference(runs, ref=ref)
     if not agg:
         print("  (no paired differences -- figure3 skipped)")
         return
+    bud = BUDGETS[-1]
     SRCCOL = dict(zip(SOURCES, ["#2f6fb0", "#c4692a", "#2f8a4c", "#6a4fb0"]))
-    order = sorted([m for m in ZOO if any((m, b) in agg for b in BUDGETS)],
-                   key=lambda m: np.mean([agg[(m, b)][0] for b in BUDGETS
-                                          if (m, b) in agg]))
-    lo_all = min(min(v[1] for v in agg.values()),
-                 min(v[0] for v in src.values()))
-    hi_all = max(max(v[2] for v in agg.values()),
-                 max(v[0] for v in src.values()))
+    ms = [m for m in ZOO if (m, bud) in agg]
+    ms = sorted(ms, key=lambda m: agg[(m, bud)][0])
+    lo_all = min(min(v[1] for k, v in agg.items() if k[1] == bud),
+                 min(v[0] for k, v in src.items() if k[1] == bud))
+    hi_all = max(max(v[2] for k, v in agg.items() if k[1] == bud),
+                 max(v[0] for k, v in src.items() if k[1] == bud))
     pad = 0.07 * (hi_all - lo_all)
 
-    fig = plt.figure(figsize=(7.8, 3.6), facecolor=SURFACE)
-    gs = fig.add_gridspec(1, 2, left=0.215, right=0.985, top=0.885,
-                          bottom=0.215, wspace=0.08)
-    axes = [fig.add_subplot(gs[0, i]) for i in range(2)]
+    h = 1.5 + 0.34 * len(ms)
+    fig, ax = plt.subplots(figsize=(7.4, h), facecolor=SURFACE)
+    for y_, m in enumerate(ms):
+        for s_ in SOURCES:
+            if (m, bud, s_) in src:
+                ax.scatter(src[(m, bud, s_)][0], y_ + 0.19, s=20,
+                           color=SRCCOL[s_], edgecolor=SURFACE, lw=0.4,
+                           zorder=4, label=sname(s_) if y_ == 0 else None)
+        pt, lo, hi = agg[(m, bud)]
+        ax.plot([lo, hi], [y_ - 0.20, y_ - 0.20], lw=1.6, color=INK,
+                solid_capstyle="round", zorder=3)
+        ax.scatter(pt, y_ - 0.20, s=22, color=INK, marker="s", zorder=5,
+                   label="equal-source mean (95% CI)" if y_ == 0 else None)
+    ax.axvline(0, color=INK, lw=0.9, ls=(0, (3, 2)), zorder=2)
+    ax.set_yticks(range(len(ms)))
+    ax.set_yticklabels([f"{MID[m]}  {NICE[m]}" for m in ms], fontsize=7.2,
+                       color=INK)
+    ax.set_ylim(-0.75, len(ms) - 0.25)
+    ax.set_xlim(lo_all - pad, hi_all + pad)
+    ax.set_xlabel(f"paired difference in macro-AP vs {NICE[ref]}  "
+                  f"({bud} budget)", fontsize=7.4, color=INK)
+    ax.tick_params(axis="x", labelsize=6.4, colors=INK2)
+    ax.tick_params(axis="y", length=0)
+    _frame(ax)
+    ax.grid(axis="x", color=GRID, lw=0.45)
+    ax.set_axisbelow(True)
+    ax.text(0.015, 0.012, f"favours {NICE[ref]}", transform=ax.transAxes,
+            fontsize=6.0, color=INK2, ha="left", style="italic")
+    ax.text(0.985, 0.012, "favours this model", transform=ax.transAxes,
+            fontsize=6.0, color=INK2, ha="right", style="italic")
+    h_, l_ = ax.get_legend_handles_labels()
+    fig.legend(h_, l_, fontsize=6.4, frameon=False, labelcolor=INK2,
+               ncol=5, loc="lower center", bbox_to_anchor=(0.5, 0.055),
+               columnspacing=1.5, handletextpad=0.4)
+    fig.text(0.5, 0.018, "coloured points are source-specific estimates, "
+             "not source-specific intervals;  black bar = patient-cluster "
+             f"paired bootstrap 95% CI ({REPS} replicates)",
+             fontsize=6.0, color=INK2, ha="center")
+    fig.subplots_adjust(left=0.215, right=0.985, top=1 - 0.30 / h,
+                        bottom=0.95 / h)
+    save(fig, "figure3_paired", svg=True)
 
-    for ax, b in zip(axes[:2], BUDGETS):
-        ms = [m for m in order if (m, b) in agg]
-        for y_, m in enumerate(ms):
-            for s in SOURCES:
-                if (m, b, s) in src:
-                    ax.scatter(src[(m, b, s)][0], y_ + 0.17, s=11,
-                               color=SRCCOL[s], edgecolor=SURFACE, lw=0.35,
-                               zorder=4, label=sname(s) if y_ == 0 else None)
-            pt, lo, hi = agg[(m, b)]
-            ax.plot([lo, hi], [y_ - 0.19, y_ - 0.19], lw=1.3, color=INK,
+
+def _load_int8_probs(m, b, src):
+    f = INT8 / f"{m}__{b}__{src}_prob.npz"
+    if not f.exists():
+        return None
+    d = np.load(f)
+    return (d["y"].astype(np.int8), d["prob_f32"].astype(np.float64),
+            d["prob"].astype(np.float64))
+
+
+def budget_transition(runs=None, reps=REPS, seed=0, cache=True):
+    """What changes between the compact and standard budgets.
+
+    Two quantities, both on matched records:
+
+      `gain`  macro-AP(INT8 standard) - macro-AP(INT8 compact). What the
+              larger configuration buys, measured on the deployed
+              numerics rather than on FP32 weights nobody ships.
+
+      `inter` [AP(INT8,std) - AP(FP32,std)] - [AP(INT8,cmp) - AP(FP32,cmp)].
+              Whether the quantisation penalty itself changes with
+              budget. Positive means the standard configuration loses
+              less to INT8 than the compact one does.
+
+    These are different questions and are kept apart deliberately: a
+    budget that improves discrimination is not the same as a budget that
+    quantises more gracefully, and neither on its own settles what to
+    deploy.
+
+    All four scores in a replicate come from one patient draw per
+    held-out source, so every difference is paired and the shared
+    difficulty cancels. Compact and standard are separately trained
+    models, so the pairing here is on records, not on weights.
+    """
+    stamp_src = sorted((f.name, f.stat().st_size, int(f.stat().st_mtime))
+                       for f in INT8.glob("*_prob.npz"))
+    stamp = hashlib.sha1(
+        (repr(stamp_src) + f"|{reps}|{seed}|t1").encode()).hexdigest()[:16]
+    cf = INT8 / f"transition_{FS_OUT}hz.json"
+    if cache and cf.exists():
+        try:
+            blob = json.loads(cf.read_text())
+            if blob.get("stamp") == stamp:
+                print(f"    (transition cache hit, {blob['reps']} reps)")
+                return ({k: tuple(v) for k, v in blob["gain"].items()},
+                        {k: tuple(v) for k, v in blob["inter"].items()})
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+
+    rng = np.random.default_rng(seed)
+    gain, inter = {}, {}
+    cmp_b, std_b = BUDGETS[0], BUDGETS[1]
+    for m in ZOO:
+        data, ok = {}, True
+        for b in (cmp_b, std_b):
+            for src in SOURCES:
+                d = _load_int8_probs(m, b, src)
+                if d is None:
+                    ok = False
+                    break
+                data[(b, src)] = d
+            if not ok:
+                break
+        if not ok:
+            continue
+        prep = {(b, src, q): _prepare_ap(data[(b, src)][0],
+                                         data[(b, src)][1 + q])
+                for b in (cmp_b, std_b) for src in SOURCES for q in (0, 1)}
+        pidx = {src: _patient_index(src) for src in SOURCES}
+
+        def macro(b, src, q, w):
+            v = _ap_weighted(prep[(b, src, q)], w)
+            return np.nan if np.all(np.isnan(v)) else float(np.nanmean(v))
+
+        ones = {src: np.ones(data[(cmp_b, src)][0].shape[0],
+                             dtype=np.float32) for src in SOURCES}
+        g0 = float(np.mean([macro(std_b, s_, 1, ones[s_])
+                            - macro(cmp_b, s_, 1, ones[s_])
+                            for s_ in SOURCES]))
+        i0 = float(np.mean([(macro(std_b, s_, 1, ones[s_])
+                             - macro(std_b, s_, 0, ones[s_]))
+                            - (macro(cmp_b, s_, 1, ones[s_])
+                               - macro(cmp_b, s_, 0, ones[s_]))
+                            for s_ in SOURCES]))
+        ga, ia = np.empty(reps), np.empty(reps)
+        for i in range(reps):
+            gv, iv = [], []
+            for s_ in SOURCES:
+                pat, npat = pidx[s_]
+                cnt = np.bincount(rng.integers(0, npat, npat),
+                                  minlength=npat)
+                w = cnt[pat].astype(np.float32)
+                a = macro(std_b, s_, 1, w)
+                c = macro(cmp_b, s_, 1, w)
+                gv.append(a - c)
+                iv.append((a - macro(std_b, s_, 0, w))
+                          - (c - macro(cmp_b, s_, 0, w)))
+            ga[i], ia[i] = np.mean(gv), np.mean(iv)
+            if (i + 1) % 500 == 0:
+                print(f"    transition {NICE[m]}: {i + 1}/{reps}",
+                      flush=True)
+        gain[m] = (g0, float(np.percentile(ga, 2.5)),
+                   float(np.percentile(ga, 97.5)))
+        inter[m] = (i0, float(np.percentile(ia, 2.5)),
+                    float(np.percentile(ia, 97.5)))
+    if cache:
+        cf.write_text(json.dumps({"stamp": stamp, "reps": reps,
+                                  "gain": gain, "inter": inter}, indent=1))
+    return gain, inter
+
+
+def figure4(runs=None):
+    """The compact-to-standard transition, in its two separable parts.
+
+    The old version plotted only what INT8 costs. That is one of two
+    things a reader needs at this point in the argument, and on its own
+    it invites the wrong summary -- "quantisation is free, so take the
+    bigger model". Those are different claims resting on different
+    comparisons.
+
+    Panel A asks what the larger budget buys, measured on the deployed
+    INT8 numerics rather than on FP32 weights nobody ships. Panel B asks
+    whether the quantisation penalty itself depends on budget: the
+    difference of differences, positive where the standard
+    configuration loses less to INT8 than the compact one does.
+
+    Both are paired on records within a held-out source and averaged
+    over the four sources with equal weight.
+    """
+    gain, inter = budget_transition(None)
+    if not gain:
+        print("  (no int8 probabilities -- figure4 skipped)")
+        return
+    order = sorted(gain, key=lambda m: gain[m][0])
+    h = 1.3 + 0.30 * len(order)
+    fig, axes = plt.subplots(1, 2, figsize=(7.8, h), facecolor=SURFACE)
+    panels = [("(A) predictive gain from the larger budget",
+               "macro-AP(INT8 standard) - macro-AP(INT8 compact)", gain),
+              ("(B) change in the INT8 penalty",
+               "penalty(standard) - penalty(compact)", inter)]
+    for ax, (title, xlab, data) in zip(axes, panels):
+        for y_, m in enumerate(order):
+            pt, lo, hi = data[m]
+            ax.plot([lo, hi], [y_, y_], lw=1.5, color=MODEL_COLOR[m],
                     solid_capstyle="round", zorder=3)
-            ax.scatter(pt, y_ - 0.19, s=17, color=INK, marker="s",
-                       zorder=5, label="equal-source mean" if y_ == 0
-                       else None)
-        ax.axvline(0, color=INK, lw=0.8, ls=(0, (3, 2)), zorder=2)
-        ax.set_yticks(range(len(ms)))
-        ax.set_yticklabels([f"{MID[m]}  {NICE[m]}" for m in ms]
-                           if b == BUDGETS[0] else [], fontsize=6.4,
+            ax.scatter(pt, y_, s=20, color=MODEL_COLOR[m],
+                       edgecolor=SURFACE, lw=0.5, zorder=4)
+        ax.axvline(0, color=INK, lw=0.9, ls=(0, (3, 2)), zorder=2)
+        ax.set_yticks(range(len(order)))
+        ax.set_yticklabels([f"{MID[m]}  {NICE[m]}" for m in order]
+                           if data is gain else [], fontsize=6.6,
                            color=INK)
-        ax.set_ylim(-0.7, len(ms) - 0.3)
-        ax.set_xlim(lo_all - pad, hi_all + pad)
-        ax.set_xlabel(f"paired difference vs {NICE[ref]}", fontsize=6.6,
-                      color=INK)
-        ax.set_title(f"({'AB'[BUDGETS.index(b)]}) {b} budget",
-                     fontsize=7.4, color=INK, pad=4)
-        ax.tick_params(axis="x", labelsize=5.8, colors=INK2)
+        ax.set_xlabel(xlab, fontsize=6.4, color=INK)
+        ax.set_title(title, fontsize=7.4, color=INK, pad=4)
+        ax.tick_params(axis="x", labelsize=6.0, colors=INK2)
         ax.tick_params(axis="y", length=0)
         _frame(ax)
         ax.grid(axis="x", color=GRID, lw=0.45)
         ax.set_axisbelow(True)
-
-    h, l = axes[0].get_legend_handles_labels()
-    fig.legend(h, l, fontsize=6.0, frameon=False, labelcolor=INK2, ncol=5,
-               loc="lower center", bbox_to_anchor=(0.5, 0.072),
-               columnspacing=1.5, handletextpad=0.4)
-    fig.text(0.5, 0.028, "coloured dots are source-specific point "
-             "estimates, not source-specific intervals;  black bar = "
-             f"patient-cluster paired bootstrap 95% CI ({REPS} replicates)",
-             fontsize=5.8, color=INK2, ha="center")
-    save(fig, "figure3_paired", svg=True)
-
-
-def figure4():
-    """Effect of INT8 quantisation, as a forest plot over every family.
-
-    The interval is a paired record-level bootstrap of the equal-source
-    mean difference, computed by b2b_int8_ci.py. It is not the range of
-    the four per-source differences: that range describes how much the
-    effect varies between these particular datasets and cannot narrow
-    with more records, so it answers a different question and must not
-    be drawn where a reader expects a confidence interval.
-
-    Height scales with the number of rows rather than being fixed, so a
-    ten-model figure does not inherit the spacing of a three-model one.
-    """
-    f = INT8 / "int8_ci.json"
-    if not f.exists():
-        print("  (no int8 CI -- run b2b_int8_ci.py)")
-        return
-    d = pd.DataFrame(json.loads(f.read_text()))
-    order = (d.groupby("model").d_auprc.mean()
-             .sort_values(ascending=False).index.tolist())
-    cmap = plt.get_cmap("Dark2")
-    h = 1.1 + 0.34 * len(order)
-    fig, ax = plt.subplots(figsize=(6.6, h), facecolor=SURFACE)
-    yy = np.arange(len(order))[::-1]
-    off = {BUDGETS[0]: 0.17, BUDGETS[1]: -0.17}
-    for y_, m in zip(yy, order):
-        for i_, b in enumerate(BUDGETS):
-            g = d[(d.model == m) & (d.budget == b)]
-            if g.empty:
-                continue
-            r = g.iloc[0]
-            yk = y_ + off[b]
-            ax.plot([r.lo, r.hi], [yk, yk], lw=1.3, color=cmap(i_),
-                    zorder=2, solid_capstyle="round")
-            ax.scatter(r.d_auprc, yk, s=24, color=cmap(i_),
-                       edgecolor=SURFACE, lw=0.6, zorder=3,
-                       label=b if m == order[0] else None)
-    ax.axvline(0, color=INK, lw=1.0, ls="--", zorder=1)
-    ax.set_yticks(yy)
-    ax.set_yticklabels([NICE[m] for m in order], fontsize=7.2)
-    ax.set_ylim(-0.7, len(order) - 0.3)
-    ax.set_xlabel("INT8 minus FP32 external macro-AUPRC",
-                  fontsize=7.4, color=INK)
-    ax.legend(fontsize=6.6, frameon=False, labelcolor=INK2, ncol=2,
-              loc="lower center", bbox_to_anchor=(0.5, -0.015 - 0.95 / h),
-              title="size budget", title_fontsize=6.6)
-    _frame(ax)
-    ax.grid(axis="x", color=GRID, lw=0.5)
-    fig.subplots_adjust(left=0.27, right=0.975, top=0.975,
-                        bottom=0.055 + 0.62 / h)
-    save(fig, "figure4_int8_cost")
+    axes[1].text(0.015, 0.015, "standard loses more to INT8",
+                 transform=axes[1].transAxes, fontsize=5.4, color=INK2,
+                 ha="left", style="italic")
+    axes[1].text(0.985, 0.015, "standard loses less",
+                 transform=axes[1].transAxes, fontsize=5.4, color=INK2,
+                 ha="right", style="italic")
+    fig.text(0.5, 0.022, "points are equal-source means; bars are "
+             f"patient-cluster paired bootstrap 95% CIs ({REPS} replicates)",
+             fontsize=6.0, color=INK2, ha="center")
+    fig.subplots_adjust(left=0.215, right=0.985, top=1 - 0.52 / h,
+                        bottom=0.40 / h + 0.045, wspace=0.07)
+    save(fig, "figure4_budget_transition", svg=True)
 
 
 def _label_points(ax, xs, ys, labels, sizes, *, fontsize=5.0,
@@ -1692,7 +1824,7 @@ def _label_points(ax, xs, ys, labels, sizes, *, fontsize=5.0,
 
     Putting the identifier at the marker centre is legible only while no
     two markers overlap. Several architectures land within a few
-    milliseconds and a thousandth of AUPRC of each other, so the centred
+    milliseconds and a thousandth of macro-AP of each other, so the centred
     labels pile up and none of them can be read.
 
     Each label is therefore tried at the centre first and, when that box
@@ -1831,7 +1963,7 @@ def figure7(runs, boot, dep):
         matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
     ax.set_xlabel("measured STM32F411 latency (ms, log)", fontsize=7.0,
                   color=INK)
-    ax.set_ylabel("equal-source external macro-AUPRC", fontsize=7.0,
+    ax.set_ylabel("equal-source external macro-AP", fontsize=7.0,
                   color=INK)
     ax.tick_params(labelsize=6.2, colors=INK2)
     ax.margins(0.13)

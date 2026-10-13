@@ -24,7 +24,8 @@ from zero. The proxy's cheapest model is the device's most expensive.
 
 | | question | evidence |
 |---|---|---|
-| **RQ1** | At a fixed MCU budget, how much does the architecture decide external diagnostic performance? | Figure 2, Figure 3, Figure 4, Table 3 |
+| **RQ1** | At a fixed MCU budget, how much does the architecture decide external diagnostic performance? | Figure 2, Figure 3, Table 3 |
+| **budget** | What does the larger weight budget buy, and does INT8 cost more at that size? | Figure 4 |
 | **RQ2** | Do the efficiency innovations of 2016-2024 translate into measured Flash, SRAM and latency on a Cortex-M4? | Figure 5, Figure 6 |
 | **RQ3** | What performance-resource trade-offs are observed, and can MCU feasibility be predicted from the graph rather than measured? | Figure 7 |
 
@@ -72,6 +73,16 @@ threshold selection.
 
 **Input.** 10 s, 12 leads, decimated to 100 Hz: 12 x 1000. Fixed before
 anything was trained.
+
+**Metric.** The primary endpoint is **average precision (AP)**,
+computed per diagnosis; `ap_fast` is verified equal to
+`sklearn.metrics.average_precision_score` to 1.7e-16 including on tied
+scores, so no trapezoidal interpolation enters anywhere. **macro-AP** is
+the mean of the 13 class APs within a held-out source; the
+**equal-source mean macro-AP** is the mean of the four source values,
+each weighted a quarter so Ningbo's 28,956 records do not outvote
+Georgia's 8,302. Macro-AUROC is reported as a secondary metric and is
+unchanged. AP is never used unqualified for the 13-class aggregate.
 
 **Everything else pinned.** Same loss (BCE with positive weighting
 capped at 50), AdamW at 2e-3, OneCycle, 12 epochs, batch 256, seed 0.
@@ -156,7 +167,7 @@ fold's weights are deployed per combination.
 > **Finding 1. At a fixed MCU budget the architecture makes a small but
 > reliable difference, and whether it fits the budget makes a large
 > one.** Six of ten configurations sit within **0.010** equal-source
-> macro-AUPRC of the best at each budget; a 2016 ResNet and a 2024
+> macro-AP of the best at each budget; a 2016 ResNet and a 2024
 > RepViT are separated by **0.0035** (compact) and **0.0012**
 > (standard). The full spread is **0.090** compact and **0.096**
 > standard, almost entirely one family: excluding MobileNetV3 it
@@ -169,11 +180,11 @@ fold's weights are deployed per combination.
 > drawn, which are hard -- and a marginal interval carries all of it.
 > The paired contrast removes it. Against FCN-1D as a prespecified
 > baseline, **17 of 18 differences have a 95% interval clear of zero**
-> (Finding 1c). So the differences are small, not absent, and
+> (Finding 1b). So the differences are small, not absent, and
 > "overlapping intervals" was never the right test. **Figure 2,
 > Figure 3, Table 3.**
 
-> **Finding 1c. Paired against a common baseline, almost every
+> **Finding 1b. Paired against a common baseline, almost every
 > architecture separates from it -- by a little.** Each family is
 > compared with **FCN-1D**, the plain-convolution baseline the other
 > nine are implicitly arguing against, fixed as the reference before the
@@ -211,8 +222,8 @@ fold's weights are deployed per combination.
 > the compact budget is not a result, because that contrast was never
 > computed. **Figure 3.**
 
-> **Finding 1b. The source ordering is not an artefact of class
-> prevalence.** Macro-AUPRC averages 13 per-class average precisions,
+> **Finding 1c. The source ordering is not an artefact of class
+> prevalence.** Macro-macro-AP averages 13 per-class average precisions,
 > and each has a floor equal to that class's positive rate, so a source
 > whose classes are commoner scores higher before any model is any
 > good. That floor is worth computing rather than assuming, because the
@@ -319,7 +330,7 @@ fold's weights are deployed per combination.
 > reaches **66.4 ms per MMACC** at both budgets, placing **6th of ten**
 > at each. At the standard budget it is beaten on arithmetic efficiency
 > by all three of the designs it names: GhostNet 45.2, ShuffleNetV2
-> 49.4, MobileNetV2 50.6. It is also 9th of ten on external AUPRC,
+> 49.4, MobileNetV2 50.6. It is also 9th of ten on external macro-AP,
 > because passing three quarters of the channels through untouched costs
 > representational capacity at MCU width.
 >
@@ -330,25 +341,63 @@ fold's weights are deployed per combination.
 > for why it cannot: the ordering it predicts is not stable even within
 > a single family across two budgets.
 
-> **Finding 5. INT8 is free for every family, and now demonstrably so.**
-> All **20 of 20** paired bootstrap intervals on the equal-source mean
-> INT8 - FP32 difference lie entirely below zero, spanning **-0.0056 to
-> -0.0017**; the worst single fold is -0.0133. Every one of those
-> numbers is an order of magnitude below the gap between the best and
-> worst family.
+> **Finding 5. INT8 is free for every family.** All **20 of 20** paired
+> bootstrap intervals on the equal-source mean INT8 - FP32 difference
+> lie entirely below zero, spanning **-0.0056 to -0.0017**; the worst
+> single fold is -0.0133. Every one of those numbers is an order of
+> magnitude below the gap between the best and worst family, and the
+> gap between budgets.
 >
 > The intervals are paired by construction -- one record index set per
 > held-out source, both precisions scored on the same draw -- because
-> FP32 and INT8 share most of their variance. An earlier version of
-> Figure 4 drew the *range across the four sources* instead, which
-> crossed zero for several families; that quantity describes how much
-> the effect varies between datasets, not how precisely the mean is
-> estimated, and it cannot shrink with more records. Which family
-> degrades most is not stable across budgets (FCN-1D worst at compact,
-> MobileNetV3 at standard), so no architectural story is
-> attached to the ordering. **Figure 4.**
+> FP32 and INT8 share most of their variance. An earlier version drew
+> the *range across the four sources* instead, which crossed zero for
+> several families; that quantity describes how much the effect varies
+> between datasets, not how precisely the mean is estimated, and it
+> cannot shrink with more records. Which family degrades most is not
+> stable across budgets (FCN-1D worst at compact, MobileNetV3 at
+> standard), so no architectural story is attached to the ordering.
+>
+> **A caveat on footing.** These twenty intervals are the one place in
+> the report still computed by the original standalone script: 400
+> replicates, resampling *records* rather than patient clusters.
+> Everything else now runs through the single-pass estimator at 2,000
+> patient-cluster replicates. For PTB-XL, where 20,487 records come
+> from 17,928 patients, record-level resampling treats repeated
+> recordings as independent and gives an interval that is slightly too
+> narrow; the other three sources are one record per patient and are
+> unaffected. The effects are far enough from zero that the conclusion
+> does not turn on it, but the numbers are not on the same footing as
+> Figure 3's and should be recomputed before submission.
 
----
+> **Finding 5b. The larger budget helps every family, and quantises
+> no worse for it.** Figure 4 separates two questions the single
+> quantisation plot used to blur together.
+>
+> **Panel A** is what the standard budget buys over the compact one,
+> measured on the INT8 models that actually ship rather than on FP32
+> weights nobody deploys. **All ten gains are positive with intervals
+> clear of zero**, from **+0.0088** (MobileNetV2) to **+0.0335**
+> (FCN-1D). The families that gain most are the two that were worst at
+> the compact budget, FCN-1D and FasterNet, so the larger budget
+> compresses the spread rather than lifting everyone equally.
+>
+> **Panel B** asks whether the INT8 penalty itself grows with the
+> model: the difference of differences, positive where the standard
+> configuration loses *less* to quantisation. **Six of ten are clear of
+> zero and all six are positive**; the other four span it and **none is
+> negative**. Quantisation is therefore no worse at the larger size and
+> is measurably gentler for most families -- consistent with a wider
+> network having more redundancy to absorb the rounding, though that
+> mechanism is not tested here. The effects are tiny in absolute terms,
+> at most **+0.0024** macro-AP.
+>
+> Keeping the two apart matters because "the bigger model scores
+> higher" and "the bigger model quantises more gracefully" are
+> different claims resting on different comparisons. Both favour the
+> standard budget on discrimination alone, and neither settles what to
+> deploy: Finding 11 puts the same step at 2.5x the Flash and 3.6x the
+> latency. **Figure 4.**
 
 ## RQ2 - hardware characterisation
 
@@ -472,7 +521,7 @@ optimality beyond the configurations tested.
 > recoverable from the model definition.
 
 > **Finding 11. The standard budget buys little for what it costs.**
-> Quadrupling the weight allowance raises external macro-AUPRC by
+> Quadrupling the weight allowance raises external macro-AP by
 > **+0.0183** on average (range +0.0096 to +0.0305 across families). The
 > measured price is **2.5x the Flash** (median; 1.8x to 3.4x) and
 > **3.6x the latency** (median; 2.1x to 9.2x).
@@ -517,14 +566,14 @@ measure on the part before committing.**
    both.
 
 2. **Fitting the budget matters far more than the block.** Among the
-   nine families that scale into the budget the spread is 0.038 AUPRC
+   nine families that scale into the budget the spread is 0.038 macro-AP
    at the compact budget and 0.025 at the standard; adding
    MobileNetV3, which must shrink to w = 0.18 and starves its trunk to
    4-16 channels, widens them to 0.090 and 0.096.
 
 3. **The architecture term is reliable but small.** Paired against
    FCN-1D on identical patients, 17 of 18 contrasts have intervals clear
-   of zero, yet the largest is +0.027 AUPRC and most are under +0.015 --
+   of zero, yet the largest is +0.027 macro-AP and most are under +0.015 --
    against a source term that moves the same metric by 0.15 (Figure 3,
    Table 3).
 
@@ -646,21 +695,21 @@ the ST toolchain installed at the paths declared at the top of that file.
 | | file | answers |
 |---|---|---|
 | 1 | `figures/figure1_design` | graphical overview in three columns: sources, benchmark, outputs. ECG traces are real records drawn from the cohort by index; the RQ1-RQ3 insets are the actual results in miniature; counts are read from the artefacts. Also exported as `.svg` |
-| 2 | `figures/figure2_classwise` | **RQ1** (A, B) equal-source mean AP for each of the 13 diagnoses, every family, both budgets -- the layer underneath macro-AUPRC, which Table 3 already reports; (C) the spread across held-out sources that the equal-source mean averages away, with pooled prevalence under each class and NSR flagged as not comparably coded (Finding 0) |
-| 3 | `figures/figure3_paired` | **RQ1** paired difference in external macro-AUPRC against FCN-1D, both budgets, resolved to the four held-out sources, with patient-cluster paired-bootstrap 95% intervals on the equal-source mean. Replaced the source-wise dot plot, which restated Figure 2 and answered no question Table 3 did not |
-| 4 | `figures/figure4_int8_cost` | **RQ1** what quantisation costs: paired bootstrap intervals on the equal-source mean INT8 - FP32 difference, all twenty entirely below zero |
+| 2 | `figures/figure2_classwise` | **RQ1, standard budget** (A) equal-source mean AP for each of the 13 diagnoses, every family -- the layer underneath macro-AP, which Table 3 reports for both budgets; (B) the spread across held-out sources that the equal-source mean averages away, with pooled prevalence under each class and NSR flagged as not comparably coded (Finding 0) |
+| 3 | `figures/figure3_paired` | **RQ1, standard budget** paired difference in macro-AP against FCN-1D, resolved to the four held-out sources, with patient-cluster paired-bootstrap 95% intervals on the equal-source mean. Replaced the source-wise dot plot, which restated Figure 2 and answered no question Table 3 did not |
+| 4 | `figures/figure4_budget_transition` | **compact -> standard** (A) what the larger budget buys, macro-AP(INT8 standard) - macro-AP(INT8 compact), measured on the deployed numerics rather than on FP32 weights nobody ships; (B) whether the INT8 penalty itself changes with budget, penalty(standard) - penalty(compact). Both paired on records within a source, patient-cluster bootstrap |
 | 5 | `figures/figure5_hardware` | **RQ2** (A) Flash, (B) peak SRAM, (C) MACC, (D) measured latency, for every family at both budgets. Solid bars are the compact budget, hatched the standard. Replaces the deployment table outright, so the extremes a reader would have looked up are annotated and the part's capacities are stated in-panel; exact values for all twenty configurations are deposited as `results/deploy_*/deployment_measurements.csv` |
 | 6 | `figures/figure6_complexity_latency` | **RQ2** (a) latency against MACC on log-log with Spearman and per-budget Kendall, (b) ms per million MACC paired across budgets -- the reversal in Finding 7 |
-| 7 | `figures/figure7_tradeoffs` | **RQ3** equal-source external macro-AUPRC against measured latency, both budgets on one log axis. Marker shape is the budget, colour the family, area the measured peak SRAM. Outlined markers are non-dominated in the accuracy-latency plane within their budget; every tested configuration is drawn and **no connecting frontier is implied** -- these are twenty discrete measurements, not a continuum |
+| 7 | `figures/figure7_tradeoffs` | **RQ3** equal-source external macro-AP against measured latency, both budgets on one log axis. Marker shape is the budget, colour the family, area the measured peak SRAM. Outlined markers are non-dominated in the accuracy-latency plane within their budget; every tested configuration is drawn and **no connecting frontier is implied** -- these are twenty discrete measurements, not a continuum |
 | S2 | `figures/figureS2_residual_latency` | OLS residual latency, retained for completeness; specification-dependent, which is why it is not in the main set |
 
 ## Main tables
 
 | | file | answers |
 |---|---|---|
-| 1 | `tables/table1_protocol` | cohort composition: records, patients, age, sex, labels per ECG, and the random-ranking AP baseline. Per-class prevalence moved to Table S1 -- four of thirteen was an arbitrary window, and NSR is not comparable across sources (Finding 0) |
-| 2 | `tables/table2_architectures` | the ten families: identifier, year, defining block, width, size, MACs |
-| 3 | `tables/table3_external` | external macro-AUPRC and AUROC per source, with bootstrap CIs |
+| 1 | `tables/table1_protocol` | cohort composition: records, patients, age, sex, labels per ECG, and the random-ranking AP reference. Per-class prevalence moved to Table S1 -- four of thirteen was an arbitrary window, and NSR is not comparable across sources (Finding 0) |
+| 2 | `tables/table2_architectures` | one row per family, the two budgets side by side: width, INT8 weight size, graph activation proxy. MACC moved to Figure 5 panel C so the two cannot drift |
+| 3 | `tables/table3_external` | external macro-AP and AUROC per source, with bootstrap CIs |
 
 There is no Table 4. The deployment measurements are Figure 5, and the
 exact numbers are deposited as a machine-readable CSV

@@ -1,24 +1,15 @@
-Table 2. The ten families and the two size budgets. The identifier column is the short label used in Figures 5 and 6. Each family is scaled to the largest width that satisfies both budgets rather than to a common width, so every design is given the biggest version of itself the part will accept. Parameters are the deployed count: RepViT is reparameterised first, so its folded training branches are not charged to Flash. Peak activation is derived from the graph as an SRAM proxy; the measured figure is in Table 4, and the two differ substantially. MACC is taken from the deployment toolchain rather than counted analytically, so it is what the device executes. FasterNet is reported at its published partial ratio only.
+Table 2. The ten architecture families and their two size budgets. Each family is scaled to the largest width that satisfies both budgets rather than to a common width, so every design is given the biggest version of itself the part will accept; widths are family-specific scaling factors and are not comparable between rows. INT8 weights are the deployed parameter count, one byte each: RepViT is reparameterised first, so its folded training branches are not charged. Graph activation is the peak tensor size derived from the model definition -- an SRAM proxy, not a measurement, and Finding 9 shows it carries no usable rank information about what the device allocates; the measured figure is Figure 5 panel B. Arithmetic cost is Figure 5 panel C. These are one-dimensional adaptations of the published families, sharing each family's defining operation but not its depth or published topology (Limitation 2). FasterNet is reported at its published partial ratio only.
 ------------------------------------------------------------------------------
-                            id  year                    defining block  width  params  int8 weights KB  peak act KB (graph)  MACC (M, ST tool)
-budget   model                                                                                                                                
-compact  FCN-1D             M1  2017                 plain convolution   1.06   29813             29.1                  7.8               2.80
-         ResNet-1D          M2  2016                    residual block   0.65   32309             31.6                  3.9               3.42
-         TCN                M3  2018               dilated convolution   0.94   27313             26.7                  6.8               4.26
-         MobileNetV2        M4  2018                 inverted residual   0.74   31285             30.6                 15.6               2.67
-         ShuffleNetV2       M5  2018           channel split + shuffle   1.62   32125             31.4                  9.8               3.64
-         GhostNet           M6  2020                      ghost module   1.25   29441             28.8                  6.8               2.49
-         MobileNetV3        M7  2019  inverted residual + SE + h-swish   0.18   31933             31.2                  1.6               0.68
-         FasterNet          M8  2023               partial convolution   0.90   32619             31.9                  9.8               3.20
-         RepViT             M9  2024   reparameterised depthwise + FFN   0.85   32657             31.9                  9.8               2.95
-         MobileNetV4-Conv  M10  2024     universal inverted bottleneck   0.78   32457             31.7                 19.5               2.98
-standard FCN-1D             M1  2017                 plain convolution   2.18  122081            119.2                 16.6              10.42
-         ResNet-1D          M2  2016                    residual block   1.28  130149            127.1                  7.8              13.43
-         TCN                M3  2018               dilated convolution   1.93  116113            113.4                 14.6              17.51
-         MobileNetV2        M4  2018                 inverted residual   1.58  130673            127.6                 39.1              11.56
-         ShuffleNetV2       M5  2018           channel split + shuffle   3.52  129177            126.1                 20.5              13.88
-         GhostNet           M6  2020                      ghost module   2.74  129969            126.9                 15.6               9.81
-         MobileNetV3        M7  2019  inverted residual + SE + h-swish   0.37  128821            125.8                  3.4               1.92
-         FasterNet          M8  2023               partial convolution   1.84  130959            127.9                 21.5              12.54
-         RepViT             M9  2024   reparameterised depthwise + FFN   1.74  124529            121.6                 19.5              10.87
-         MobileNetV4-Conv  M10  2024     universal inverted bottleneck   1.62  129877            126.8                 39.1              11.56
+                                                              compact                              standard                             
+         architecture  year                defining operation   width INT8 weights KB graph act KB    width INT8 weights KB graph act KB
+ID                                                                                                                                      
+M1             FCN-1D  2017                 plain convolution    1.06            29.1          7.8     2.18           119.2         16.6
+M2          ResNet-1D  2016                    residual block    0.65            31.6          3.9     1.28           127.1          7.8
+M3                TCN  2018               dilated convolution    0.94            26.7          6.8     1.93           113.4         14.6
+M4        MobileNetV2  2018                 inverted residual    0.74            30.6         15.6     1.58           127.6         39.1
+M5       ShuffleNetV2  2018           channel split + shuffle    1.62            31.4          9.8     3.52           126.1         20.5
+M6           GhostNet  2020                      ghost module    1.25            28.8          6.8     2.74           126.9         15.6
+M7        MobileNetV3  2019  inverted residual + SE + h-swish    0.18            31.2          1.6     0.37           125.8          3.4
+M8          FasterNet  2023               partial convolution    0.90            31.9          9.8     1.84           127.9         21.5
+M9             RepViT  2024   reparameterised depthwise + FFN    0.85            31.9          9.8     1.74           121.6         19.5
+M10  MobileNetV4-Conv  2024     universal inverted bottleneck    0.78            31.7         19.5     1.62           126.8         39.1
