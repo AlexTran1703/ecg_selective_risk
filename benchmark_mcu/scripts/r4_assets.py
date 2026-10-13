@@ -1086,99 +1086,66 @@ def _deploy_legend(fig, y=0.020):
 
 
 def figure5(runs=None):
-    """RQ2: what each configuration costs the device.
+    """RQ2: does a configuration fit, and can it run?
 
-    Four panels, one per resource, ten rows each and four points per
-    row -- the two scaling methods at the two budgets. Forty bars per
-    metric would say the same thing and be unreadable; a row of four
-    points lets a reader see a family's whole cost profile at once, and
-    the shared row order lets them carry a family across panels.
+    Two panels, because these are the two questions the part asks
+    before any other matters: flash decides whether the model can be
+    stored, SRAM whether it can be executed at all. Arithmetic cost and
+    latency are not memory constraints and have a figure of their own.
 
-    Flash and SRAM are what the toolchain reports for the linked
-    firmware, which includes the runtime; the weight and activation
-    budgets the configurations were fitted to are the model's share of
-    those, and are marked separately so the two are not conflated.
+    Four points per row -- the two scaling methods at the two budgets --
+    so a family's whole footprint reads at a glance, and the dashed
+    lines are the device's real limits rather than the budgets the
+    search targeted. A point left of the line is feasible on that
+    resource.
     """
     dep, synth = deploy_table()
     if not dep:
         print("  figure5 skipped: no deployment records")
         return
     ms = [m for m in D.ORDER if any(k[0] == m for k in dep)]
-    # Arithmetic cost and latency span more than an order of magnitude
-    # across these ten families -- FCN-1D alone is twenty times the
-    # median -- so a linear axis would crush nine rows against the
-    # spine to make room for one. Flash and SRAM stay linear, because
-    # there the fixed device limit is the thing being read against.
-    panels = [("(A) firmware flash", "KB", False,
+    panels = [("(A) firmware flash",
                lambda r: (r.get("total_flash_b") or 0) / 1024,
-               lambda r: (r.get("weights_b") or 0) / 1024, D.FLASH_KB),
-              ("(B) peak SRAM", "KB", False,
+               D.FLASH_KB, "flash limit"),
+              ("(B) peak SRAM",
                lambda r: (r.get("total_ram_b") or 0) / 1024,
-               lambda r: (r.get("activations_b") or 0) / 1024, D.SRAM_KB),
-              ("(C) arithmetic cost", "million MACC (log)", True,
-               lambda r: (r.get("macc") or 0) / 1e6, None, None),
-              ("(D) inference latency", "ms (log)", True,
-               lambda r: r.get("ms_median") or np.nan, None, None)]
+               D.SRAM_KB, "SRAM limit")]
+    off = {"U-UC128": 0.255, "U-C256": 0.085,
+           "J-UC128": -0.085, "J-C256": -0.255}
 
-    fig, axes = plt.subplots(1, 4, figsize=(11.6, 4.6), facecolor=SURFACE,
+    fig, axes = plt.subplots(1, 2, figsize=(8.6, 4.5), facecolor=SURFACE,
                              sharey=True)
-    for ax, (title, unit, logx, val, sub, limit) in zip(axes, panels):
+    for ax, (title, val, limit, lname) in zip(axes, panels):
         for y_, m in enumerate(ms):
             for cfg in D.DEPLOYED:
                 r = dep.get((m, cfg))
                 if not r:
                     continue
                 colour, shape = _cfg_style(cfg)
-                off = {"U-UC128": 0.255, "U-C256": 0.085,
-                       "J-UC128": -0.085, "J-C256": -0.255}[cfg]
                 ok = r.get("deployed", True)
-                if sub is not None:
-                    ax.plot([sub(r), val(r)], [y_ + off, y_ + off], lw=0.7,
-                            color=colour, alpha=0.35, zorder=2)
-                    ax.scatter(sub(r), y_ + off, s=9, facecolor="none",
-                               edgecolor=colour, lw=0.6, zorder=3)
-                ax.scatter(val(r), y_ + off, s=22, marker=shape,
+                ax.scatter(val(r), y_ + off[cfg], s=26, marker=shape,
                            color=colour if ok else "#ffffff",
-                           edgecolor=colour if ok else "#b03a4a",
-                           lw=0.5 if ok else 0.9, zorder=5)
-                if not ok:
-                    ax.scatter(val(r), y_ + off, s=46, marker="x",
-                               color="#b03a4a", lw=0.8, zorder=6)
-        if logx:
-            ax.set_xscale("log")
-            # Hand-placed decade ticks: matplotlib's minor log labels
-            # overlap into illegibility at this panel width.
-            lo_, hi_ = ax.get_xlim()
-            ticks = [t for t in (1, 2, 5, 10, 20, 50, 100, 200, 500,
-                                 1000, 2000, 5000) if lo_ <= t <= hi_]
-            ax.set_xticks(ticks)
-            ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
-            ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
-        if limit:
-            ax.axvline(limit, color="#b03a4a", lw=0.9, ls=(0, (3, 2)),
-                       zorder=4)
-            ax.text(limit, -0.45, f" {limit} KB", fontsize=5.6,
-                    color="#b03a4a", ha="left", va="center")
-        ax.set_title(title, fontsize=7.8, color=INK, pad=5)
-        ax.set_xlabel(unit, fontsize=6.8, color=INK2)
-        ax.tick_params(axis="x", labelsize=6.0, colors=INK2)
+                           edgecolor=SURFACE if ok else "#b03a4a",
+                           lw=0.4 if ok else 0.9, zorder=5)
+        ax.axvline(limit, color="#b03a4a", lw=1.0, ls=(0, (3, 2)), zorder=4)
+        # Right-aligned against the line: left-aligned it runs off
+        # the panel, and there is empty space inside the limit.
+        ax.text(limit, -0.56, lname + " " + str(limit) + " KB  ",
+                fontsize=6.4, color="#b03a4a", ha="right", va="center")
+        ax.set_xlim(0, limit * 1.14)
+        ax.set_title(title, fontsize=8.2, color=INK, pad=5)
+        ax.set_xlabel("KB", fontsize=7.0, color=INK2)
+        ax.tick_params(axis="x", labelsize=6.4, colors=INK2)
         ax.tick_params(axis="y", length=0)
-        # M1 at the top: the row order has to match Table 2 and every
-        # other figure, and matplotlib counts rows upward.
-        ax.set_ylim(len(ms) - 0.4, -0.6)
+        ax.set_ylim(len(ms) - 0.4, -0.75)
         B._frame(ax)
-        ax.grid(axis="x", color=GRID, lw=0.4, which="both")
+        ax.grid(axis="x", color=GRID, lw=0.4)
         ax.set_axisbelow(True)
     axes[0].set_yticks(range(len(ms)))
-    axes[0].set_yticklabels([f"{D.LABEL[m]} {m}" for m in ms], fontsize=6.6,
-                            color=INK)
+    axes[0].set_yticklabels([D.LABEL[m] + "  " + m for m in ms],
+                            fontsize=7.0, color=INK)
     _deploy_legend(fig, y=0.018)
-    fig.text(0.5, 0.062,
-             "filled marker = linked firmware (includes the ST runtime);  "
-             "open marker = the model's own weights / activations;  "
-             "x = did not deploy",
-             fontsize=6.0, color=INK2, ha="center")
-    fig.subplots_adjust(left=0.135, right=0.99, top=0.925, bottom=0.175,
+    fig.subplots_adjust(left=0.185, right=0.985, top=0.925, bottom=0.165,
                         wspace=0.08)
     if synth:
         _stamp(fig)
@@ -1186,101 +1153,111 @@ def figure5(runs=None):
 
 
 def figure6(runs=None):
-    """RQ2: does arithmetic cost predict latency, and which method runs
-    faster for the same bytes?
+    """RQ2: is arithmetic cost a usable proxy for latency on this part?
 
-    Panel A asks whether MACC is a usable proxy for time on this part.
-    If it were, every point would sit on one line and a designer could
-    stop at a FLOP count. Rank discordance is reported rather than r
-    alone, because what a designer does with the proxy is *order*
-    candidates, and a proxy can correlate strongly while still
-    mis-ordering the pairs that matter.
+    One panel per scaling method, stacked so the two share an x axis and
+    a reader can drop a vertical line through both. If MAC count were a
+    good proxy every point would lie on its panel's trend and a designer
+    could stop at a FLOP count.
 
-    Panel B is the matched comparison: the same family, the same budget,
-    joint over uniform. A ratio below one means joint is faster. This is
-    more directly useful than milliseconds per MACC, which divides by a
-    quantity panel A may already have shown to be the wrong denominator.
+    Rank discordance is reported beside the correlation, per panel,
+    because what a designer does with a proxy is *order* candidates, and
+    a proxy can correlate strongly while still mis-ordering the pairs
+    that decide a choice. Splitting by method also asks a sharper
+    question than pooling would: whether the proxy fails for everyone,
+    or only for the networks one method produces.
+
+    Colour is the architecture family, as in Figure 7, so a family can
+    be carried between the two figures; the per-point identifiers are
+    gone and the legend carries identity instead.
     """
     dep, synth = deploy_table()
     if not dep:
         print("  figure6 skipped: no deployment records")
         return
-    pts = [(r, m, cfg) for (m, cfg), r in dep.items()
-           if r.get("deployed", True) and r.get("ms_median")]
-    fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.3), facecolor=SURFACE)
+    all_pts = [(r, m, cfg) for (m, cfg), r in dep.items()
+               if r.get("deployed", True) and r.get("ms_median")]
+    if len(all_pts) < 6:
+        print("  figure6 skipped: too few deployed")
+        return
+    from scipy.stats import spearmanr
 
-    ax = axes[0]
-    for r, m, cfg in pts:
-        colour, shape = _cfg_style(cfg)
-        ax.scatter(r["macc"] / 1e6, r["ms_median"], s=30, marker=shape,
-                   color=colour, edgecolor=SURFACE, lw=0.4, zorder=4)
-        ax.annotate(D.LABEL[m], (r["macc"] / 1e6, r["ms_median"]),
-                    textcoords="offset points", xytext=(3.5, 2.5),
-                    fontsize=4.9, color=INK2, zorder=5)
-    x = np.array([r["macc"] / 1e6 for r, _, _ in pts])
-    y = np.array([r["ms_median"] for r, _, _ in pts])
-    if len(x) > 2:
-        from scipy.stats import spearmanr
+    fig, axes = plt.subplots(2, 1, figsize=(7.2, 5.6), facecolor=SURFACE,
+                             sharex=True, sharey=True)
+    for k, (meth, ax) in enumerate(zip(("uniform", "joint"), axes)):
+        pts = [p for p in all_pts if D.METHOD_OF[p[2]] == meth]
+        if not pts:
+            continue
+        x = np.array([r["macc"] / 1e6 for r, _, _ in pts])
+        y = np.array([r["ms_median"] for r, _, _ in pts])
+
+        # Least squares in log-log, where constant throughput would be
+        # a straight line of slope one.
+        a, b = np.polyfit(np.log10(x), np.log10(y), 1)
+        xs = np.linspace(np.log10(x.min()), np.log10(x.max()), 50)
+        ax.plot(10 ** xs, 10 ** (a * xs + b), lw=1.1, color="#8a8a84",
+                ls=(0, (4, 2)), zorder=2)
+
+        for r, m, cfg in pts:
+            ax.scatter(r["macc"] / 1e6, r["ms_median"], s=48,
+                       marker=BSHAPE[D.BUDGET_OF[cfg]],
+                       color=B.MODEL_COLOR[D.ICON[m]], edgecolor=SURFACE,
+                       lw=0.5, zorder=5, alpha=0.92)
+
         rho = spearmanr(x, y).statistic
         disc = sum(1 for i in range(len(x)) for j in range(i + 1, len(x))
                    if (x[i] - x[j]) * (y[i] - y[j]) < 0)
         tot = len(x) * (len(x) - 1) // 2
-        ax.text(0.03, 0.965, f"Spearman rho = {rho:.2f}\n"
-                f"mis-ordered pairs: {disc}/{tot} ({100 * disc / tot:.0f}%)",
-                transform=ax.transAxes, fontsize=6.4, color=INK, va="top",
-                linespacing=1.5)
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_xlabel("arithmetic cost (million MACC)", fontsize=7.2, color=INK)
-    ax.set_ylabel("measured latency (ms)", fontsize=7.2, color=INK)
-    ax.set_title("(A) does arithmetic cost predict latency?", fontsize=7.9,
-                 color=INK, pad=5)
-    ax.tick_params(labelsize=6.2, colors=INK2)
-    for a in (ax.xaxis, ax.yaxis):
-        a.set_major_formatter(matplotlib.ticker.ScalarFormatter())
-        a.set_minor_formatter(matplotlib.ticker.NullFormatter())
-    B._frame(ax)
-    ax.grid(color=GRID, lw=0.4, which="both")
-    ax.set_axisbelow(True)
+        ax.text(0.035, 0.955,
+                "Spearman rho = {:.2f}".format(rho) + chr(10)
+                + "mis-ordered pairs: {}/{} ({:.0f}%)".format(
+                    disc, tot, 100 * disc / tot),
+                transform=ax.transAxes, fontsize=7.2, color=INK, va="top",
+                linespacing=1.6)
 
-    ax = axes[1]
-    ms = [m for m in D.ORDER if any(k[0] == m for k in dep)]
-    for y_, m in enumerate(ms):
-        for bud, (uc, jc) in {"UC-128": ("U-UC128", "J-UC128"),
-                              "C-256": ("U-C256", "J-C256")}.items():
-            u, j = dep.get((m, uc)), dep.get((m, jc))
-            if not (u and j and u.get("ms_median") and j.get("ms_median")):
-                continue
-            ratio = j["ms_median"] / u["ms_median"]
-            ax.scatter(ratio, y_ + (0.16 if bud == "UC-128" else -0.16),
-                       s=32, marker=BSHAPE[bud], color="#3a3a36",
-                       edgecolor=SURFACE, lw=0.4, zorder=5)
-    ax.axvline(1.0, color=INK, lw=0.9, ls=(0, (3, 2)), zorder=2)
-    ax.set_xscale("log")
-    ax.set_yticks(range(len(ms)))
-    ax.set_yticklabels([f"{D.LABEL[m]} {m}" for m in ms], fontsize=6.6,
-                       color=INK)
-    ax.set_ylim(len(ms) - 0.4, -0.6)
-    ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
-    ax.set_xlabel("latency ratio  joint / uniform", fontsize=7.2, color=INK)
-    ax.set_title("(B) which method runs faster for the same bytes?",
-                 fontsize=7.9, color=INK, pad=5)
-    ax.tick_params(axis="x", labelsize=6.2, colors=INK2)
-    ax.tick_params(axis="y", length=0)
-    B._frame(ax)
-    ax.grid(axis="x", color=GRID, lw=0.4, which="both")
-    ax.set_axisbelow(True)
-    ax.text(0.02, 0.012, "joint faster", transform=ax.transAxes,
-            fontsize=6.4, color=INK, ha="left", style="italic")
-    ax.text(0.98, 0.012, "uniform faster", transform=ax.transAxes,
-            fontsize=6.4, color=INK, ha="right", style="italic")
-    ax.text(0.5, 1.035, "circle = UC-128,  square = C-256",
-            transform=ax.transAxes, fontsize=6.0, color=INK2, ha="center")
-    ax.set_xticks([0.25, 0.5, 1.0, 2.0])
-    _deploy_legend(fig, y=0.012)
-    fig.subplots_adjust(left=0.075, right=0.99, top=0.925, bottom=0.165,
-                        wspace=0.30)
+        slowest = max(pts, key=lambda t: t[0]["ms_median"] / t[0]["macc"])
+        biggest = max(pts, key=lambda t: t[0]["macc"])
+        for r, m, cfg in {id(slowest): slowest, id(biggest): biggest}.values():
+            ax.annotate(D.LABEL[m] + " " + m,
+                        (r["macc"] / 1e6, r["ms_median"]),
+                        textcoords="offset points", xytext=(9, 7),
+                        fontsize=6.8, color=INK, zorder=7)
+
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_title("(" + chr(65 + k) + ") " + meth + " scaling",
+                     fontsize=8.4, color=INK, pad=5)
+        ax.set_ylabel("measured latency (ms, log)", fontsize=7.6,
+                      color=INK)
+        ax.tick_params(labelsize=6.8, colors=INK2)
+        B._frame(ax)
+        ax.grid(color=GRID, lw=0.4, which="major")
+        ax.set_axisbelow(True)
+
+    axes[-1].set_xticks([2, 5, 10, 20, 50])
+    axes[-1].set_yticks([200, 500, 1000, 2000, 4000])
+    for axis in (axes[-1].xaxis, axes[-1].yaxis, axes[0].yaxis):
+        axis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+        axis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    axes[-1].set_xlabel("arithmetic cost (million MACC, log)", fontsize=7.8,
+                        color=INK)
+
+    fam = [plt.Line2D([], [], lw=0, marker="o", markersize=5.5,
+                      markerfacecolor=B.MODEL_COLOR[D.ICON[m]],
+                      markeredgecolor="none", label=D.LABEL[m] + " " + m)
+           for m in D.ORDER if any(p[1] == m for p in all_pts)]
+    # Black, not grey: the shape key shares a legend grid with the
+    # families, and one of those families is already grey.
+    shp = [plt.Line2D([], [], lw=0, marker=BSHAPE[bn], markersize=5.5,
+                      markerfacecolor="#1a1a18", markeredgecolor="none",
+                      label="budget " + bn)
+           for bn in ("UC-128", "C-256")]
+    fig.legend(handles=fam + shp, fontsize=6.8, frameon=False,
+               labelcolor=INK2, ncol=4, loc="lower center",
+               bbox_to_anchor=(0.5, 0.004), columnspacing=1.4,
+               handletextpad=0.4)
+    fig.subplots_adjust(left=0.100, right=0.985, top=0.950, bottom=0.200,
+                        hspace=0.26)
     if synth:
         _stamp(fig)
     B.save(fig, "figure6_complexity_latency", dest=D.FIG, svg=True)
