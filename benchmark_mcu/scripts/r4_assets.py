@@ -449,21 +449,21 @@ def figure2(runs):
                    vmin=float(np.nanpercentile(grid, 2)),
                    vmax=float(np.nanpercentile(grid, 98)))
     ax.set_xticks(range(len(names)))
-    ax.set_xticklabels(names, fontsize=5.8, color=INK, rotation=45,
+    ax.set_xticklabels(names, fontsize=6.7, color=INK, rotation=45,
                        ha="right", rotation_mode="anchor")
     ax.set_yticks(range(len(ms)))
-    ax.set_yticklabels([f"{D.LABEL[m]} {m}" for m in ms], fontsize=6.0,
+    ax.set_yticklabels([f"{D.LABEL[m]} {m}" for m in ms], fontsize=6.9,
                        color=INK)
     ax.tick_params(length=0, pad=2)
     for sp in ax.spines.values():
         sp.set_visible(False)
     ax.set_title("(A) equal-source mean AP per diagnosis, reference tier "
                  "(float32, published depth, unconstrained)",
-                 fontsize=7.6, color=INK, pad=5)
+                 fontsize=8.7, color=INK, pad=5)
     cb = fig.colorbar(im, cax=fig.add_subplot(gs[0, 1]))
-    cb.ax.tick_params(labelsize=5.4, length=1.5, colors=INK2)
+    cb.ax.tick_params(labelsize=6.2, length=1.5, colors=INK)
     cb.outline.set_visible(False)
-    cb.set_label("AP", fontsize=5.8, color=INK2)
+    cb.set_label("AP", fontsize=6.7, color=INK)
 
     ax = fig.add_subplot(gs[1, 0])
     SRCCOL = dict(zip(SOURCES, ["#2f6fb0", "#c4692a", "#2f8a4c", "#6a4fb0"]))
@@ -479,23 +479,23 @@ def figure2(runs):
     nsr_x = order.index(cls.index("NSR"))
     ax.axvspan(nsr_x - 0.45, nsr_x + 0.45, color="#f2dcd8", zorder=0)
     ax.annotate("NSR: coded three different ways across sources",
-                xy=(0.985, 0.90), xycoords="axes fraction", fontsize=5.8,
+                xy=(0.985, 0.90), xycoords="axes fraction", fontsize=6.7,
                 color="#8c3b2f", ha="right", va="top")
     ax.set_xticks(range(len(names)))
     ax.set_xticklabels([f"{n}{NL}{pooled[n]:.1f}%" for n in names],
-                       fontsize=5.8, color=INK)
+                       fontsize=6.7, color=INK)
     ax.set_xlim(-0.6, len(names) - 0.4)
     ax.set_ylabel(f"AP, averaged over{NL}the ten architectures",
-                  fontsize=6.2, color=INK, linespacing=1.4)
+                  fontsize=7.1, color=INK, linespacing=1.4)
     ax.set_title("(B) spread across held-out sources; pooled prevalence "
-                 "under each class", fontsize=7.6, color=INK, pad=5)
-    ax.tick_params(axis="y", labelsize=5.8, colors=INK2)
+                 "under each class", fontsize=8.7, color=INK, pad=5)
+    ax.tick_params(axis="y", labelsize=6.7, colors=INK)
     ax.tick_params(axis="x", length=0, pad=2)
     B._frame(ax)
     ax.grid(axis="y", color=GRID, lw=0.45)
     ax.set_axisbelow(True)
     h, l = ax.get_legend_handles_labels()
-    fig.legend(h, l, fontsize=6.2, frameon=False, labelcolor=INK2, ncol=4,
+    fig.legend(h, l, fontsize=7.1, frameon=False, labelcolor=INK, ncol=4,
                loc="lower center", bbox_to_anchor=(0.5, 0.008))
     B.save(fig, "figure2_classwise", dest=D.FIG, svg=True)
 
@@ -513,9 +513,9 @@ def _hdr(fig, letter, x, y, w, title, colour):
     fig.add_artist(matplotlib.patches.Circle(
         (x + 0.012, y), 0.011, transform=fig.transFigure, facecolor=colour,
         edgecolor="none", zorder=12))
-    fig.text(x + 0.012, y, letter, ha="center", va="center", fontsize=8.5,
+    fig.text(x + 0.012, y, letter, ha="center", va="center", fontsize=9.8,
              color="white", fontweight="bold", zorder=13)
-    fig.text(x + 0.030, y, title, ha="left", va="center", fontsize=9.2,
+    fig.text(x + 0.030, y, title, ha="left", va="center", fontsize=10.6,
              color=INK, fontweight="bold", zorder=13)
 
 
@@ -572,7 +572,7 @@ def figure1(runs=None):
         cy = 0.745 - (i // 2) * 0.150
         _card(fig, cx, cy, 0.147, 0.135, "#ffffff", SRC_COL[s])
         fig.text(cx + 0.0735, cy + 0.113, B.sname(s), ha="center",
-                 va="center", fontsize=8.0, color=SRC_COL[s],
+                 va="center", fontsize=9.2, color=SRC_COL[s],
                  fontweight="bold", zorder=6)
         rec = B._clean_record(sig, np.flatnonzero((ix["source"] == s).values))
         if rec is not None:
@@ -581,47 +581,47 @@ def figure1(runs=None):
                      "#4a4a46", lw=0.5, z=6)
         n, npat, age, fem = stats[s]
         fig.text(cx + 0.0735, cy + 0.037, f"{n:,} ECGs | {npat:,} patients",
-                 ha="center", va="center", fontsize=6.3, color=INK, zorder=6)
+                 ha="center", va="center", fontsize=7.2, color=INK, zorder=6)
         fig.text(cx + 0.0735, cy + 0.016,
                  f"median age {age:.0f} | {fem:.1f}% female",
-                 ha="center", va="center", fontsize=6.3, color=INK2, zorder=6)
+                 ha="center", va="center", fontsize=7.2, color=INK, zorder=6)
 
     _card(fig, 0.016, 0.505, 0.304, 0.072, "#ffffff", "#c9d6e6")
     fig.text(0.168, 0.555, f"{len(cls)} diagnostic labels (SNOMED-CT mapped)",
-             ha="center", va="center", fontsize=7.2, color=INK, zorder=6)
+             ha="center", va="center", fontsize=8.3, color=INK, zorder=6)
     fig.text(0.168, 0.527, f"{len(ix):,} ECG recordings across all sources",
-             ha="center", va="center", fontsize=7.2, color=INK, zorder=6)
+             ha="center", va="center", fontsize=8.3, color=INK, zorder=6)
 
     fig.text(0.168, 0.455, "Leave-one-source-out evaluation (4 folds)",
-             ha="center", va="center", fontsize=8.2, color=INK,
+             ha="center", va="center", fontsize=9.4, color=INK,
              fontweight="bold", zorder=6)
     for i, s in enumerate(SOURCES):
         fx = 0.018 + i * 0.0765
         _card(fig, fx, 0.300, 0.070, 0.125, "#ffffff", SRC_COL[s])
         fig.text(fx + 0.035, 0.396, f"Fold {i + 1}", ha="center",
-                 va="center", fontsize=7.0, color=INK, fontweight="bold",
+                 va="center", fontsize=8.0, color=INK, fontweight="bold",
                  zorder=6)
         fig.text(fx + 0.035, 0.368, "Test:", ha="center", va="center",
-                 fontsize=6.3, color=INK2, zorder=6)
+                 fontsize=7.2, color=INK, zorder=6)
         fig.text(fx + 0.035, 0.344, B.sname(s), ha="center", va="center",
-                 fontsize=6.8, color=SRC_COL[s], fontweight="bold", zorder=6)
+                 fontsize=7.8, color=SRC_COL[s], fontweight="bold", zorder=6)
         fig.text(fx + 0.035, 0.317, "train on\nthe other 3", ha="center",
-                 va="center", fontsize=5.6, color=INK2, zorder=6,
+                 va="center", fontsize=6.4, color=INK, zorder=6,
                  linespacing=1.3)
     fig.text(0.168, 0.265,
              "Every model sees the same folds, loss, schedule and seed",
-             ha="center", va="center", fontsize=6.4, color=INK2, zorder=6)
+             ha="center", va="center", fontsize=7.4, color=INK, zorder=6)
     _card(fig, 0.016, 0.040, 0.304, 0.205, "#ffffff", "#c9d6e6")
-    fig.text(0.168, 0.222, "Scoring", ha="center", va="center", fontsize=7.8,
+    fig.text(0.168, 0.222, "Scoring", ha="center", va="center", fontsize=9.0,
              color=INK, fontweight="bold", zorder=6)
     for j, line in enumerate([
             "macro average precision over 13 classes",
             "equal weight per held-out source",
             "patient-cluster bootstrap, 2,000 replicates",
             "paired differences against FCN-1D"]):
-        fig.text(0.030, 0.190 - j * 0.034, "•", fontsize=7,
+        fig.text(0.030, 0.190 - j * 0.034, "•", fontsize=8.0,
                  color=COL_A, va="center", zorder=6)
-        fig.text(0.044, 0.190 - j * 0.034, line, fontsize=6.6, color=INK,
+        fig.text(0.044, 0.190 - j * 0.034, line, fontsize=7.6, color=INK,
                  va="center", zorder=6)
     _panel_b(fig)
     _panel_c(fig)
@@ -658,7 +658,7 @@ def _mini_scale(fig, x, y, w, h, colour, mode):
 def _panel_b(fig):
     _card(fig, 0.346, 0.770, 0.304, 0.145, "#ffffff", "#bcd9c6")
     fig.text(0.498, 0.893, "10 reference models (FP32, unconstrained)",
-             ha="center", va="center", fontsize=8.0, color=INK,
+             ha="center", va="center", fontsize=9.2, color=INK,
              fontweight="bold", zorder=6)
     show = ["FCN-1D", "ResNet-1D", "TCN", "MobileNetV2", "ShuffleNetV2"]
     for i, m in enumerate(show):
@@ -666,17 +666,17 @@ def _panel_b(fig):
         B.family_icon(fig, D.ICON[m], ix, 0.824, 0.034, 0.038,
                       B.MODEL_COLOR[D.ICON[m]])
         fig.text(ix + 0.017, 0.805, D.LABEL[m], ha="center", va="center",
-                 fontsize=6.0, color=INK, fontweight="bold", zorder=7)
+                 fontsize=6.9, color=INK, fontweight="bold", zorder=7)
         fig.text(ix + 0.017, 0.788, m, ha="center", va="center",
-                 fontsize=5.0, color=INK2, zorder=7)
-    fig.text(0.597, 0.840, "...", ha="center", va="center", fontsize=10,
-             color=INK2, zorder=7)
+                 fontsize=5.8, color=INK, zorder=7)
+    fig.text(0.597, 0.840, "...", ha="center", va="center", fontsize=11.5,
+             color=INK, zorder=7)
     B.family_icon(fig, "mobilenetv4", 0.610, 0.824, 0.034, 0.038,
                   B.MODEL_COLOR["mobilenetv4"])
-    fig.text(0.627, 0.805, "M10", ha="center", va="center", fontsize=6.0,
+    fig.text(0.627, 0.805, "M10", ha="center", va="center", fontsize=6.9,
              color=INK, fontweight="bold", zorder=7)
     fig.text(0.627, 0.788, "MobileNetV4", ha="center", va="center",
-             fontsize=5.0, color=INK2, zorder=7)
+             fontsize=5.8, color=INK, zorder=7)
 
     B._flow(fig, 0.498, 0.752, direction="down", size=11, shaft=0.013,
             color=COL_B, lw=2.0)
@@ -684,7 +684,7 @@ def _panel_b(fig):
     _card(fig, 0.346, 0.395, 0.304, 0.330, "#ffffff", "#bcd9c6")
     fig.text(0.498, 0.700,
              "Two scaling methods, each at two INT8 weight budgets",
-             ha="center", va="center", fontsize=8.0, color=INK,
+             ha="center", va="center", fontsize=9.2, color=INK,
              fontweight="bold", zorder=6)
     for name, sub, colour, mode, x0 in [
             ("Uniform width", "published depth kept,\nchannels scaled",
@@ -694,18 +694,18 @@ def _panel_b(fig):
              JNT_C, "joint", 0.505)]:
         _card(fig, x0, 0.505, 0.136, 0.180, "#fbfbf7", colour, lw=1.0)
         fig.text(x0 + 0.068, 0.663, name, ha="center", va="center",
-                 fontsize=7.4, color=colour, fontweight="bold", zorder=7)
+                 fontsize=8.5, color=colour, fontweight="bold", zorder=7)
         fig.text(x0 + 0.068, 0.628, sub, ha="center", va="center",
-                 fontsize=5.6, color=INK2, zorder=7, linespacing=1.35)
+                 fontsize=6.4, color=INK, zorder=7, linespacing=1.35)
         _mini_scale(fig, x0 + 0.011, 0.522, 0.114, 0.060, colour, mode)
         for j, (bname, cap, shape) in enumerate(
                 [("Tight", "<= 128 KB", "o"), ("Relaxed", "<= 256 KB", "s")]):
             bx = x0 + 0.004 + j * 0.067
             _card(fig, bx, 0.412, 0.062, 0.072, "#ffffff", colour, lw=0.9)
             fig.text(bx + 0.031, 0.466, bname, ha="center", va="center",
-                     fontsize=6.8, color=colour, fontweight="bold", zorder=7)
+                     fontsize=7.8, color=colour, fontweight="bold", zorder=7)
             fig.text(bx + 0.031, 0.445, cap, ha="center", va="center",
-                     fontsize=5.8, color=INK, zorder=7)
+                     fontsize=6.7, color=INK, zorder=7)
             fig.add_artist(matplotlib.lines.Line2D(
                 [bx + 0.031], [0.425], transform=fig.transFigure, lw=0,
                 marker=shape, markersize=4.0, markerfacecolor=colour,
@@ -715,69 +715,69 @@ def _panel_b(fig):
             color=COL_B, lw=2.0)
     _card(fig, 0.346, 0.268, 0.304, 0.085, "#ffffff", COL_B, lw=1.1)
     fig.text(0.498, 0.325, "40 INT8 configurations", ha="center",
-             va="center", fontsize=8.6, color=INK, fontweight="bold",
+             va="center", fontsize=9.9, color=INK, fontweight="bold",
              zorder=6)
     fig.text(0.498, 0.297, "10 architectures x 2 methods x 2 budgets",
-             ha="center", va="center", fontsize=6.8, color=INK2, zorder=6)
+             ha="center", va="center", fontsize=7.8, color=INK, zorder=6)
     _card(fig, 0.346, 0.040, 0.304, 0.205, "#ffffff", "#bcd9c6")
     fig.text(0.498, 0.222, "Every configuration verified before training",
-             ha="center", va="center", fontsize=7.8, color=INK,
+             ha="center", va="center", fontsize=9.0, color=INK,
              fontweight="bold", zorder=6)
     for j, line in enumerate([
             "budget enforced on predicted deployed bytes",
             "dilated layers charged at float32: not quantisable",
             "activation ceiling settled by building the firmware",
             "widths frozen in a manifest, read by every stage"]):
-        fig.text(0.360, 0.190 - j * 0.034, "-", fontsize=7,
+        fig.text(0.360, 0.190 - j * 0.034, "-", fontsize=8.0,
                  color=COL_B, va="center", zorder=6)
-        fig.text(0.372, 0.190 - j * 0.034, line, fontsize=6.3, color=INK,
+        fig.text(0.372, 0.190 - j * 0.034, line, fontsize=7.2, color=INK,
                  va="center", zorder=6)
 
 
 def _panel_c(fig):
     _card(fig, 0.680, 0.740, 0.306, 0.175, "#ffffff", "#f0cdb0")
     fig.text(0.833, 0.893, "RQ1   Reference architectures (FP32)",
-             ha="center", va="center", fontsize=8.0, color="#9c4a1a",
+             ha="center", va="center", fontsize=9.2, color="#9c4a1a",
              fontweight="bold", zorder=6)
     for j, line in enumerate(["10 reference models at published topology",
                               "4 held-out sources, no device constraint",
                               "outputs: Figures 2-3, Table 3 (REF column)"]):
-        fig.text(0.694, 0.852 - j * 0.034, "-", fontsize=7,
+        fig.text(0.694, 0.852 - j * 0.034, "-", fontsize=8.0,
                  color=COL_C, va="center", zorder=6)
-        fig.text(0.706, 0.852 - j * 0.034, line, fontsize=6.5, color=INK,
+        fig.text(0.706, 0.852 - j * 0.034, line, fontsize=7.5, color=INK,
                  va="center", zorder=6)
 
     _card(fig, 0.680, 0.330, 0.306, 0.385, "#ffffff", "#f0cdb0")
     fig.text(0.833, 0.690, "RQ2-RQ3   Deployment on STM32F411",
-             ha="center", va="center", fontsize=8.0, color="#9c4a1a",
+             ha="center", va="center", fontsize=9.2, color="#9c4a1a",
              fontweight="bold", zorder=6)
     B.board_icon(fig, 0.690, 0.425, 0.112, 0.215)
     fig.text(0.746, 0.402, "STM32F411VET6", ha="center", va="center",
-             fontsize=6.6, color=INK, fontweight="bold", zorder=7)
+             fontsize=7.6, color=INK, fontweight="bold", zorder=7)
     fig.text(0.746, 0.382, "Cortex-M4F, 100 MHz", ha="center", va="center",
-             fontsize=6.0, color=INK2, zorder=7)
+             fontsize=6.9, color=INK, zorder=7)
     fig.text(0.746, 0.363, "512 KB Flash, 128 KB SRAM", ha="center",
-             va="center", fontsize=6.0, color=INK2, zorder=7)
+             va="center", fontsize=6.9, color=INK, zorder=7)
     fig.text(0.820, 0.648, "Measured per configuration:", ha="left",
-             va="center", fontsize=6.8, color=INK, fontweight="bold",
+             va="center", fontsize=7.8, color=INK, fontweight="bold",
              zorder=6)
     for j, line in enumerate(["Flash occupancy (KB)", "peak SRAM (KB)",
                               "arithmetic cost (MACC)",
                               "inference latency (ms)",
                               "macro-AP of the INT8 model"]):
-        fig.text(0.822, 0.610 - j * 0.036, "-", fontsize=7,
+        fig.text(0.822, 0.610 - j * 0.036, "-", fontsize=8.0,
                  color=COL_C, va="center", zorder=6)
-        fig.text(0.834, 0.610 - j * 0.036, line, fontsize=6.4, color=INK,
+        fig.text(0.834, 0.610 - j * 0.036, line, fontsize=7.4, color=INK,
                  va="center", zorder=6)
     fig.text(0.903, 0.400, "32 timed inferences per model,",
-             ha="center", va="center", fontsize=5.9, color=INK2, zorder=6)
+             ha="center", va="center", fontsize=6.8, color=INK, zorder=6)
     fig.text(0.903, 0.381, "DWT cycle counter at 100 MHz;",
-             ha="center", va="center", fontsize=5.9, color=INK2, zorder=6)
+             ha="center", va="center", fontsize=6.8, color=INK, zorder=6)
     fig.text(0.903, 0.362, "deployed means it ran on the board",
-             ha="center", va="center", fontsize=5.9, color=INK2, zorder=6)
+             ha="center", va="center", fontsize=6.8, color=INK, zorder=6)
 
     fig.text(0.833, 0.295, "Main outputs", ha="center", va="center",
-             fontsize=8.2, color=INK, fontweight="bold", zorder=6)
+             fontsize=9.4, color=INK, fontweight="bold", zorder=6)
     for j, (tag, body, colour) in enumerate([
             ("RQ1", "reference\ngeneralisation\n\nFig. 2-3", "#b03a4a"),
             ("RQ2", "scaling method\nand budget\n\nFig. 4-6", COL_B),
@@ -785,9 +785,9 @@ def _panel_c(fig):
         bx = 0.684 + j * 0.1005
         _card(fig, bx, 0.040, 0.094, 0.225, "#fbfbf7", colour, lw=1.0)
         fig.text(bx + 0.047, 0.233, tag, ha="center", va="center",
-                 fontsize=8.0, color=colour, fontweight="bold", zorder=7)
+                 fontsize=9.2, color=colour, fontweight="bold", zorder=7)
         fig.text(bx + 0.047, 0.142, body, ha="center", va="center",
-                 fontsize=6.2, color=INK, zorder=7, linespacing=1.5)
+                 fontsize=7.1, color=INK, zorder=7, linespacing=1.5)
 
     B._flow(fig, 0.3335, 0.50, direction="right", size=12, shaft=0.010,
             color="#8a8a84", lw=2.2)
@@ -846,32 +846,28 @@ def figure3(runs, ref="FCN-1D"):
                    label="equal-source mean (95% CI)" if y_ == 0 else None)
     ax.axvline(0, color=INK, lw=0.9, ls=(0, (3, 2)), zorder=2)
     ax.set_yticks(range(len(ms)))
-    ax.set_yticklabels([f"{D.LABEL[m]}  {m}" for m in ms], fontsize=7.2,
+    ax.set_yticklabels([f"{D.LABEL[m]}  {m}" for m in ms], fontsize=8.3,
                        color=INK)
     ax.set_ylim(len(ms) - 0.25, -0.75)
     ax.set_xlim(lo_all - pad, hi_all + pad)
     ax.set_xlabel(f"paired difference in macro-AP vs {ref}   "
                   "(reference tier, float32, unconstrained)",
-                  fontsize=7.4, color=INK)
-    ax.tick_params(axis="x", labelsize=6.4, colors=INK2)
+                  fontsize=8.5, color=INK)
+    ax.tick_params(axis="x", labelsize=7.4, colors=INK)
     ax.tick_params(axis="y", length=0)
     B._frame(ax)
     ax.grid(axis="x", color=GRID, lw=0.45)
     ax.set_axisbelow(True)
     ax.text(0.015, 0.012, f"favours {ref}", transform=ax.transAxes,
-            fontsize=6.0, color=INK2, ha="left", style="italic")
+            fontsize=6.9, color=INK, ha="left", style="italic")
     ax.text(0.985, 0.012, "favours this model", transform=ax.transAxes,
-            fontsize=6.0, color=INK2, ha="right", style="italic")
+            fontsize=6.9, color=INK, ha="right", style="italic")
     h_, l_ = ax.get_legend_handles_labels()
-    fig.legend(h_, l_, fontsize=6.4, frameon=False, labelcolor=INK2,
-               ncol=5, loc="lower center", bbox_to_anchor=(0.5, 0.055),
+    fig.legend(h_, l_, fontsize=7.4, frameon=False, labelcolor=INK,
+               ncol=5, loc="lower center", bbox_to_anchor=(0.5, 0.012),
                columnspacing=1.5, handletextpad=0.4)
-    fig.text(0.5, 0.018, "coloured points are source-specific estimates, "
-             "not source-specific intervals;  black bar = patient-cluster "
-             f"paired bootstrap 95% CI ({REPS} replicates)",
-             fontsize=6.0, color=INK2, ha="center")
-    fig.subplots_adjust(left=0.215, right=0.985, top=1 - 0.30 / h,
-                        bottom=0.95 / h)
+    fig.subplots_adjust(left=0.225, right=0.985, top=1 - 0.30 / h,
+                        bottom=0.86 / h)
     B.save(fig, "figure3_paired", dest=D.FIG, svg=True)
 
 
@@ -1021,35 +1017,29 @@ def figure4(runs):
             cfg = ("U-UC128" if bud == "Tight" else "U-C256")
             rec = man.get(f"{m}__{cfg}")
             if rec and rec["weight_bytes"] / 1024 < 0.5 * cap:
-                ax.text(hi + pad * 0.55, y_, "*", fontsize=9, color="#8c3b2f",
+                ax.text(hi + pad * 0.55, y_, "*", fontsize=10.3, color="#8c3b2f",
                         ha="center", va="center", zorder=6)
         ax.axvline(0, color=INK, lw=0.9, ls=(0, (3, 2)), zorder=2)
         ax.set_xlim(lo - pad, hi + pad * 1.2)
         ax.set_ylim(len(ms) - 0.3, -0.7)
         ax.set_title(f"({chr(65 + k)}) {bud} budget  (≤ {cap} KB INT8 weights)",
-                     fontsize=8.0, color=INK, pad=6)
-        ax.set_xlabel("macro-AP:  joint − uniform", fontsize=7.2,
+                     fontsize=9.2, color=INK, pad=6)
+        ax.set_xlabel("macro-AP:  joint − uniform", fontsize=8.3,
                       color=INK)
-        ax.tick_params(axis="x", labelsize=6.4, colors=INK2)
+        ax.tick_params(axis="x", labelsize=7.4, colors=INK)
         ax.tick_params(axis="y", length=0)
         B._frame(ax)
         ax.grid(axis="x", color=GRID, lw=0.45)
         ax.set_axisbelow(True)
         ax.text(0.02, 0.012, "uniform better", transform=ax.transAxes,
-                fontsize=6.0, color=UNI_C, ha="left", style="italic")
+                fontsize=6.9, color=UNI_C, ha="left", style="italic")
         ax.text(0.98, 0.012, "joint better", transform=ax.transAxes,
-                fontsize=6.0, color=JNT_C, ha="right", style="italic")
+                fontsize=6.9, color=JNT_C, ha="right", style="italic")
     axes[0].set_yticks(range(len(ms)))
     axes[0].set_yticklabels([f"{D.LABEL[m]}  {m}" for m in ms],
-                            fontsize=7.2, color=INK)
-    fig.text(0.5, 0.020,
-             "paired patient-cluster bootstrap, "
-             f"{REPS} replicates, equal weight per held-out source;   "
-             "* activation memory, not the weight budget, "
-             "determines the configuration",
-             fontsize=6.1, color=INK2, ha="center")
-    fig.subplots_adjust(left=0.175, right=0.985, top=1 - 0.42 / h,
-                        bottom=0.92 / h, wspace=0.07)
+                            fontsize=8.3, color=INK)
+    fig.subplots_adjust(left=0.185, right=0.985, top=1 - 0.42 / h,
+                        bottom=0.62 / h, wspace=0.07)
     B.save(fig, "figure4_scaling_method", dest=D.FIG, svg=True)
 
 
@@ -1123,7 +1113,7 @@ def deployed_ap(runs, int8=None):
 
 
 def _stamp(fig, text="SYNTHETIC PLACEHOLDER - layout only, not results"):
-    fig.text(0.5, 0.5, text, fontsize=22, color="#c0392b", alpha=0.13,
+    fig.text(0.5, 0.5, text, fontsize=25.3, color="#c0392b", alpha=0.13,
              ha="center", va="center", rotation=24, zorder=50,
              fontweight="bold")
 
@@ -1142,7 +1132,7 @@ def _deploy_legend(fig, y=0.020):
                      markerfacecolor=MCOL[meth], markeredgecolor="none",
                      label=f"{meth} {b}")
           for meth in ("uniform", "joint") for b in ("Tight", "Relaxed")]
-    fig.legend(handles=hs, fontsize=6.3, frameon=False, labelcolor=INK2,
+    fig.legend(handles=hs, fontsize=7.2, frameon=False, labelcolor=INK,
                ncol=4, loc="lower center", bbox_to_anchor=(0.5, y),
                columnspacing=1.6, handletextpad=0.4)
 
@@ -1193,11 +1183,11 @@ def figure5(runs=None):
         # Right-aligned against the line: left-aligned it runs off
         # the panel, and there is empty space inside the limit.
         ax.text(limit, -0.56, lname + " " + str(limit) + " KB  ",
-                fontsize=6.4, color="#b03a4a", ha="right", va="center")
+                fontsize=7.4, color="#b03a4a", ha="right", va="center")
         ax.set_xlim(0, limit * 1.14)
-        ax.set_title(title, fontsize=8.2, color=INK, pad=5)
-        ax.set_xlabel("KB", fontsize=7.0, color=INK2)
-        ax.tick_params(axis="x", labelsize=6.4, colors=INK2)
+        ax.set_title(title, fontsize=9.4, color=INK, pad=5)
+        ax.set_xlabel("KB", fontsize=8.0, color=INK)
+        ax.tick_params(axis="x", labelsize=7.4, colors=INK)
         ax.tick_params(axis="y", length=0)
         ax.set_ylim(len(ms) - 0.4, -0.75)
         B._frame(ax)
@@ -1205,7 +1195,7 @@ def figure5(runs=None):
         ax.set_axisbelow(True)
     axes[0].set_yticks(range(len(ms)))
     axes[0].set_yticklabels([D.LABEL[m] + "  " + m for m in ms],
-                            fontsize=7.0, color=INK)
+                            fontsize=8.0, color=INK)
     _deploy_legend(fig, y=0.018)
     fig.subplots_adjust(left=0.185, right=0.985, top=0.925, bottom=0.165,
                         wspace=0.08)
@@ -1230,8 +1220,9 @@ def figure6(runs=None):
     or only for the networks one method produces.
 
     Colour is the architecture family, as in Figure 7, so a family can
-    be carried between the two figures; the per-point identifiers are
-    gone and the legend carries identity instead.
+    be carried between the two figures; identity comes from the legend
+    rather than from labels on the points, which at forty points would
+    sit on top of the data they describe.
     """
     dep, synth = deploy_table()
     if not dep:
@@ -1274,24 +1265,16 @@ def figure6(runs=None):
                 "Spearman rho = {:.2f}".format(rho) + chr(10)
                 + "mis-ordered pairs: {}/{} ({:.0f}%)".format(
                     disc, tot, 100 * disc / tot),
-                transform=ax.transAxes, fontsize=7.2, color=INK, va="top",
+                transform=ax.transAxes, fontsize=8.3, color=INK, va="top",
                 linespacing=1.6)
-
-        slowest = max(pts, key=lambda t: t[0]["ms_median"] / t[0]["macc"])
-        biggest = max(pts, key=lambda t: t[0]["macc"])
-        for r, m, cfg in {id(slowest): slowest, id(biggest): biggest}.values():
-            ax.annotate(D.LABEL[m] + " " + m,
-                        (r["macc"] / 1e6, r["ms_median"]),
-                        textcoords="offset points", xytext=(9, 7),
-                        fontsize=6.8, color=INK, zorder=7)
 
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.set_title("(" + chr(65 + k) + ") " + meth + " scaling",
-                     fontsize=8.4, color=INK, pad=5)
-        ax.set_ylabel("measured latency (ms, log)", fontsize=7.6,
+                     fontsize=9.7, color=INK, pad=5)
+        ax.set_ylabel("measured latency (ms, log)", fontsize=8.7,
                       color=INK)
-        ax.tick_params(labelsize=6.8, colors=INK2)
+        ax.tick_params(labelsize=7.8, colors=INK)
         B._frame(ax)
         ax.grid(color=GRID, lw=0.4, which="major")
         ax.set_axisbelow(True)
@@ -1301,7 +1284,7 @@ def figure6(runs=None):
     for axis in (axes[-1].xaxis, axes[-1].yaxis, axes[0].yaxis):
         axis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
         axis.set_minor_formatter(matplotlib.ticker.NullFormatter())
-    axes[-1].set_xlabel("arithmetic cost (million MACC, log)", fontsize=7.8,
+    axes[-1].set_xlabel("arithmetic cost (million MACC, log)", fontsize=9.0,
                         color=INK)
 
     fam = [plt.Line2D([], [], lw=0, marker="o", markersize=5.5,
@@ -1314,8 +1297,8 @@ def figure6(runs=None):
                       markerfacecolor="#1a1a18", markeredgecolor="none",
                       label="budget " + bn)
            for bn in ("Tight", "Relaxed")]
-    fig.legend(handles=fam + shp, fontsize=6.8, frameon=False,
-               labelcolor=INK2, ncol=4, loc="lower center",
+    fig.legend(handles=fam + shp, fontsize=7.8, frameon=False,
+               labelcolor=INK, ncol=4, loc="lower center",
                bbox_to_anchor=(0.5, 0.004), columnspacing=1.4,
                handletextpad=0.4)
     fig.subplots_adjust(left=0.100, right=0.985, top=0.950, bottom=0.200,
@@ -1330,11 +1313,15 @@ def figure7(runs):
     resource well?
 
     One panel per scaling method so forty bubbles are not piled onto one
-    pair of axes, but the Pareto front is computed **once over the
-    combined set**. Fronts computed per method would be two different
+    pair of axes, but the non-dominated set is computed **once over the
+    combined set**. Sets computed per method would be two different
     questions wearing one name: a configuration that another method
     dominates outright would still appear non-dominated within its own
     panel, and the figure would recommend it.
+
+    Membership is shown by outline alone. A line joining the members ran
+    across the cloud without adding anything the outlines did not
+    already say.
 
     Axes are shared so the panels can be compared directly. Bubble area
     is peak SRAM, the resource that is scarcest here and the one that
@@ -1371,18 +1358,10 @@ def figure7(runs):
     hi_ap = max(p["ap"] for p in pts) + 0.02
     smax = max(p["sram"] for p in pts) or 1.0
 
-    fr_all = sorted([p for p in pts if (p["m"], p["cfg"]) in front],
-                    key=lambda p: p["ms"])
     fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.9), facecolor=SURFACE,
                              sharey=True)
     for k, (meth, ax) in enumerate(zip(("uniform", "joint"), axes)):
         sel = [p for p in pts if D.METHOD_OF[p["cfg"]] == meth]
-        # The pooled frontier, identical in both panels. Connecting
-        # only this panel's members would draw a line that is neither
-        # the pooled frontier nor a method-specific one.
-        if len(fr_all) > 1:
-            ax.plot([p["ms"] for p in fr_all], [p["ap"] for p in fr_all],
-                    lw=1.0, color="#8a8a84", ls=(0, (4, 2)), zorder=2)
         for p in sel:
             colour = B.MODEL_COLOR[D.ICON[p["m"]]]
             on = (p["m"], p["cfg"]) in front
@@ -1401,18 +1380,18 @@ def figure7(runs):
         ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
         ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax.set_title(f"({chr(65 + k)}) {meth} scaling   "
-                     f"({len(sel)} deployed)", fontsize=8.0, color=INK,
+                     f"({len(sel)} deployed)", fontsize=9.2, color=INK,
                      pad=5)
         ax.set_xlabel("measured latency on STM32F411 (ms, log)",
-                      fontsize=7.2, color=INK)
-        ax.tick_params(labelsize=6.2, colors=INK2)
+                      fontsize=8.3, color=INK)
+        ax.tick_params(labelsize=7.1, colors=INK)
         B._frame(ax)
         ax.grid(color=GRID, lw=0.4, which="both")
         ax.set_axisbelow(True)
     axes[0].set_ylabel("equal-source mean macro-AP"
                        + (" of the deployed INT8 model" if used_int8
                           else " (float32; INT8 scoring not finished)"),
-                       fontsize=7.2, color=INK)
+                       fontsize=8.3, color=INK)
 
     fam = [plt.Line2D([], [], lw=0, marker="o", markersize=5.5,
                       markerfacecolor=B.MODEL_COLOR[D.ICON[m]],
@@ -1433,8 +1412,8 @@ def figure7(runs):
             markersize=np.sqrt(28 + 300 * (s_kb / smax)) * 0.62,
             markerfacecolor="#cfcfc8", markeredgecolor="none",
             label="{:.0f} KB SRAM".format(s_kb)))
-    fig.legend(handles=fam + keys, fontsize=6.6, frameon=False,
-               labelcolor=INK2, ncol=5, loc="upper center",
+    fig.legend(handles=fam + keys, fontsize=7.6, frameon=False,
+               labelcolor=INK, ncol=5, loc="upper center",
                bbox_to_anchor=(0.5, 0.132), columnspacing=1.5,
                handletextpad=0.5)
     # Axes bottom leaves room for the tick labels and the x label;
