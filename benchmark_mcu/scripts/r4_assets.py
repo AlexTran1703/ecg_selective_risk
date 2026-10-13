@@ -638,7 +638,7 @@ def _panel_b(fig):
                  fontsize=5.6, color=INK2, zorder=7, linespacing=1.35)
         _mini_scale(fig, x0 + 0.011, 0.522, 0.114, 0.060, colour, mode)
         for j, (bname, cap, shape) in enumerate(
-                [("UC-128", "<= 128 KB", "o"), ("C-256", "<= 256 KB", "s")]):
+                [("Tight", "<= 128 KB", "o"), ("Relaxed", "<= 256 KB", "s")]):
             bx = x0 + 0.004 + j * 0.067
             _card(fig, bx, 0.412, 0.062, 0.072, "#ffffff", colour, lw=0.9)
             fig.text(bx + 0.031, 0.466, bname, ha="center", va="center",
@@ -851,8 +851,8 @@ def method_contrast(runs, reps=REPS, seed=0, cache=True):
 
     rng = np.random.default_rng(seed)
     out = {}
-    for budget, (ucfg, jcfg) in {"UC-128": ("U-UC128", "J-UC128"),
-                                 "C-256": ("U-C256", "J-C256")}.items():
+    for budget, (ucfg, jcfg) in {"Tight": ("U-UC128", "J-UC128"),
+                                 "Relaxed": ("U-C256", "J-C256")}.items():
         ms = [m for m in D.complete(runs, ucfg) if m in D.complete(runs, jcfg)]
         if not ms:
             continue
@@ -924,7 +924,7 @@ def figure4(runs):
     if not delta:
         print("  figure4 skipped: no matched pairs")
         return
-    budgets = [b for b in ("UC-128", "C-256")
+    budgets = [b for b in ("Tight", "Relaxed")
                if any(k[1] == b for k in delta)]
     # Fixed M1-M10 order, not sorted by effect. The two budgets rank
     # the families differently, so no single sort is correct for both
@@ -954,10 +954,10 @@ def figure4(runs):
             ax.plot([l_, h_], [y_, y_], lw=1.7, color=colour,
                     solid_capstyle="round", zorder=3, alpha=0.9)
             ax.scatter(pt, y_, s=26, color=colour,
-                       marker="o" if bud == "UC-128" else "s",
+                       marker="o" if bud == "Tight" else "s",
                        edgecolor=SURFACE, lw=0.5, zorder=5)
             # mark the families whose weight budget never binds
-            cfg = ("U-UC128" if bud == "UC-128" else "U-C256")
+            cfg = ("U-UC128" if bud == "Tight" else "U-C256")
             rec = man.get(f"{m}__{cfg}")
             if rec and rec["weight_bytes"] / 1024 < 0.5 * cap:
                 ax.text(hi + pad * 0.55, y_, "*", fontsize=9, color="#8c3b2f",
@@ -965,7 +965,7 @@ def figure4(runs):
         ax.axvline(0, color=INK, lw=0.9, ls=(0, (3, 2)), zorder=2)
         ax.set_xlim(lo - pad, hi + pad * 1.2)
         ax.set_ylim(len(ms) - 0.3, -0.7)
-        ax.set_title(f"({chr(65 + k)}) {bud}  (≤ {cap} KB INT8 weights)",
+        ax.set_title(f"({chr(65 + k)}) {bud} budget  (≤ {cap} KB INT8 weights)",
                      fontsize=8.0, color=INK, pad=6)
         ax.set_xlabel("macro-AP:  joint − uniform", fontsize=7.2,
                       color=INK)
@@ -1068,7 +1068,7 @@ def _stamp(fig, text="SYNTHETIC PLACEHOLDER - layout only, not results"):
 
 #: the stable encoding, used by every deployment figure
 MCOL = {"uniform": UNI_C, "joint": JNT_C}
-BSHAPE = {"UC-128": "o", "C-256": "s"}
+BSHAPE = {"Tight": "o", "Relaxed": "s"}
 
 
 def _cfg_style(cfg):
@@ -1079,7 +1079,7 @@ def _deploy_legend(fig, y=0.020):
     hs = [plt.Line2D([], [], lw=0, marker=BSHAPE[b], markersize=5,
                      markerfacecolor=MCOL[meth], markeredgecolor="none",
                      label=f"{meth} {b}")
-          for meth in ("uniform", "joint") for b in ("UC-128", "C-256")]
+          for meth in ("uniform", "joint") for b in ("Tight", "Relaxed")]
     fig.legend(handles=hs, fontsize=6.3, frameon=False, labelcolor=INK2,
                ncol=4, loc="lower center", bbox_to_anchor=(0.5, y),
                columnspacing=1.6, handletextpad=0.4)
@@ -1251,7 +1251,7 @@ def figure6(runs=None):
     shp = [plt.Line2D([], [], lw=0, marker=BSHAPE[bn], markersize=5.5,
                       markerfacecolor="#1a1a18", markeredgecolor="none",
                       label="budget " + bn)
-           for bn in ("UC-128", "C-256")]
+           for bn in ("Tight", "Relaxed")]
     fig.legend(handles=fam + shp, fontsize=6.8, frameon=False,
                labelcolor=INK2, ncol=4, loc="lower center",
                bbox_to_anchor=(0.5, 0.004), columnspacing=1.4,
@@ -1355,7 +1355,7 @@ def figure7(runs):
 
     hs = [plt.Line2D([], [], lw=0, marker=BSHAPE[b], markersize=5,
                      markerfacecolor="#8a8a84", markeredgecolor="none",
-                     label=b) for b in ("UC-128", "C-256")]
+                     label=b) for b in ("Tight", "Relaxed")]
     hs.append(plt.Line2D([], [], lw=0, marker="o", markersize=7,
                          markerfacecolor="none", markeredgecolor=INK,
                          label="non-dominated (both methods pooled)"))
@@ -1410,12 +1410,12 @@ def table2(runs=None):
     for m in D.ORDER:
         for meth in ("uniform", "joint"):
             r = {"ID": D.LABEL[m], "Family": m, "Method": meth.capitalize()}
-            for bud, cfg in (("UC-128", "U-" if meth == "uniform" else "J-"),
-                             ("C-256", "U-" if meth == "uniform" else "J-")):
-                key = f"{m}__{cfg}{'UC128' if bud == 'UC-128' else 'C256'}"
+            pre = "U-" if meth == "uniform" else "J-"
+            for bud, suffix in (("Tight", "UC128"), ("Relaxed", "C256")):
+                key = m + "__" + pre + suffix
                 rec = man[key]
                 mo = fuse(build(m, rec["width"], rec["depth"]))
-                tag = "UC-128" if bud == "UC-128" else "C-256"
+                tag = bud
                 r[f"{tag} width"] = round(rec["width"], 3)
                 r[f"{tag} blocks"] = _blocks(mo)
                 r[f"{tag} weights (KB)"] = round(rec["weight_bytes"] / 1024,

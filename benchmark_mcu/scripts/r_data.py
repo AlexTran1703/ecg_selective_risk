@@ -39,11 +39,11 @@ FIG, TAB = HERE / "figures", HERE / "tables"
 #: every configuration, reference tier first
 CONFIGS = ["REF", "U-UC128", "U-C256", "J-UC128", "J-C256"]
 DEPLOYED = CONFIGS[1:]
-BUDGET_OF = {"U-UC128": "UC-128", "J-UC128": "UC-128",
-             "U-C256": "C-256", "J-C256": "C-256"}
+BUDGET_OF = {"U-UC128": "Tight", "J-UC128": "Tight",
+             "U-C256": "Relaxed", "J-C256": "Relaxed"}
 METHOD_OF = {"U-UC128": "uniform", "U-C256": "uniform",
              "J-UC128": "joint", "J-C256": "joint"}
-BUDGET_KB = {"UC-128": 128, "C-256": 256}
+BUDGET_KB = {"Tight": 128, "Relaxed": 256}
 
 #: families in publication order, with the label each figure uses
 ORDER = list(REFERENCE)
@@ -58,10 +58,10 @@ ICON = {"FCN-1D": "fcn", "ResNet-1D": "resnet", "TCN": "tcn",
         "MobileNetV4": "mobilenetv4"}
 
 CONFIG_LABEL = {"REF": "Reference (float32, unconstrained)",
-                "U-UC128": "Uniform, UC-128",
-                "U-C256": "Uniform, C-256",
-                "J-UC128": "Joint, UC-128",
-                "J-C256": "Joint, C-256"}
+                "U-UC128": "Uniform, Tight",
+                "U-C256": "Uniform, Relaxed",
+                "J-UC128": "Joint, Tight",
+                "J-C256": "Joint, Relaxed"}
 
 FLASH_KB, SRAM_KB = 512, 128
 ACT_CAP_KB = 96

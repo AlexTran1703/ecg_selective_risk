@@ -1,4 +1,4 @@
-ID,Family,Method,UC-128 width,UC-128 blocks,UC-128 weights (KB),C-256 width,C-256 blocks,C-256 weights (KB)
+ID,Family,Method,Tight width,Tight blocks,Tight weights (KB),Relaxed width,Relaxed blocks,Relaxed weights (KB)
 M1,FCN-1D,Uniform,0.391,3,42.7,0.391,3,42.7
 M1,FCN-1D,Joint,0.391,3,42.7,0.391,3,42.7
 M2,ResNet-1D,Uniform,0.117,8,117.9,0.164,8,228.6

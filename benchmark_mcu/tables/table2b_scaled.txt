@@ -1,23 +1,23 @@
 Table 2, Section B. The forty deployed configurations, two rows per family. Uniform keeps the published block count and scales channel width alone; joint scales width and depth together and reports the block count that survives. Per-stage block counts for joint scaling are in results/config_manifest.json, since one global depth multiplier does not determine them. Every configuration was compiled and linked for the target before training.
 ------------------------------------------------------------------------------
- ID       Family  Method  UC-128 width  UC-128 blocks  UC-128 weights (KB)  C-256 width  C-256 blocks  C-256 weights (KB)
- M1       FCN-1D Uniform         0.391              3                 42.7        0.391             3                42.7
- M1       FCN-1D   Joint         0.391              3                 42.7        0.391             3                42.7
- M2    ResNet-1D Uniform         0.117              8                117.9        0.164             8               228.6
- M2    ResNet-1D   Joint         0.172              4                117.3        0.258             4               244.7
- M3          TCN Uniform         0.139              8                 12.3        0.139             8                12.3
- M3          TCN   Joint         0.337              1                  3.8        0.337             1                 3.8
- M4  MobileNetV2 Uniform         0.111             17                115.4        0.222            17               233.3
- M4  MobileNetV2   Joint         0.167              7                127.4        0.325             7               245.6
- M5 ShuffleNetV2 Uniform         0.164             16                123.7        0.319            16               255.4
- M5 ShuffleNetV2   Joint         0.198              3                121.1        0.405             4               252.5
- M6     GhostNet Uniform         0.161             16                127.3        0.256            16               251.1
- M6     GhostNet   Joint         0.351              5                126.4        0.518             7               254.1
- M7  MobileNetV3 Uniform         0.340             11                125.7        0.493            11               252.9
- M7  MobileNetV3   Joint         0.563              5                 83.8        0.646             7               254.9
- M8    FasterNet Uniform         0.137             13                122.5        0.237            13               240.4
- M8    FasterNet   Joint         0.187              4                123.5        0.337             4               242.2
- M9       RepViT Uniform         0.177             20                122.9        0.240            20               248.4
- M9       RepViT   Joint         0.323              5                120.7        0.437             6               243.6
-M10  MobileNetV4 Uniform         0.208             12                108.0        0.406            12               255.1
-M10  MobileNetV4   Joint         0.392              2                102.5        0.563             4               224.5
+ ID       Family  Method  Tight width  Tight blocks  Tight weights (KB)  Relaxed width  Relaxed blocks  Relaxed weights (KB)
+ M1       FCN-1D Uniform        0.391             3                42.7          0.391               3                  42.7
+ M1       FCN-1D   Joint        0.391             3                42.7          0.391               3                  42.7
+ M2    ResNet-1D Uniform        0.117             8               117.9          0.164               8                 228.6
+ M2    ResNet-1D   Joint        0.172             4               117.3          0.258               4                 244.7
+ M3          TCN Uniform        0.139             8                12.3          0.139               8                  12.3
+ M3          TCN   Joint        0.337             1                 3.8          0.337               1                   3.8
+ M4  MobileNetV2 Uniform        0.111            17               115.4          0.222              17                 233.3
+ M4  MobileNetV2   Joint        0.167             7               127.4          0.325               7                 245.6
+ M5 ShuffleNetV2 Uniform        0.164            16               123.7          0.319              16                 255.4
+ M5 ShuffleNetV2   Joint        0.198             3               121.1          0.405               4                 252.5
+ M6     GhostNet Uniform        0.161            16               127.3          0.256              16                 251.1
+ M6     GhostNet   Joint        0.351             5               126.4          0.518               7                 254.1
+ M7  MobileNetV3 Uniform        0.340            11               125.7          0.493              11                 252.9
+ M7  MobileNetV3   Joint        0.563             5                83.8          0.646               7                 254.9
+ M8    FasterNet Uniform        0.137            13               122.5          0.237              13                 240.4
+ M8    FasterNet   Joint        0.187             4               123.5          0.337               4                 242.2
+ M9       RepViT Uniform        0.177            20               122.9          0.240              20                 248.4
+ M9       RepViT   Joint        0.323             5               120.7          0.437               6                 243.6
+M10  MobileNetV4 Uniform        0.208            12               108.0          0.406              12                 255.1
+M10  MobileNetV4   Joint        0.392             2               102.5          0.563               4                 224.5
