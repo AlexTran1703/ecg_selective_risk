@@ -233,24 +233,24 @@ def figure1(runs=None):
        colour=COL_C, ha="left", weight="bold")
     for k, (tag, title, bullets, col, fc, ec) in enumerate([
             ("RQ1.", "Cross-source generalization",
-             ["external discrimination across\nfour held-out sources",
-              "class-specific AP and paired\narchitecture comparisons"],
+             ["external discrimination, four held-out sources",
+              "class-specific AP and paired contrasts"],
              "#c0392b", "#fdeeee", "#e8a8a0"),
             ("RQ2.", "Scaling and MCU efficiency",
-             ["compare scaling strategies under\ndeployment budgets",
-              "assess prediction, quantisation\neffects, Flash, SRAM, latency"],
+             ["scaling strategy at matched budgets",
+              "quantisation, Flash, SRAM and latency"],
              "#1f5fa8", "#eaf2fb", "#7aa9d8"),
             ("RQ3.", "Performance-resource trade-offs",
-             ["identify favorable deployed\nconfigurations",
-              "trade-offs among external\nmacro-AP, latency and memory"],
+             ["macro-AP against measured latency and SRAM",
+              "non-dominated set, both methods pooled"],
              "#1d7a44", "#eaf6ee", "#79bb94")]):
-        ey = 0.586 - k * 0.278
-        _rr(fig, cx_ + 0.016, ey, 0.244, 0.244, fc, ec=ec, lw=1.0, r=0.009,
+        ey = 0.622 - k * 0.268
+        _rr(fig, cx_ + 0.016, ey, 0.244, 0.216, fc, ec=ec, lw=1.0, r=0.009,
             z=4)
-        _t(fig, cx_ + 0.030, ey + 0.198, f"{tag} {title}", size=8.0,
+        _t(fig, cx_ + 0.030, ey + 0.170, f"{tag} {title}", size=8.0,
            colour=col, ha="left", weight="bold", z=9)
         for j, b in enumerate(bullets):
-            by = ey + 0.132 - j * 0.064
+            by = ey + 0.104 - j * 0.052
             fig.add_artist(matplotlib.lines.Line2D(
                 [cx_ + 0.036], [by], transform=fig.transFigure, lw=0,
                 marker="o", markersize=3.0, markerfacecolor=col,

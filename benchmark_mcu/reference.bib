@@ -172,3 +172,181 @@
   year    = {2017},
   url     = {https://arxiv.org/abs/1704.04861}
 }
+
+% ======================================================================
+% RELATED WORK. Added 2026-10-13 from a supplied reading list.
+%
+% VERIFICATION STATUS: these were NOT checked against Crossref or the
+% publisher record. Venue, volume and page details are as supplied.
+% Three entries arrived without an author list and carry a FIXME; they
+% cannot be submitted in this state. No DOI is recorded for an entry
+% whose DOI string was not supplied -- a fabricated identifier resolves
+% to the wrong paper, which is worse than none.
+% ======================================================================
+
+% ------------------------------------- MCU benchmarking and inference
+@inproceedings{Banbury2021MLPerfTiny,
+  author    = {Banbury, Colby and Reddi, Vijay Janapa and Torelli, Peter
+               and Holleman, Jeremy and Jeffries, Nat and Kiraly, Csaba
+               and Montino, Pietro and Kanter, David and Ahmed, Sebastian
+               and Pau, Danilo and Thakker, Urmish and Torrini, Antonio
+               and Warden, Peter and Cordaro, Jay and Di Guglielmo,
+               Giuseppe and Duarte, Javier and Gibellini, Stephen and
+               Parekh, Videet and Tran, Honson and Tran, Nhan and
+               Wenxu, Niu and Xuesong, Xu},
+  title     = {{MLPerf} Tiny Benchmark},
+  booktitle = {Advances in Neural Information Processing Systems,
+               Datasets and Benchmarks Track},
+  year      = {2021},
+  note      = {arXiv:2106.07597}
+}
+
+@inproceedings{Lin2021MCUNetV2,
+  author    = {Lin, Ji and Chen, Wei-Ming and Cai, Han and Gan, Chuang
+               and Han, Song},
+  title     = {{MCUNetV2}: Memory-Efficient Patch-based Inference for Tiny
+               Deep Learning},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2021},
+  note      = {arXiv:2110.15352}
+}
+
+% ------------------------------------ PTB-XL benchmarking and reuse
+@article{Bickmann2024Benchmarking,
+  author  = {Bickmann, Lucas and Plagwitz, Lucas and Varghese, Julian},
+  title   = {Benchmarking Approaches: Time Series Versus Feature-Based
+             Machine Learning in {ECG} Analysis on the {PTB-XL} Dataset},
+  journal = {Studies in Health Technology and Informatics},
+  year    = {2024},
+  volume  = {316},
+  pages   = {589--593}
+}
+
+% A preprint, not peer reviewed. Cite as such or replace with the
+% published version if one has since appeared.
+@misc{Gitau2025ReproducePTBXL,
+  author       = {Gitau and others},
+  title        = {[Re] Deep Learning for {ECG} Analysis: Benchmarks and
+                  Insights from {PTB-XL}},
+  year         = {2025},
+  howpublished = {medRxiv preprint},
+  note         = {FIXME: complete the author list before submission}
+}
+
+% ----------------------------------------- ECG TinyML and edge devices
+@article{Kim2023TinyMLECG,
+  author  = {Kim and others},
+  title   = {{TinyML}-Based Classification in an {ECG} Monitoring Embedded
+             System},
+  journal = {Computers, Materials \& Continua},
+  year    = {2023},
+  volume  = {75},
+  number  = {1},
+  pages   = {1751--1764},
+  note    = {FIXME: complete the author list before submission}
+}
+
+@inproceedings{ATC2024TinyMLECG,
+  title     = {{TinyML}-Based System for Cost-Effective {ECG} Rhythm
+               Classification on Embedded Device},
+  booktitle = {International Conference on Advanced Technologies for
+               Communications (ATC)},
+  year      = {2024},
+  note      = {FIXME: author list not supplied. Conference held October
+               2024; IEEE Xplore record added March 2025}
+}
+
+@article{Akbari2025AFEdge,
+  author  = {Akbari and others},
+  title   = {Atrial Fibrillation Detection on the Embedded Edge:
+             Energy-Efficient Inference on a Low-Power Microcontroller},
+  journal = {Sensors},
+  year    = {2025},
+  volume  = {25},
+  number  = {21},
+  pages   = {6601},
+  note    = {FIXME: complete the author list before submission}
+}
+
+@article{Sensors2025ECGAnomaly,
+  title   = {Reliable {ECG} Anomaly Detection on Edge Devices for Internet
+             of Medical Things Applications},
+  journal = {Sensors},
+  year    = {2025},
+  volume  = {25},
+  number  = {8},
+  pages   = {2496},
+  note    = {FIXME: author list not supplied}
+}
+
+@article{TinyMLCardio2025Survey,
+  title   = {{TinyML} and Edge Intelligence Applications in Cardiovascular
+             Disease: A Survey},
+  journal = {Computers in Biology and Medicine},
+  year    = {2025},
+  volume  = {186},
+  pages   = {109653},
+  note    = {FIXME: author list not supplied. A review, not an original
+             deployment study}
+}
+
+% ======================================================================
+% SOURCE DATASETS. The four corpora the cohort is drawn from.
+%
+% Table 1 reports post-harmonisation counts, which are smaller than the
+% released totals these papers describe: records carrying no label
+% inside the 13-class space are dropped before any splitting. Cite the
+% paper for the dataset and Table 1 for what this study actually used.
+% ======================================================================
+
+@article{Wagner2020PTBXL,
+  author  = {Wagner, Patrick and Strodthoff, Nils and Bousseljot,
+             Ralf-Dieter and Kreiseler, Dieter and Lunze, Fatima I. and
+             Samek, Wojciech and Schaeffter, Tobias},
+  title   = {{PTB-XL}, a large publicly available electrocardiography
+             dataset},
+  journal = {Scientific Data},
+  year    = {2020},
+  volume  = {7},
+  pages   = {154},
+  doi     = {10.1038/s41597-020-0495-6}
+}
+
+% The Challenge paper is the primary citable description of the Georgia
+% 12-lead set; there is no separate dataset-description publication.
+@article{PerezAlday2020Challenge,
+  author  = {Perez Alday, Erick A. and others},
+  title   = {Classification of 12-lead {ECGs}: The {PhysioNet/Computing
+             in Cardiology} Challenge 2020},
+  journal = {Physiological Measurement},
+  year    = {2020},
+  volume  = {41},
+  number  = {12},
+  pages   = {124003},
+  doi     = {10.1088/1361-6579/abc960}
+}
+
+@article{Zheng2020Chapman,
+  author  = {Zheng, Jianwei and Zhang, Jianming and Danioko, Sidy and
+             Yao, Hai and Guo, Hangyuan and Rakovski, Cyril},
+  title   = {A 12-lead electrocardiogram database for arrhythmia research
+             covering more than 10,000 patients},
+  journal = {Scientific Data},
+  year    = {2020},
+  volume  = {7},
+  pages   = {48},
+  doi     = {10.1038/s41597-020-0386-x}
+}
+
+% The Challenge 2021 release is where the Ningbo First Hospital database
+% was published. Cite the PhysioNet record (10.13026/jz9p-0m02) in the
+% data availability statement alongside this paper.
+@inproceedings{Reyna2021Challenge,
+  author    = {Reyna, Matthew A. and others},
+  title     = {Will Two Do? Varying Dimensions in Electrocardiography:
+               The {PhysioNet/Computing in Cardiology} Challenge 2021},
+  booktitle = {Computing in Cardiology},
+  year      = {2021},
+  volume    = {48},
+  note      = {Dataset: PhysioNet, doi:10.13026/jz9p-0m02}
+}
