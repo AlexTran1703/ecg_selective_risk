@@ -1,0 +1,4 @@
+Limitation	What your study establishes	What it cannot establish
+L1. External-source representativeness	Performance across four held-out ECG datasets	Performance across the full diversity of real clinical settings
+L2. Uniform width scaling	Architecture comparisons under a consistent, reproducible scaling policy	The best achievable implementation of each family under a given budget
+L3. Macro-AP as the primary endpoint	Average discrimination across 13 diagnoses, with equal class and source weighting	Complete clinical utility, calibration or performance at specific operating thresholds
