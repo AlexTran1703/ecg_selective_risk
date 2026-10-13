@@ -1,0 +1,11 @@
+ID,Family,Published variant,Year,Defining operation,Blocks,Parameters (k),MMACC
+M1,FCN-1D,"Wang et al., FCN",2017,plain convolution,3,277.1,274.16
+M2,ResNet-1D,"He et al., ResNet-18",2016,residual block,8,8744.1,398.57
+M3,TCN,"Bai et al., 8 levels",2018,dilated causal convolution,8,189.3,199.91
+M4,MobileNetV2,"Sandler et al., 1.0x",2018,inverted residual,17,2198.0,92.32
+M5,ShuffleNetV2,"Ma et al., 1.0x",2018,channel split and shuffle,16,1255.2,52.25
+M6,GhostNet,"Han et al., 1.0x",2020,ghost module,16,2639.6,46.64
+M7,MobileNetV3,"Howard et al., Small",2019,"inverted residual, SE, hard-swish",11,888.0,17.51
+M8,FasterNet,"Chen et al., T0",2023,partial convolution,13,2350.3,106.89
+M9,RepViT,"Wang et al., M0.9",2024,reparameterised depthwise and FFN,20,3621.9,187.83
+M10,MobileNetV4,"Qin et al., Conv-S",2024,universal inverted bottleneck,12,1198.7,50.54
