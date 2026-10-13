@@ -664,7 +664,7 @@ graph-derived activation sizes is no better than screening at random.
 ```
 benchmark_mcu/
   REPORT.md
-  reference.bib                    verified entries
+  reference.bib                    15 entries, single bibliography
   src/mcubench/models.py           ten families
   scripts/b1_train.py              LOSO training, both budgets
   scripts/b2_int8.py               ONNX Runtime static PTQ
