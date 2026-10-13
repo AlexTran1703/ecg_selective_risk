@@ -70,6 +70,66 @@ def save_table(df, name, caption):
     print(f"  tables/{name}")
 
 
+def table1(runs=None):
+    """Composition of the four harmonised ECG sources.
+
+    Entirely cohort-derived: no model, no fold and no bootstrap enters
+    it, which is why it is unchanged by the reconstruction.
+    """
+    c = B.cohort()
+    m, y, cls = c["index"], c["y"], c["classes"]
+    rows = []
+    for src in SOURCES:
+        k = (m["source"] == src).values
+        sub, lab = m[k], y[k]
+        age = sub["age"].dropna()
+        nf = int((sub["sex"] == "Female").sum())
+        rows.append({
+            "source": B.sname(src),
+            "records": "{:,}".format(int(k.sum())),
+            "patients": "{:,}".format(sub["patient"].nunique()),
+            "age, median (IQR)": (
+                "{:.0f} ({:.0f}-{:.0f})".format(
+                    age.median(), age.quantile(.25), age.quantile(.75))
+                if len(age) else "NR"),
+            "female (%)": "{:.1f}".format(100 * nf / k.sum()),
+            "labels per ECG": "{:.2f}".format(lab.sum(1).mean()),
+            # The macro-average of per-class prevalence is the expected
+            # average precision of a random ranking on this source. It
+            # is a reference, not a bound: a model can score below it.
+            "random-ranking AP reference": "{:.3f}".format(lab.mean())})
+    rows.append({
+        "source": "Total",
+        "records": "{:,}".format(len(m)),
+        "patients": "{:,}".format(m["patient"].nunique()),
+        "age, median (IQR)": "",
+        "female (%)": "{:.1f}".format(
+            100 * (m["sex"] == "Female").sum() / len(m)),
+        "labels per ECG": "{:.2f}".format(y.sum(1).mean()),
+        "random-ranking AP reference": "{:.3f}".format(y.mean())})
+    df = pd.DataFrame(rows)
+    save_table(df, "table1_protocol",
+               "Table 1. Composition of the four harmonised ECG sources. "
+               "Counts are records retained after harmonisation to the "
+               "13-label space; records carrying no label inside it were "
+               "dropped before any splitting. Patients are unique within a "
+               "source, so the ratio to records shows that only PTB-XL "
+               "repeats patients (17,928 patients over 20,487 records); "
+               "identifiers are not comparable between sources, so the "
+               "Total row sums within-source counts. Sex is normalised "
+               "across sources, which record it differently; age is the "
+               "median over records where it is present. Labels per ECG is "
+               "the mean number of positive labels. The random-ranking AP "
+               "reference is the macro-average of per-class prevalence, "
+               "given so that Table 3 can be read against something other "
+               "than zero; it is a reference, not a bound, and a model can "
+               "score below it. NSR is not coded comparably across these "
+               "four sources and its prevalence should not be read as a "
+               "population difference. Inputs are 10 s, 12 leads, decimated "
+               "to 100 Hz.")
+    return df
+
+
 def table_architectures():
     """The ten families at published topology, with no device constraint.
 
@@ -165,6 +225,7 @@ def main():
     ap.add_argument("--only", nargs="+", default=None)
     args = ap.parse_args()
     jobs = [("figure1", _fig1.figure1),
+            ("table1", table1),
             ("table2", table2),
             ("table3", lambda: table3(D.load_runs())),
             ("figure2", lambda: figure2(D.load_runs())),
@@ -984,7 +1045,8 @@ def figure4(runs):
     fig.text(0.5, 0.020,
              "paired patient-cluster bootstrap, "
              f"{REPS} replicates, equal weight per held-out source;   "
-             "* weight budget never binds (activation-bound)",
+             "* activation memory, not the weight budget, "
+             "determines the configuration",
              fontsize=6.1, color=INK2, ha="center")
     fig.subplots_adjust(left=0.175, right=0.985, top=1 - 0.42 / h,
                         bottom=0.92 / h, wspace=0.07)
@@ -1309,15 +1371,18 @@ def figure7(runs):
     hi_ap = max(p["ap"] for p in pts) + 0.02
     smax = max(p["sram"] for p in pts) or 1.0
 
-    fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.5), facecolor=SURFACE,
+    fr_all = sorted([p for p in pts if (p["m"], p["cfg"]) in front],
+                    key=lambda p: p["ms"])
+    fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.9), facecolor=SURFACE,
                              sharey=True)
     for k, (meth, ax) in enumerate(zip(("uniform", "joint"), axes)):
         sel = [p for p in pts if D.METHOD_OF[p["cfg"]] == meth]
-        fr = sorted([p for p in sel if (p["m"], p["cfg"]) in front],
-                    key=lambda p: p["ms"])
-        if len(fr) > 1:
-            ax.plot([p["ms"] for p in fr], [p["ap"] for p in fr], lw=1.0,
-                    color="#8a8a84", ls=(0, (4, 2)), zorder=2)
+        # The pooled frontier, identical in both panels. Connecting
+        # only this panel's members would draw a line that is neither
+        # the pooled frontier nor a method-specific one.
+        if len(fr_all) > 1:
+            ax.plot([p["ms"] for p in fr_all], [p["ap"] for p in fr_all],
+                    lw=1.0, color="#8a8a84", ls=(0, (4, 2)), zorder=2)
         for p in sel:
             colour = B.MODEL_COLOR[D.ICON[p["m"]]]
             on = (p["m"], p["cfg"]) in front
@@ -1327,10 +1392,6 @@ def figure7(runs):
                        color=colour, alpha=0.55 if not on else 0.9,
                        edgecolor=INK if on else SURFACE,
                        lw=1.0 if on else 0.4, zorder=5 if on else 4)
-            ax.annotate(D.LABEL[p["m"]], (p["ms"], p["ap"]),
-                        textcoords="offset points", xytext=(0, 0),
-                        ha="center", va="center", fontsize=4.8,
-                        color=INK, zorder=7)
         ax.set_xscale("log")
         ax.set_xlim(lo_ms, hi_ms)
         ax.set_ylim(lo_ap, hi_ap)
@@ -1353,23 +1414,34 @@ def figure7(runs):
                           else " (float32; INT8 scoring not finished)"),
                        fontsize=7.2, color=INK)
 
-    hs = [plt.Line2D([], [], lw=0, marker=BSHAPE[b], markersize=5,
-                     markerfacecolor="#8a8a84", markeredgecolor="none",
-                     label=b) for b in ("Tight", "Relaxed")]
-    hs.append(plt.Line2D([], [], lw=0, marker="o", markersize=7,
-                         markerfacecolor="none", markeredgecolor=INK,
-                         label="non-dominated (both methods pooled)"))
+    fam = [plt.Line2D([], [], lw=0, marker="o", markersize=5.5,
+                      markerfacecolor=B.MODEL_COLOR[D.ICON[m]],
+                      markeredgecolor="none", label=D.LABEL[m] + " " + m)
+           for m in D.ORDER if any(p["m"] == m for p in pts)]
+    # Black, not grey: the keys share a legend grid with the families,
+    # and one of those families is already grey.
+    keys = [plt.Line2D([], [], lw=0, marker=BSHAPE[b], markersize=5.5,
+                       markerfacecolor="#1a1a18", markeredgecolor="none",
+                       label="budget " + b) for b in ("Tight", "Relaxed")]
+    keys.append(plt.Line2D([], [], lw=0, marker="o", markersize=7.5,
+                           markerfacecolor="none", markeredgecolor=INK,
+                           label="non-dominated (pooled)"))
     for s_kb in (np.percentile([p["sram"] for p in pts], 20),
                  np.percentile([p["sram"] for p in pts], 80)):
-        hs.append(plt.Line2D(
+        keys.append(plt.Line2D(
             [], [], lw=0, marker="o",
             markersize=np.sqrt(28 + 300 * (s_kb / smax)) * 0.62,
             markerfacecolor="#cfcfc8", markeredgecolor="none",
-            label=f"{s_kb:.0f} KB SRAM"))
-    fig.legend(handles=hs, fontsize=6.3, frameon=False, labelcolor=INK2,
-               ncol=5, loc="lower center", bbox_to_anchor=(0.5, 0.012),
-               columnspacing=1.5, handletextpad=0.5)
-    fig.subplots_adjust(left=0.075, right=0.99, top=0.925, bottom=0.185,
+            label="{:.0f} KB SRAM".format(s_kb)))
+    fig.legend(handles=fam + keys, fontsize=6.6, frameon=False,
+               labelcolor=INK2, ncol=5, loc="upper center",
+               bbox_to_anchor=(0.5, 0.132), columnspacing=1.5,
+               handletextpad=0.5)
+    # Axes bottom leaves room for the tick labels and the x label;
+    # the legend is anchored by its top just under them, so the
+    # gap is the height of the entries rather than whatever the
+    # reserved band happens to be.
+    fig.subplots_adjust(left=0.075, right=0.99, top=0.935, bottom=0.235,
                         wspace=0.06)
     if synth:
         _stamp(fig)
@@ -1439,8 +1511,9 @@ def table3(runs):
 
     Ten rows, five configuration columns, each cell an equal-source mean
     macro-AP with a patient-cluster bootstrap interval. Source-specific
-    estimates and macro-AUROC are supplementary: carrying them here
-    would turn one readable table into about fifty rows.
+    estimates and macro-AUROC are not carried here: they would turn one
+    readable table into about fifty rows, and they are recoverable from
+    the released per-fold predictions.
     """
     marg, _, _ = inference(runs, configs=D.CONFIGS)
     if not marg:
